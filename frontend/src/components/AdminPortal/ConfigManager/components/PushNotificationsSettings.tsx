@@ -6,9 +6,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { useOptimizely } from '../../../../hooks/useOptimizely';
 import { PasswordInput } from '../../PasswordInput';
 import { Toggle } from './Toggle';
 import { API_URL } from '../../../../config';
+import { trackOptimizelyEvent, OPTIMIZELY_EVENTS, isFeatureBeingEnabled } from '../../../../utils/optimizelyTracking';
 import PushNotificationStatus from './PushNotificationStatus';
 
 interface PushNotificationsSettingsProps {
@@ -32,6 +34,7 @@ const PushNotificationsSettings: React.FC<PushNotificationsSettingsProps> = ({
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { optimizely } = useOptimizely();
   const [generating, setGenerating] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [localKeys, setLocalKeys] = useState<{ publicKey: string; privateKey: string } | null>(null);
@@ -204,6 +207,12 @@ const PushNotificationsSettings: React.FC<PushNotificationsSettingsProps> = ({
             setJustGenerated(false);
             throw new Error('Failed to save config');
           }
+          
+          // Track Optimizely event - notifications enabled for the first time
+          if (isFeatureBeingEnabled(true, basePushConfig.enabled)) {
+            trackOptimizelyEvent(OPTIMIZELY_EVENTS.NOTIFICATIONS_ENABLED, optimizely);
+          }
+          
           // Trigger refresh of PushNotificationStatus
           setRefreshKey(Date.now());
         } catch (error) {
@@ -283,6 +292,11 @@ const PushNotificationsSettings: React.FC<PushNotificationsSettingsProps> = ({
         publicKey: data.publicKey,
         privateKey: data.privateKey
       });
+      
+      // Track Optimizely event - notifications enabled for the first time
+      if (isFeatureBeingEnabled(true, basePushConfig.enabled)) {
+        trackOptimizelyEvent(OPTIMIZELY_EVENTS.NOTIFICATIONS_ENABLED, optimizely);
+      }
       
       // Mark as just generated so Save/Cancel buttons don't appear
       setJustGenerated(true);

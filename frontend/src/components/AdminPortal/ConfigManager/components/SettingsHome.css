@@ -69,19 +69,20 @@
 }
 
 .settings-card-icon.needs-config {
-  background: rgba(245, 158, 11, 0.1);
-  border-color: rgba(245, 158, 11, 0.3);
+  --highlight-color: var(--icon-highlight-color, #f59e0b);
+  background: color-mix(in srgb, var(--highlight-color) 10%, transparent);
+  border-color: color-mix(in srgb, var(--highlight-color) 30%, transparent);
 }
 
 .settings-card-icon.needs-config > svg {
-  color: #f59e0b;
+  color: var(--highlight-color);
   opacity: 0.9;
 }
 
 .settings-card:hover .settings-card-icon.needs-config {
-  background: rgba(245, 158, 11, 0.15);
-  border-color: rgba(245, 158, 11, 0.4);
-  box-shadow: 0px 0px 25px rgba(245, 158, 11, 0.2);
+  background: color-mix(in srgb, var(--highlight-color) 15%, transparent);
+  border-color: color-mix(in srgb, var(--highlight-color) 40%, transparent);
+  box-shadow: 0px 0px 25px color-mix(in srgb, var(--highlight-color) 20%, transparent);
 }
 
 .settings-card:hover .settings-card-icon.needs-config > svg {

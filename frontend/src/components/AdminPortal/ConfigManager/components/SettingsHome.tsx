@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useDecision } from '@optimizely/react-sdk';
 import {
   GeneralIcon,
   LinksIcon,
@@ -14,6 +15,10 @@ import {
   AnalyticsIcon,
   LoggingIcon,
 } from '../../../icons';
+import { 
+  FEATURE_FLAGS, 
+  INTEGRATIONS_ADOPTION_VARIABLES 
+} from '../../../../optimizely-config';
 import './SettingsHome.css';
 
 interface SettingsCardProps {
@@ -22,6 +27,10 @@ interface SettingsCardProps {
   path: string;
   onClick: () => void;
   needsConfig?: boolean;
+  showBadge?: boolean;
+  highlightIcon?: boolean;
+  badgeColor?: string;
+  iconHighlightColor?: string;
 }
 
 const SettingsCard: React.FC<SettingsCardProps> = ({
@@ -29,13 +38,32 @@ const SettingsCard: React.FC<SettingsCardProps> = ({
   title,
   onClick,
   needsConfig,
+  /* Optimizely feature flags */
+  showBadge = true,
+  highlightIcon = true,
+  badgeColor = '#f59e0b',
+  iconHighlightColor = '#f59e0b',
 }) => {
+  const shouldShowBadge = needsConfig && showBadge;
+  const shouldHighlightIcon = needsConfig && highlightIcon;
+  
   return (
     <button className="settings-card" onClick={onClick}>
       <div className="settings-card-icon-wrapper">
-        <div className={`settings-card-icon ${needsConfig ? 'needs-config' : ''}`}>{icon}</div>
-        {needsConfig && (
-          <span className="settings-card-badge" title="Not configured">
+        <div 
+          className={`settings-card-icon ${shouldHighlightIcon ? 'needs-config' : ''}`}
+          style={shouldHighlightIcon ? { 
+            '--icon-highlight-color': iconHighlightColor 
+          } as React.CSSProperties : undefined}
+        >
+          {icon}
+        </div>
+        {shouldShowBadge && (
+          <span 
+            className="settings-card-badge" 
+            title="Not configured"
+            style={{ backgroundColor: badgeColor }}
+          >
             !
           </span>
         )}
@@ -46,6 +74,21 @@ const SettingsCard: React.FC<SettingsCardProps> = ({
 };
 
 const SettingsHome: React.FC = () => {
+  // ============================================================================
+  // FEATURE FLAGS - Unconfigured Settings Highlighting (Powered by Optimizely)
+  // ============================================================================
+  const [decision] = useDecision(FEATURE_FLAGS.INTEGRATIONS_ADOPTION);
+  
+  // Master toggle - is the feature enabled in Optimizely?
+  const ENABLE_UNCONFIGURED_HIGHLIGHTING = decision.enabled;
+  
+  // Get feature variables from Optimizely (with fallback defaults)
+  const SHOW_BADGES = (decision.variables[INTEGRATIONS_ADOPTION_VARIABLES.SHOW_BADGES] as boolean) ?? false;
+  const HIGHLIGHT_ICON_COLOR = (decision.variables[INTEGRATIONS_ADOPTION_VARIABLES.HIGHLIGHT_ICONS] as boolean) ?? true;
+  const BADGE_COLOR = (decision.variables[INTEGRATIONS_ADOPTION_VARIABLES.BADGE_COLOR] as string) ?? '#f59e0b';
+  const ICON_HIGHLIGHT_COLOR = (decision.variables[INTEGRATIONS_ADOPTION_VARIABLES.ICON_HIGHLIGHT_COLOR] as string) ?? '#f59e0b';
+  // ============================================================================
+
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [configStatus, setConfigStatus] = useState({
@@ -115,7 +158,7 @@ const SettingsHome: React.FC = () => {
       icon: <AIIcon width={48} height={48} />,
       title: t('settings.openai.title'),
       path: '/admin/settings/openai',
-      needsConfig: configLoaded && !configStatus.openai,
+      needsConfig: ENABLE_UNCONFIGURED_HIGHLIGHTING && configLoaded && !configStatus.openai,
     },
     {
       icon: <ImageQualityIcon width={48} height={48} />,
@@ -131,25 +174,25 @@ const SettingsHome: React.FC = () => {
       icon: <EmailIcon width={48} height={48} />,
       title: t('settings.email.title'),
       path: '/admin/settings/email',
-      needsConfig: configLoaded && !configStatus.smtp,
+      needsConfig: ENABLE_UNCONFIGURED_HIGHLIGHTING && configLoaded && !configStatus.smtp,
     },
     {
       icon: <BellIcon width={48} height={48} />,
       title: t('settings.pushNotifications.title'),
       path: '/admin/settings/push-notifications',
-      needsConfig: configLoaded && !configStatus.pushNotifications,
+      needsConfig: ENABLE_UNCONFIGURED_HIGHLIGHTING && configLoaded && !configStatus.pushNotifications,
     },
     {
       icon: <GoogleGrayIcon width={48} height={48} />,
       title: t('settings.googleOAuth.title'),
       path: '/admin/settings/google-oauth',
-      needsConfig: configLoaded && !configStatus.oauth,
+      needsConfig: ENABLE_UNCONFIGURED_HIGHLIGHTING && configLoaded && !configStatus.oauth,
     },
     {
       icon: <AnalyticsIcon width={48} height={48} />,
       title: t('settings.analytics.title'),
       path: '/admin/settings/analytics',
-      needsConfig: configLoaded && !configStatus.analytics,
+      needsConfig: ENABLE_UNCONFIGURED_HIGHLIGHTING && configLoaded && !configStatus.analytics,
     },
     {
       icon: <LoggingIcon width={48} height={48} />,
@@ -175,6 +218,10 @@ const SettingsHome: React.FC = () => {
             title={section.title}
             path={section.path}
             needsConfig={section.needsConfig}
+            showBadge={SHOW_BADGES}
+            highlightIcon={HIGHLIGHT_ICON_COLOR}
+            badgeColor={BADGE_COLOR}
+            iconHighlightColor={ICON_HIGHLIGHT_COLOR}
             onClick={() => navigate(section.path)}
           />
         ))}

@@ -4,11 +4,13 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useOptimizely } from '../../../../hooks/useOptimizely';
 import { API_URL } from '../../../../config';
 import Breadcrumbs from '../components/Breadcrumbs';
 import AuthSettings from '../components/AuthSettings';
 import { ConfigData } from '../types';
 import { error } from '../../../../utils/logger';
+import { trackOptimizelyEvent, OPTIMIZELY_EVENTS, isFeatureBeingEnabled } from '../../../../utils/optimizelyTracking';
 import {
   updateConfig as updateConfigHelper,
   updateArrayItem as updateArrayItemHelper,
@@ -22,6 +24,7 @@ interface GoogleOAuthPageProps {
 
 const GoogleOAuthPage: React.FC<GoogleOAuthPageProps> = ({ setMessage }) => {
   const { t } = useTranslation();
+  const { optimizely } = useOptimizely();
   const [config, setConfig] = useState<ConfigData | null>(null);
   const [originalConfig, setOriginalConfig] = useState<ConfigData | null>(null);
   const [savingSection, setSavingSection] = useState<string | null>(null);
@@ -90,6 +93,14 @@ const GoogleOAuthPage: React.FC<GoogleOAuthPageProps> = ({ setMessage }) => {
       });
 
       if (res.ok) {
+        // Track Optimizely event if Google OAuth is being enabled for the first time
+        if (originalConfig && isFeatureBeingEnabled(
+          config.environment.auth.google.enabled,
+          originalConfig.environment.auth.google.enabled
+        )) {
+          trackOptimizelyEvent(OPTIMIZELY_EVENTS.GOOGLE_OAUTH_CONFIGURED, optimizely);
+        }
+        
         setMessage({ type: 'success', text: 'Google OAuth settings saved successfully' });
         setOriginalConfig(structuredClone(config));
       } else {

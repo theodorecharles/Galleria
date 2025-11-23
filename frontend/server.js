@@ -403,9 +403,9 @@ function setCSPHeader(res, apiUrl, configFile) {
       }; ` +
       "style-src 'self' 'unsafe-inline'; " +
       "worker-src 'self'; " +
-      `img-src 'self' ${apiDomainHttps} ${apiUrl} data: blob: https://*.basemaps.cartocdn.com https://www.gravatar.com; ` +
+      `img-src 'self' ${apiDomainHttps} ${apiUrl} data: blob: https://*.basemaps.cartocdn.com https://www.gravatar.com https://jumbe.zaius.com; ` +
       `media-src 'self' ${apiDomainHttps} ${apiUrl} blob:; ` +
-      `connect-src 'self' ${apiDomainHttps} ${apiUrl}; ` +
+      `connect-src 'self' ${apiDomainHttps} ${apiUrl} https://cdn.optimizely.com https://logx.optimizely.com https://jumbe.zaius.com; ` +
       "font-src 'self'; " +
       "object-src 'none'; " +
       "base-uri 'self'; " +

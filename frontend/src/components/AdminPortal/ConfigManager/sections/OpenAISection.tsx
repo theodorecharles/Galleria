@@ -5,9 +5,11 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useOptimizely } from '../../../../hooks/useOptimizely';
 import { API_URL } from '../../../../config';
 import { ConfigData } from '../types';
 import { trackConfigSettingsSaved } from '../../../../utils/analytics';
+import { trackOptimizelyEvent, OPTIMIZELY_EVENTS, isFeatureBeingConfigured } from '../../../../utils/optimizelyTracking';
 import { PasswordInput } from '../../PasswordInput';
 import { error as logError } from '../../../../utils/logger';
 
@@ -39,6 +41,7 @@ const OpenAISection: React.FC<OpenAISectionProps> = ({
   sectionRef,
 }) => {
   const { t } = useTranslation();
+  const { optimizely } = useOptimizely();
   const openAISectionRef = useRef<HTMLDivElement>(null);
   const apiKeyInputRef = useRef<HTMLInputElement>(null);
 
@@ -218,6 +221,11 @@ const OpenAISection: React.FC<OpenAISectionProps> = ({
       if (res.ok) {
         // Track config settings save
         trackConfigSettingsSaved('OpenAI');
+        
+        // Track Optimizely event if OpenAI is being configured for the first time
+        if (isFeatureBeingConfigured(config.openai?.apiKey, originalConfig?.openai?.apiKey)) {
+          trackOptimizelyEvent(OPTIMIZELY_EVENTS.OPENAI_CONFIGURED, optimizely);
+        }
         
         setMessage({ type: "success", text: t('settings.saved', { section: 'OpenAI' }) });
         // Update original config after successful save

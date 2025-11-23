@@ -4,8 +4,10 @@
 
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useOptimizely } from '../../../../hooks/useOptimizely';
 import { API_URL } from '../../../../config';
 import { ConfigData } from '../types';
+import { trackOptimizelyEvent, OPTIMIZELY_EVENTS } from '../../../../utils/optimizelyTracking';
 import { PasswordInput } from '../../PasswordInput';
 
 
@@ -37,6 +39,7 @@ const AnalyticsSettings: React.FC<AnalyticsSettingsProps> = ({
   setActionButtons,
 }) => {
   const { t } = useTranslation();
+  const { optimizely } = useOptimizely();
   
   // Handle save with restart modal
   const handleSaveAnalytics = async () => {
@@ -57,6 +60,13 @@ const AnalyticsSettings: React.FC<AnalyticsSettingsProps> = ({
           config.analytics.openobserve.username !== originalConfig.analytics.openobserve.username ||
           config.analytics.openobserve.password !== originalConfig.analytics.openobserve.password ||
           config.analytics.openobserve.stream !== originalConfig.analytics.openobserve.stream;
+        
+        // Track Optimizely event if analytics is being configured for the first time
+        const wasConfigured = !!(originalConfig.analytics.scriptPath || originalConfig.analytics.openobserve.enabled);
+        const isNowConfigured = !!(config.analytics.scriptPath || config.analytics.openobserve.enabled);
+        if (!wasConfigured && isNowConfigured) {
+          trackOptimizelyEvent(OPTIMIZELY_EVENTS.ANALYTICS_CONFIGURED, optimizely);
+        }
         
         // Update original config to match
         setOriginalConfig(structuredClone(config));

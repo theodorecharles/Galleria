@@ -4,8 +4,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useOptimizely } from '../../../../hooks/useOptimizely';
 import { API_URL } from '../../../../config';
 import { ConfigData } from '../types';
+import { trackOptimizelyEvent, OPTIMIZELY_EVENTS, isFeatureBeingEnabled } from '../../../../utils/optimizelyTracking';
 import { PasswordInput } from '../../PasswordInput';
 import { TestEmailModal } from './TestEmailModal';
 import { SMTPProvidersModal } from './SMTPProvidersModal';
@@ -44,6 +46,7 @@ const SMTPSettings: React.FC<SMTPSettingsProps> = ({
   setActionButtons,
 }) => {
   const { t } = useTranslation();
+  const { optimizely } = useOptimizely();
   const [showTestModal, setShowTestModal] = useState(false);
   const [showProvidersModal, setShowProvidersModal] = useState(false);
   const [editingField, setEditingField] = useState<FieldKey | null>(null);
@@ -227,6 +230,11 @@ const SMTPSettings: React.FC<SMTPSettingsProps> = ({
       });
 
       if (res.ok) {
+        // Track Optimizely event if email is being enabled for the first time
+        if (isFeatureBeingEnabled(newValue, emailConfig.enabled)) {
+          trackOptimizelyEvent(OPTIMIZELY_EVENTS.EMAIL_CONFIGURED, optimizely);
+        }
+        
         // Update original config to match
         setOriginalConfig(structuredClone(newConfig));
         setMessage({
