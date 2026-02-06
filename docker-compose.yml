@@ -19,7 +19,7 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
     volumes:
-      - ${DATA_DIR:-/Users/Ted/Desktop/galleria-data}:/data
+      - ${DATA_DIR:-~/galleria-data}:/data
     restart: unless-stopped
     # runtime: nvidia  # Uncomment if you have NVIDIA GPU + Container Toolkit
     healthcheck:

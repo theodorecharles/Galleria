@@ -734,9 +734,9 @@ export default function SetupWizard() {
         <div className="setup-footer">
           <p>
             Need help? Check the{' '}
-            <a 
-              href="https://github.com/theodorecharles/Galleria" 
-              target="_blank" 
+            <a
+              href={`https://galleria.website/${i18n.language}/docs/`}
+              target="_blank"
               rel="noopener noreferrer"
             >
               documentation
