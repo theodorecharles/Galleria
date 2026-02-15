@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Pull latest changes from GitHub
         run: |
-          cd /home/ted/photography-website/
+          cd /home/ted/Galleria/
           CURRENT_BRANCH=$(git branch --show-current)
           echo "Current branch: $CURRENT_BRANCH"
           git fetch origin "$CURRENT_BRANCH"
@@ -32,7 +32,7 @@ jobs:
       - name: Send deployment start notification
         if: vars.TELEGRAM_CHAT_ID
         run: |
-          cd /home/ted/photography-website/
+          cd /home/ted/Galleria/
           COMMIT_HASH=$(git rev-parse --short HEAD)
           COMMIT_MSG=$(git log -1 --pretty=%B | head -n 1)
 
@@ -52,13 +52,13 @@ jobs:
 
       - name: Run deployment script
         run: |
-          cd /home/ted/photography-website/
+          cd /home/ted/Galleria/
           ./restart.sh
 
       - name: Send success notification
         if: success() && vars.TELEGRAM_CHAT_ID
         run: |
-          cd /home/ted/photography-website/
+          cd /home/ted/Galleria/
           COMMIT_HASH=$(git rev-parse --short HEAD)
           COMMIT_MSG=$(git log -1 --pretty=%B | head -n 1)
 
@@ -79,7 +79,7 @@ jobs:
       - name: Send failure notification
         if: failure() && vars.TELEGRAM_CHAT_ID
         run: |
-          cd /home/ted/photography-website/
+          cd /home/ted/Galleria/
           COMMIT_HASH=$(git rev-parse --short HEAD)
           COMMIT_MSG=$(git log -1 --pretty=%B | head -n 1)
 
