@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "Пользовательский CSS сохранён!",
     "failedToSaveHeaderColors": "Тема заголовка сохранена!",
     "errorSavingHeaderTheme": "Цвета заголовка сохранены!",
-    "errorSavingHeaderColors": "Не удалось сохранить тему заголовка"
+    "errorSavingHeaderColors": "Не удалось сохранить тему заголовка",
+    "gridColumns": "Сетки столбцов",
+    "gridColumnsDescription": "Настройте количество столбцов, отображаемых на каждом контрольном пункте ширины экрана.",
+    "column": "столбец",
+    "columns": "столбцы",
+    "gridColumnsSaved": "Сетки столбцов сохранены!",
+    "failedToSaveGridColumns": "Не удалось сохранить сетки столбцов"
   }
 }

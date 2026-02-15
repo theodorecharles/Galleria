@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "CSS kustom disimpan!",
     "failedToSaveHeaderColors": "Tema header disimpan!",
     "errorSavingHeaderTheme": "Warna header disimpan!",
-    "errorSavingHeaderColors": "Gagal menyimpan tema header"
+    "errorSavingHeaderColors": "Gagal menyimpan tema header",
+    "gridColumns": "Kolom Grid",
+    "gridColumnsDescription": "Sesuaikan jumlah kolom yang ditampilkan pada setiap titik jeda lebar layar.",
+    "column": "kolom",
+    "columns": "kolom",
+    "gridColumnsSaved": "Kolom grid berhasil disimpan!",
+    "failedToSaveGridColumns": "Gagal menyimpan kolom grid"
   }
 }

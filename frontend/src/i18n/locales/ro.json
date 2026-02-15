@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "CSS personalizat salvat!",
     "failedToSaveHeaderColors": "Tema antet salvată!",
     "errorSavingHeaderTheme": "Culorile antetului salvate!",
-    "errorSavingHeaderColors": "Eșec la salvarea temei antetului"
+    "errorSavingHeaderColors": "Eșec la salvarea temei antetului",
+    "gridColumns": "Coloane Grilă",
+    "gridColumnsDescription": "Personalizați numărul de coloane afișate la fiecare punct de întrerupere a lățimii ecranului.",
+    "column": "coloană",
+    "columns": "coloane",
+    "gridColumnsSaved": "Coloanele grilei au fost salvate!",
+    "failedToSaveGridColumns": "Salvarea coloanelor grilei a eșuat"
   }
 }

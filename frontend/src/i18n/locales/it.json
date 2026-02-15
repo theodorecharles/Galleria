@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "CSS personalizzato salvato!",
     "failedToSaveHeaderColors": "Tema intestazione salvato!",
     "errorSavingHeaderTheme": "Colori intestazione salvati!",
-    "errorSavingHeaderColors": "Impossibile salvare il tema dell'intestazione"
+    "errorSavingHeaderColors": "Impossibile salvare il tema dell'intestazione",
+    "gridColumns": "Colonne della griglia",
+    "gridColumnsDescription": "Personalizza il numero di colonne visualizzate a ciascun punto di interruzione della larghezza dello schermo.",
+    "column": "colonna",
+    "columns": "colonne",
+    "gridColumnsSaved": "Colonne della griglia salvate!",
+    "failedToSaveGridColumns": "Impossibile salvare le colonne della griglia"
   }
 }

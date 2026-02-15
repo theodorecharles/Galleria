@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "カスタムCSSが保存されました！",
     "failedToSaveHeaderColors": "ヘッダーテーマが保存されました！",
     "errorSavingHeaderTheme": "ヘッダーの色が保存されました！",
-    "errorSavingHeaderColors": "ヘッダーテーマの保存に失敗しました"
+    "errorSavingHeaderColors": "ヘッダーテーマの保存に失敗しました",
+    "gridColumns": "グリッド列",
+    "gridColumnsDescription": "各画面幅のブレークポイントで表示される列の数をカスタマイズします。",
+    "column": "列",
+    "columns": "列",
+    "gridColumnsSaved": "グリッド列が保存されました！",
+    "failedToSaveGridColumns": "グリッド列の保存に失敗しました"
   }
 }

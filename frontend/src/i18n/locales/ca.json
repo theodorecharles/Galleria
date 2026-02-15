@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "CSS personalitzat desat!",
     "failedToSaveHeaderColors": "Tema de la capçalera desat!",
     "errorSavingHeaderTheme": "Colors de la capçalera desats!",
-    "errorSavingHeaderColors": "No s'ha pogut desar el tema de la capçalera"
+    "errorSavingHeaderColors": "No s'ha pogut desar el tema de la capçalera",
+    "gridColumns": "Columnes de la graella",
+    "gridColumnsDescription": "Personalitza el nombre de columnes mostrades a cada punt de ruptura d'amplada de pantalla.",
+    "column": "columna",
+    "columns": "columnes",
+    "gridColumnsSaved": "Columnes de la graella desades!",
+    "failedToSaveGridColumns": "No s'ha pogut desar les columnes de la graella"
   },
   "license": {
     "title": "Llicència de la foto",

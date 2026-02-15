@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "CSS pertsonalizatua gordeta!",
     "failedToSaveHeaderColors": "Goiburuaren gaia gordeta!",
     "errorSavingHeaderTheme": "Goiburuaren koloreak gordeta!",
-    "errorSavingHeaderColors": "Goiburuaren gaia gordetzea huts egin du"
+    "errorSavingHeaderColors": "Goiburuaren gaia gordetzea huts egin du",
+    "gridColumns": "Sareta Zutabeak",
+    "gridColumnsDescription": "Pertsonalizatu zutabe kopurua pantaila zabalera muga bakoitzean bistaratzen dena.",
+    "column": "zutabe",
+    "columns": "zutabeak",
+    "gridColumnsSaved": "Sareta zutabeak gordeta!",
+    "failedToSaveGridColumns": "Sareta zutabeak gordetzeak huts egin du"
   },
   "license": {
     "title": "Argazki-lizentzia",

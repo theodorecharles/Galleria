@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "Tilpasset CSS gemt!",
     "failedToSaveHeaderColors": "Header-tema gemt!",
     "errorSavingHeaderTheme": "Header-farver gemt!",
-    "errorSavingHeaderColors": "Kunne ikke gemme header-tema"
+    "errorSavingHeaderColors": "Kunne ikke gemme header-tema",
+    "gridColumns": "Gitterkolonner",
+    "gridColumnsDescription": "Tilpas antallet af kolonner, der vises ved hver skærmbredde breakpoint.",
+    "column": "kolonne",
+    "columns": "kolonner",
+    "gridColumnsSaved": "Gitterkolonner gemt!",
+    "failedToSaveGridColumns": "Kunne ikke gemme gitterkolonner"
   },
   "license": {
     "title": "Fotolicens",

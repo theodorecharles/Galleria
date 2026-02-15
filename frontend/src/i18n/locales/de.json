@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "Benutzerdefiniertes CSS gespeichert!",
     "failedToSaveHeaderColors": "Header-Thema gespeichert!",
     "errorSavingHeaderTheme": "Header-Farben gespeichert!",
-    "errorSavingHeaderColors": "Header-Thema konnte nicht gespeichert werden"
+    "errorSavingHeaderColors": "Header-Thema konnte nicht gespeichert werden",
+    "gridColumns": "Rasterspalten",
+    "gridColumnsDescription": "Passen Sie die Anzahl der Spalten an, die bei jedem Bildschirmbreiten-Breakpoint angezeigt werden.",
+    "column": "Spalte",
+    "columns": "Spalten",
+    "gridColumnsSaved": "Rasterspalten gespeichert!",
+    "failedToSaveGridColumns": "Speichern der Rasterspalten fehlgeschlagen"
   }
 }

@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "Özel CSS kaydedildi!",
     "failedToSaveHeaderColors": "Başlık teması kaydedildi!",
     "errorSavingHeaderTheme": "Başlık renkleri kaydedildi!",
-    "errorSavingHeaderColors": "Başlık teması kaydedilemedi"
+    "errorSavingHeaderColors": "Başlık teması kaydedilemedi",
+    "gridColumns": "Izgara Sütunları",
+    "gridColumnsDescription": "Her ekran genişliği kırılma noktasında görüntülenen sütun sayısını özelleştirin.",
+    "column": "sütun",
+    "columns": "sütunlar",
+    "gridColumnsSaved": "Izgara sütunları kaydedildi!",
+    "failedToSaveGridColumns": "Izgara sütunları kaydedilemedi"
   }
 }

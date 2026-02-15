@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "Mukautettu CSS tallennettu!",
     "failedToSaveHeaderColors": "Otsikon teema tallennettu!",
     "errorSavingHeaderTheme": "Otsikon värit tallennettu!",
-    "errorSavingHeaderColors": "Otsikon teeman tallennus epäonnistui"
+    "errorSavingHeaderColors": "Otsikon teeman tallennus epäonnistui",
+    "gridColumns": "Ruudukon sarakkeet",
+    "gridColumnsDescription": "Mukauta näytettävien sarakkeiden määrää kunkin näytön leveyden kohdalla.",
+    "column": "sarake",
+    "columns": "sarakkeet",
+    "gridColumnsSaved": "Ruudukon sarakkeet tallennettu!",
+    "failedToSaveGridColumns": "Ruudukon sarakkeiden tallennus epäonnistui"
   },
   "license": {
     "title": "Kuvan lisenssi",

@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "Το προσαρμοσμένο CSS αποθηκεύτηκε!",
     "failedToSaveHeaderColors": "Το θέμα κεφαλίδας αποθηκεύτηκε!",
     "errorSavingHeaderTheme": "Τα χρώματα κεφαλίδας αποθηκεύτηκαν!",
-    "errorSavingHeaderColors": "Αποτυχία αποθήκευσης του θέματος κεφαλίδας"
+    "errorSavingHeaderColors": "Αποτυχία αποθήκευσης του θέματος κεφαλίδας",
+    "gridColumns": "Στήλες Πλέγματος",
+    "gridColumnsDescription": "Προσαρμόστε τον αριθμό των στηλών που εμφανίζονται σε κάθε σημείο αλλαγής πλάτους οθόνης.",
+    "column": "στήλη",
+    "columns": "στήλες",
+    "gridColumnsSaved": "Οι στήλες πλέγματος αποθηκεύτηκαν!",
+    "failedToSaveGridColumns": "Αποτυχία αποθήκευσης των στηλών πλέγματος"
   },
   "license": {
     "title": "Άδεια Φωτογραφίας",

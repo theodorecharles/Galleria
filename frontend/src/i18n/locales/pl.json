@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "Niestandardowy CSS zapisany!",
     "failedToSaveHeaderColors": "Motyw nagłówka zapisany!",
     "errorSavingHeaderTheme": "Kolory nagłówka zapisane!",
-    "errorSavingHeaderColors": "Nie udało się zapisać motywu nagłówka"
+    "errorSavingHeaderColors": "Nie udało się zapisać motywu nagłówka",
+    "gridColumns": "Kolumny siatki",
+    "gridColumnsDescription": "Dostosuj liczbę kolumn wyświetlanych przy każdym punkcie przerwania szerokości ekranu.",
+    "column": "kolumna",
+    "columns": "kolumny",
+    "gridColumnsSaved": "Kolumny siatki zapisane!",
+    "failedToSaveGridColumns": "Nie udało się zapisać kolumn siatki"
   }
 }

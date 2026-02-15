@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "CSS po meri shranjen!",
     "failedToSaveHeaderColors": "Tema glave shranjena!",
     "errorSavingHeaderTheme": "Barve glave shranjene!",
-    "errorSavingHeaderColors": "Ni uspelo shraniti teme glave"
+    "errorSavingHeaderColors": "Ni uspelo shraniti teme glave",
+    "gridColumns": "Mrežni stolpci",
+    "gridColumnsDescription": "Prilagodite število stolpcev, prikazanih pri vsaki širini zaslona.",
+    "column": "stolpec",
+    "columns": "stolpci",
+    "gridColumnsSaved": "Mrežni stolpci so shranjeni!",
+    "failedToSaveGridColumns": "Shranjevanje mrežnih stolpcev ni uspelo"
   },
   "license": {
     "title": "Licenca za fotografijo",

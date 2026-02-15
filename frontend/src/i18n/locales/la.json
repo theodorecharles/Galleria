@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "Consuetudo CSS servata!",
     "failedToSaveHeaderColors": "Thema capitis servatum!",
     "errorSavingHeaderTheme": "Colores capitis servati!",
-    "errorSavingHeaderColors": "Defectum ad servandum thema capitis"
+    "errorSavingHeaderColors": "Defectum ad servandum thema capitis",
+    "gridColumns": "Columnae Retis",
+    "gridColumnsDescription": "Numerum columnarum ad quemque latitudinem scrinii punctum frangendi accommodare.",
+    "column": "columna",
+    "columns": "columnae",
+    "gridColumnsSaved": "Columnae retis servatae!",
+    "failedToSaveGridColumns": "Defecit ad servandas columnas retis"
   },
   "license": {
     "title": "Licentia Photonis",

@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "Vlastní CSS uloženo!",
     "failedToSaveHeaderColors": "Téma záhlaví uloženo!",
     "errorSavingHeaderTheme": "Barvy záhlaví uloženy!",
-    "errorSavingHeaderColors": "Nepodařilo se uložit téma záhlaví"
+    "errorSavingHeaderColors": "Nepodařilo se uložit téma záhlaví",
+    "gridColumns": "Mřížkové sloupce",
+    "gridColumnsDescription": "Přizpůsobte počet sloupců zobrazených při každém bodu zlomu šířky obrazovky.",
+    "column": "sloupec",
+    "columns": "sloupce",
+    "gridColumnsSaved": "Mřížkové sloupce uloženy!",
+    "failedToSaveGridColumns": "Nepodařilo se uložit mřížkové sloupce"
   },
   "license": {
     "title": "Licence fotografie",

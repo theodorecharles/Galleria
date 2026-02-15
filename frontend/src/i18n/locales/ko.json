@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "사용자 정의 CSS가 저장되었습니다!",
     "failedToSaveHeaderColors": "헤더 테마가 저장되었습니다!",
     "errorSavingHeaderTheme": "헤더 색상이 저장되었습니다!",
-    "errorSavingHeaderColors": "헤더 테마 저장 실패"
+    "errorSavingHeaderColors": "헤더 테마 저장 실패",
+    "gridColumns": "그리드 열",
+    "gridColumnsDescription": "각 화면 너비 분기점에서 표시되는 열의 수를 사용자 지정합니다.",
+    "column": "열",
+    "columns": "열들",
+    "gridColumnsSaved": "그리드 열이 저장되었습니다!",
+    "failedToSaveGridColumns": "그리드 열 저장에 실패했습니다."
   }
 }

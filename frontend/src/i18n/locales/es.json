@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "¡CSS personalizado guardado!",
     "failedToSaveHeaderColors": "¡Tema del encabezado guardado!",
     "errorSavingHeaderTheme": "¡Colores del encabezado guardados!",
-    "errorSavingHeaderColors": "No se pudo guardar el tema del encabezado"
+    "errorSavingHeaderColors": "No se pudo guardar el tema del encabezado",
+    "gridColumns": "Columnas de la cuadrícula",
+    "gridColumnsDescription": "Personaliza el número de columnas mostradas en cada punto de interrupción de ancho de pantalla.",
+    "column": "columna",
+    "columns": "columnas",
+    "gridColumnsSaved": "¡Columnas de la cuadrícula guardadas!",
+    "failedToSaveGridColumns": "Error al guardar las columnas de la cuadrícula"
   }
 }
