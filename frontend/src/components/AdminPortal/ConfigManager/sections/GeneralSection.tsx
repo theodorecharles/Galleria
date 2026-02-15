@@ -1367,7 +1367,7 @@ const GeneralSection: React.FC<GeneralSectionProps> = ({
                 { field: 'gridColumns1600' as const, label: '1600px+', defaultVal: 5 },
               ]).map(({ field, label, defaultVal }) => (
                 <div key={field} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ minWidth: '100px', fontSize: '0.9rem', color: 'inherit' }}>{label}</span>
+                  <span style={{ minWidth: '100px', fontSize: '0.9rem', color: '#e4e4e7' }}>{label}</span>
                   <CustomDropdown
                     value={String(branding[field] ?? defaultVal)}
                     options={Array.from({ length: 8 }, (_, i) => ({
