@@ -110,6 +110,14 @@
   color: #1e1e1e;
 }
 
+[data-photo-grid-theme="light"] .license-section h2 {
+  color: #1e1e1e;
+}
+
+[data-photo-grid-theme="light"] .license-url a {
+  color: #1e1e1e;
+}
+
 [data-photo-grid-theme="light"] .license-section h3 {
   color: #1e1e1e;
 }
