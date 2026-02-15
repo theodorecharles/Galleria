@@ -274,7 +274,11 @@ async function generateHomepageHtml() {
       headerBorderColor: config.branding?.headerBorderColor || "#1e1e1e",
       headerBorderOpacity: config.branding?.headerBorderOpacity ?? 0.2,
       headerDropdownTheme: config.branding?.headerDropdownTheme || "light",
-      photoGridTheme: config.branding?.photoGridTheme || "dark"
+      photoGridTheme: config.branding?.photoGridTheme || "dark",
+      gridColumns600: config.branding?.gridColumns600,
+      gridColumns900: config.branding?.gridColumns900,
+      gridColumns1200: config.branding?.gridColumns1200,
+      gridColumns1600: config.branding?.gridColumns1600
     };
 
     // Inject custom CSS if present

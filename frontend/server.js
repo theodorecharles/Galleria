@@ -713,7 +713,11 @@ app.get(/^\/.*/, async (req, res) => {
             headerBorderColor: configFile.branding?.headerBorderColor || "#1e1e1e",
             headerBorderOpacity: configFile.branding?.headerBorderOpacity ?? 0.2,
             headerDropdownTheme: configFile.branding?.headerDropdownTheme || "light",
-            photoGridTheme: configFile.branding?.photoGridTheme || "dark"
+            photoGridTheme: configFile.branding?.photoGridTheme || "dark",
+            gridColumns600: configFile.branding?.gridColumns600,
+            gridColumns900: configFile.branding?.gridColumns900,
+            gridColumns1200: configFile.branding?.gridColumns1200,
+            gridColumns1600: configFile.branding?.gridColumns1600
           };
 
           // Inject custom CSS if present
@@ -879,7 +883,11 @@ app.get(/^\/.*/, async (req, res) => {
             headerBorderColor: configFile.branding?.headerBorderColor || "#1e1e1e",
             headerBorderOpacity: configFile.branding?.headerBorderOpacity ?? 0.2,
             headerDropdownTheme: configFile.branding?.headerDropdownTheme || "light",
-            photoGridTheme: configFile.branding?.photoGridTheme || "dark"
+            photoGridTheme: configFile.branding?.photoGridTheme || "dark",
+            gridColumns600: configFile.branding?.gridColumns600,
+            gridColumns900: configFile.branding?.gridColumns900,
+            gridColumns1200: configFile.branding?.gridColumns1200,
+            gridColumns1600: configFile.branding?.gridColumns1600
           };
 
           // Inject custom CSS if present
@@ -1067,7 +1075,11 @@ app.get(/^\/.*/, async (req, res) => {
             headerBorderColor: configFile.branding?.headerBorderColor || "#1e1e1e",
             headerBorderOpacity: configFile.branding?.headerBorderOpacity ?? 0.2,
             headerDropdownTheme: configFile.branding?.headerDropdownTheme || "light",
-            photoGridTheme: configFile.branding?.photoGridTheme || "dark"
+            photoGridTheme: configFile.branding?.photoGridTheme || "dark",
+            gridColumns600: configFile.branding?.gridColumns600,
+            gridColumns900: configFile.branding?.gridColumns900,
+            gridColumns1200: configFile.branding?.gridColumns1200,
+            gridColumns1600: configFile.branding?.gridColumns1600
           };
 
           // Inject custom CSS if present
@@ -1182,7 +1194,11 @@ app.get(/^\/.*/, async (req, res) => {
       headerBorderColor: configFile.branding?.headerBorderColor || "#1e1e1e",
       headerBorderOpacity: configFile.branding?.headerBorderOpacity ?? 0.2,
       headerDropdownTheme: configFile.branding?.headerDropdownTheme || "light",
-      photoGridTheme: configFile.branding?.photoGridTheme || "dark"
+      photoGridTheme: configFile.branding?.photoGridTheme || "dark",
+      gridColumns600: configFile.branding?.gridColumns600,
+      gridColumns900: configFile.branding?.gridColumns900,
+      gridColumns1200: configFile.branding?.gridColumns1200,
+      gridColumns1600: configFile.branding?.gridColumns1600
     };
 
     // Inject custom CSS if present

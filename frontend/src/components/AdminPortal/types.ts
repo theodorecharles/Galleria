@@ -47,6 +47,10 @@ export interface BrandingConfig {
   headerDropdownTheme?: 'light' | 'dark';
   photoGridTheme?: 'light' | 'dark';
   customCSS?: string;
+  gridColumns600?: number;
+  gridColumns900?: number;
+  gridColumns1200?: number;
+  gridColumns1600?: number;
 }
 
 export interface ImageOptimizationSettings {

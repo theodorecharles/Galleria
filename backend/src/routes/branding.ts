@@ -79,6 +79,10 @@ interface BrandingConfig {
   headerDropdownTheme?: 'light' | 'dark';
   photoGridTheme?: 'light' | 'dark';
   customCSS?: string;
+  gridColumns600?: number;
+  gridColumns900?: number;
+  gridColumns1200?: number;
+  gridColumns1600?: number;
 }
 
 // Get current branding configuration
@@ -113,6 +117,10 @@ router.get("/", (req: Request, res: Response) => {
       headerDropdownTheme: branding.headerDropdownTheme || "light",
       photoGridTheme: branding.photoGridTheme || "dark",
       customCSS: branding.customCSS || "",
+      gridColumns600: branding.gridColumns600,
+      gridColumns900: branding.gridColumns900,
+      gridColumns1200: branding.gridColumns1200,
+      gridColumns1600: branding.gridColumns1600,
     };
 
     res.json(brandingConfig);
@@ -158,6 +166,10 @@ router.put("/", requireManager, (req: Request, res: Response) => {
       "headerDropdownTheme",
       "photoGridTheme",
       "customCSS",
+      "gridColumns600",
+      "gridColumns900",
+      "gridColumns1200",
+      "gridColumns1600",
     ];
     for (const [key, value] of Object.entries(updates)) {
       if (!validFields.includes(key)) {
@@ -187,6 +199,11 @@ router.put("/", requireManager, (req: Request, res: Response) => {
           updates.headerBlur = value ? 10 : 0; // true -> 10px, false -> 0px
         } else if (typeof value !== "number" || value < 0 || value > 20) {
           res.status(400).json({ error: "Header blur must be a number between 0 and 20" });
+          return;
+        }
+      } else if (key === "gridColumns600" || key === "gridColumns900" || key === "gridColumns1200" || key === "gridColumns1600") {
+        if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 8) {
+          res.status(400).json({ error: `${key} must be an integer between 1 and 8` });
           return;
         }
       } else if (key === "headerBorderOpacity") {
