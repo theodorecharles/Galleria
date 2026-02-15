@@ -1358,46 +1358,49 @@ const GeneralSection: React.FC<GeneralSectionProps> = ({
             <p className="branding-description">
               {t('general.gridColumnsDescription')}
             </p>
-            {([
-              { field: 'gridColumns600' as const, label: '600–899px', defaultVal: 2 },
-              { field: 'gridColumns900' as const, label: '900–1199px', defaultVal: 3 },
-              { field: 'gridColumns1200' as const, label: '1200–1599px', defaultVal: 4 },
-              { field: 'gridColumns1600' as const, label: '1600px+', defaultVal: 5 },
-            ]).map(({ field, label, defaultVal }) => (
-              <div key={field} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                <span style={{ minWidth: '110px', fontSize: '0.9rem', opacity: 0.85 }}>{label}</span>
-                <CustomDropdown
-                  value={String(branding[field] ?? defaultVal)}
-                  options={Array.from({ length: 8 }, (_, i) => ({
-                    value: String(i + 1),
-                    label: `${i + 1} ${i + 1 === 1 ? t('general.column') : t('general.columns')}`
-                  }))}
-                  openUpward={true}
-                  onChange={async (newValue) => {
-                    const numValue = parseInt(newValue, 10);
-                    handleBrandingChange(field, numValue);
-                    // Auto-save
-                    try {
-                      const res = await fetch(`${API_URL}/api/branding`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ [field]: numValue }),
-                      });
-                      if (res.ok) {
-                        setMessage({ type: 'success', text: t('general.gridColumnsSaved') });
-                        setBranding({ ...branding, [field]: numValue });
-                      } else {
-                        const errorData = await res.json().catch(() => ({}));
-                        setMessage({ type: 'error', text: errorData.error || t('general.failedToSaveGridColumns') });
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.5rem 1.5rem' }}>
+              {([
+                { field: 'gridColumns0' as const, label: '< 600px', defaultVal: 1 },
+                { field: 'gridColumns600' as const, label: '600–899px', defaultVal: 2 },
+                { field: 'gridColumns900' as const, label: '900–1199px', defaultVal: 3 },
+                { field: 'gridColumns1200' as const, label: '1200–1599px', defaultVal: 4 },
+                { field: 'gridColumns1600' as const, label: '1600px+', defaultVal: 5 },
+              ]).map(({ field, label, defaultVal }) => (
+                <div key={field} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ minWidth: '100px', fontSize: '0.9rem', color: 'inherit' }}>{label}</span>
+                  <CustomDropdown
+                    value={String(branding[field] ?? defaultVal)}
+                    options={Array.from({ length: 8 }, (_, i) => ({
+                      value: String(i + 1),
+                      label: `${i + 1} ${i + 1 === 1 ? t('general.column') : t('general.columns')}`
+                    }))}
+                    openUpward={true}
+                    onChange={async (newValue) => {
+                      const numValue = parseInt(newValue, 10);
+                      handleBrandingChange(field, numValue);
+                      // Auto-save
+                      try {
+                        const res = await fetch(`${API_URL}/api/branding`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          credentials: 'include',
+                          body: JSON.stringify({ [field]: numValue }),
+                        });
+                        if (res.ok) {
+                          setMessage({ type: 'success', text: t('general.gridColumnsSaved') });
+                          setBranding({ ...branding, [field]: numValue });
+                        } else {
+                          const errorData = await res.json().catch(() => ({}));
+                          setMessage({ type: 'error', text: errorData.error || t('general.failedToSaveGridColumns') });
+                        }
+                      } catch (err) {
+                        setMessage({ type: 'error', text: t('general.failedToSaveGridColumns') });
                       }
-                    } catch (err) {
-                      setMessage({ type: 'error', text: t('general.failedToSaveGridColumns') });
-                    }
-                  }}
-                />
-              </div>
-            ))}
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
     </>

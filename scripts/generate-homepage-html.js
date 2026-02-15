@@ -275,6 +275,7 @@ async function generateHomepageHtml() {
       headerBorderOpacity: config.branding?.headerBorderOpacity ?? 0.2,
       headerDropdownTheme: config.branding?.headerDropdownTheme || "light",
       photoGridTheme: config.branding?.photoGridTheme || "dark",
+      gridColumns0: config.branding?.gridColumns0,
       gridColumns600: config.branding?.gridColumns600,
       gridColumns900: config.branding?.gridColumns900,
       gridColumns1200: config.branding?.gridColumns1200,
