@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "CSS personnalisé enregistré !",
     "failedToSaveHeaderColors": "Thème de l'en-tête enregistré !",
     "errorSavingHeaderTheme": "Couleurs de l'en-tête enregistrées !",
-    "errorSavingHeaderColors": "Échec de l'enregistrement du thème de l'en-tête"
+    "errorSavingHeaderColors": "Échec de l'enregistrement du thème de l'en-tête",
+    "gridColumns": "Colonnes de la grille",
+    "gridColumnsDescription": "Personnalisez le nombre de colonnes affichées à chaque point de rupture de largeur d'écran.",
+    "column": "colonne",
+    "columns": "colonnes",
+    "gridColumnsSaved": "Colonnes de la grille enregistrées !",
+    "failedToSaveGridColumns": "Échec de l'enregistrement des colonnes de la grille"
   }
 }

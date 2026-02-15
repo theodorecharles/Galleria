@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "Tilpasset CSS lagret!",
     "failedToSaveHeaderColors": "Overskriftstema lagret!",
     "errorSavingHeaderTheme": "Overskriftsfarger lagret!",
-    "errorSavingHeaderColors": "Kunne ikke lagre overskriftstema"
+    "errorSavingHeaderColors": "Kunne ikke lagre overskriftstema",
+    "gridColumns": "Rutenettkolonner",
+    "gridColumnsDescription": "Tilpass antall kolonner som vises ved hvert skjermbreddepunkt.",
+    "column": "kolonne",
+    "columns": "kolonner",
+    "gridColumnsSaved": "Rutenettkolonner lagret!",
+    "failedToSaveGridColumns": "Kunne ikke lagre rutenettkolonner"
   }
 }

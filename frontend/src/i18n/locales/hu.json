@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "Egyedi CSS elmentve!",
     "failedToSaveHeaderColors": "Fejléc téma elmentve!",
     "errorSavingHeaderTheme": "Fejléc színek elmentve!",
-    "errorSavingHeaderColors": "Nem sikerült elmenteni a fejléc témát"
+    "errorSavingHeaderColors": "Nem sikerült elmenteni a fejléc témát",
+    "gridColumns": "Rács oszlopok",
+    "gridColumnsDescription": "Testreszabhatja a megjelenített oszlopok számát minden képernyőszélességi töréspontnál.",
+    "column": "oszlop",
+    "columns": "oszlopok",
+    "gridColumnsSaved": "Rács oszlopok mentve!",
+    "failedToSaveGridColumns": "Nem sikerült menteni a rács oszlopokat"
   },
   "license": {
     "title": "Fotólicenc",

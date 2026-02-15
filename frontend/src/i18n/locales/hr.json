@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "Prilagođeni CSS spremljen!",
     "failedToSaveHeaderColors": "Tema zaglavlja spremljena!",
     "errorSavingHeaderTheme": "Boje zaglavlja spremljene!",
-    "errorSavingHeaderColors": "Nije uspjelo spremanje teme zaglavlja"
+    "errorSavingHeaderColors": "Nije uspjelo spremanje teme zaglavlja",
+    "gridColumns": "Mrežni stupci",
+    "gridColumnsDescription": "Prilagodite broj stupaca prikazanih na svakoj širini zaslona.",
+    "column": "stupac",
+    "columns": "stupci",
+    "gridColumnsSaved": "Mrežni stupci su spremljeni!",
+    "failedToSaveGridColumns": "Nije uspjelo spremanje mrežnih stupaca"
   },
   "license": {
     "title": "Licenca za fotografije",

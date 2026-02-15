@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "Aangepaste CSS opgeslagen!",
     "failedToSaveHeaderColors": "Header thema opgeslagen!",
     "errorSavingHeaderTheme": "Header kleuren opgeslagen!",
-    "errorSavingHeaderColors": "Opslaan van header thema mislukt"
+    "errorSavingHeaderColors": "Opslaan van header thema mislukt",
+    "gridColumns": "Rasterkolommen",
+    "gridColumnsDescription": "Pas het aantal kolommen aan dat bij elke schermbreedte-breekpunt wordt weergegeven.",
+    "column": "kolom",
+    "columns": "kolommen",
+    "gridColumnsSaved": "Rasterkolommen opgeslagen!",
+    "failedToSaveGridColumns": "Opslaan van rasterkolommen mislukt"
   }
 }

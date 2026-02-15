@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "Prilagođeni CSS sačuvan!",
     "failedToSaveHeaderColors": "Tema zaglavlja sačuvana!",
     "errorSavingHeaderTheme": "Boje zaglavlja sačuvane!",
-    "errorSavingHeaderColors": "Neuspešno čuvanje teme zaglavlja"
+    "errorSavingHeaderColors": "Neuspešno čuvanje teme zaglavlja",
+    "gridColumns": "Kolone mreže",
+    "gridColumnsDescription": "Prilagodite broj kolona prikazanih na svakoj širini ekrana.",
+    "column": "kolona",
+    "columns": "kolone",
+    "gridColumnsSaved": "Kolone mreže sačuvane!",
+    "failedToSaveGridColumns": "Nije uspelo čuvanje kolona mreže"
   },
   "license": {
     "title": "Licenca za fotografije",

@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "CSS กำหนดเองบันทึกแล้ว!",
     "failedToSaveHeaderColors": "ธีมหัวข้อบันทึกแล้ว!",
     "errorSavingHeaderTheme": "สีของหัวข้อบันทึกแล้ว!",
-    "errorSavingHeaderColors": "ไม่สามารถบันทึกธีมหัวข้อได้"
+    "errorSavingHeaderColors": "ไม่สามารถบันทึกธีมหัวข้อได้",
+    "gridColumns": "คอลัมน์กริด",
+    "gridColumnsDescription": "ปรับแต่งจำนวนคอลัมน์ที่แสดงในแต่ละจุดแบ่งความกว้างของหน้าจอ",
+    "column": "คอลัมน์",
+    "columns": "คอลัมน์",
+    "gridColumnsSaved": "บันทึกคอลัมน์กริดเรียบร้อยแล้ว!",
+    "failedToSaveGridColumns": "ไม่สามารถบันทึกคอลัมน์กริดได้"
   },
   "license": {
     "title": "ใบอนุญาตภาพถ่าย",

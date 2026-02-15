@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "Naisave ang pasadyang CSS!",
     "failedToSaveHeaderColors": "Naisave ang tema ng header!",
     "errorSavingHeaderTheme": "Naisave ang mga kulay ng header!",
-    "errorSavingHeaderColors": "Nabigong isave ang tema ng header"
+    "errorSavingHeaderColors": "Nabigong isave ang tema ng header",
+    "gridColumns": "Mga Haligi ng Grid",
+    "gridColumnsDescription": "I-customize ang bilang ng mga haligi na ipinapakita sa bawat breakpoint ng lapad ng screen.",
+    "column": "haligi",
+    "columns": "mga haligi",
+    "gridColumnsSaved": "Na-save ang mga haligi ng grid!",
+    "failedToSaveGridColumns": "Nabigong i-save ang mga haligi ng grid"
   }
 }

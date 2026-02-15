@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "自定义CSS已保存！",
     "failedToSaveHeaderColors": "标题主题已保存！",
     "errorSavingHeaderTheme": "标题颜色已保存！",
-    "errorSavingHeaderColors": "保存标题主题失败"
+    "errorSavingHeaderColors": "保存标题主题失败",
+    "gridColumns": "网格列",
+    "gridColumnsDescription": "自定义在每个屏幕宽度断点显示的列数。",
+    "column": "列",
+    "columns": "列",
+    "gridColumnsSaved": "网格列已保存！",
+    "failedToSaveGridColumns": "保存网格列失败"
   }
 }

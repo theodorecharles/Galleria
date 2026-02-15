@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "CSS tùy chỉnh đã được lưu!",
     "failedToSaveHeaderColors": "Chủ đề tiêu đề đã được lưu!",
     "errorSavingHeaderTheme": "Màu tiêu đề đã được lưu!",
-    "errorSavingHeaderColors": "Không thể lưu chủ đề tiêu đề"
+    "errorSavingHeaderColors": "Không thể lưu chủ đề tiêu đề",
+    "gridColumns": "Cột lưới",
+    "gridColumnsDescription": "Tùy chỉnh số lượng cột hiển thị tại mỗi điểm ngắt độ rộng màn hình.",
+    "column": "cột",
+    "columns": "các cột",
+    "gridColumnsSaved": "Cột lưới đã được lưu!",
+    "failedToSaveGridColumns": "Không thể lưu cột lưới"
   }
 }

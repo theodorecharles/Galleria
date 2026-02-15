@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "CSS tersuai disimpan!",
     "failedToSaveHeaderColors": "Tema pengepala disimpan!",
     "errorSavingHeaderTheme": "Warna pengepala disimpan!",
-    "errorSavingHeaderColors": "Gagal menyimpan tema pengepala"
+    "errorSavingHeaderColors": "Gagal menyimpan tema pengepala",
+    "gridColumns": "Lajur Grid",
+    "gridColumnsDescription": "Sesuaikan bilangan lajur yang dipaparkan pada setiap titik pecah lebar skrin.",
+    "column": "lajur",
+    "columns": "lajur-lajur",
+    "gridColumnsSaved": "Lajur grid disimpan!",
+    "failedToSaveGridColumns": "Gagal menyimpan lajur grid"
   },
   "license": {
     "title": "Lesen Foto",

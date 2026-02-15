@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "Pasirinktinė CSS išsaugota!",
     "failedToSaveHeaderColors": "Antraštės tema išsaugota!",
     "errorSavingHeaderTheme": "Antraštės spalvos išsaugotos!",
-    "errorSavingHeaderColors": "Nepavyko išsaugoti antraštės temos"
+    "errorSavingHeaderColors": "Nepavyko išsaugoti antraštės temos",
+    "gridColumns": "Tinklelio stulpeliai",
+    "gridColumnsDescription": "Pritaikykite rodomų stulpelių skaičių kiekviename ekrano pločio lūžio taške.",
+    "column": "stulpelis",
+    "columns": "stulpeliai",
+    "gridColumnsSaved": "Tinklelio stulpeliai išsaugoti!",
+    "failedToSaveGridColumns": "Nepavyko išsaugoti tinklelio stulpelių"
   },
   "license": {
     "title": "Nuotraukų licencija",

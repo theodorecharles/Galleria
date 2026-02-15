@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "Vlastné CSS uložené!",
     "failedToSaveHeaderColors": "Téma hlavičky uložená!",
     "errorSavingHeaderTheme": "Farby hlavičky uložené!",
-    "errorSavingHeaderColors": "Nepodarilo sa uložiť tému hlavičky"
+    "errorSavingHeaderColors": "Nepodarilo sa uložiť tému hlavičky",
+    "gridColumns": "Stĺpce mriežky",
+    "gridColumnsDescription": "Prispôsobte počet stĺpcov zobrazených pri každom šírkovom bode zlomu obrazovky.",
+    "column": "stĺpec",
+    "columns": "stĺpce",
+    "gridColumnsSaved": "Stĺpce mriežky uložené!",
+    "failedToSaveGridColumns": "Nepodarilo sa uložiť stĺpce mriežky"
   },
   "license": {
     "title": "Licencia na fotografiu",

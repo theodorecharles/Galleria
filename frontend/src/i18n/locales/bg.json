@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "Персонализираният CSS е запазен!",
     "failedToSaveHeaderColors": "Темата на заглавката е запазена!",
     "errorSavingHeaderTheme": "Цветовете на заглавката са запазени!",
-    "errorSavingHeaderColors": "Неуспешно запазване на темата на заглавката"
+    "errorSavingHeaderColors": "Неуспешно запазване на темата на заглавката",
+    "gridColumns": "Колони на мрежата",
+    "gridColumnsDescription": "Персонализирайте броя на колоните, показвани при всяка ширина на екрана.",
+    "column": "колона",
+    "columns": "колони",
+    "gridColumnsSaved": "Колоните на мрежата са запазени!",
+    "failedToSaveGridColumns": "Неуспешно запазване на колоните на мрежата"
   },
   "license": {
     "title": "Лиценз на снимка",

@@ -241,7 +241,13 @@
     "failedToSaveHeaderTheme": "Користувацький CSS збережено!",
     "failedToSaveHeaderColors": "Тему заголовка збережено!",
     "errorSavingHeaderTheme": "Кольори заголовка збережено!",
-    "errorSavingHeaderColors": "Не вдалося зберегти тему заголовка"
+    "errorSavingHeaderColors": "Не вдалося зберегти тему заголовка",
+    "gridColumns": "Стовпці сітки",
+    "gridColumnsDescription": "Налаштуйте кількість стовпців, що відображаються на кожному контрольному пункті ширини екрана.",
+    "column": "стовпець",
+    "columns": "стовпці",
+    "gridColumnsSaved": "Стовпці сітки збережено!",
+    "failedToSaveGridColumns": "Не вдалося зберегти стовпці сітки"
   },
   "license": {
     "title": "Ліцензія на фото",

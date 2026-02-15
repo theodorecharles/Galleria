@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "CSS personalizado salvo!",
     "failedToSaveHeaderColors": "Tema do cabeçalho salvo!",
     "errorSavingHeaderTheme": "Cores do cabeçalho salvas!",
-    "errorSavingHeaderColors": "Falha ao salvar o tema do cabeçalho"
+    "errorSavingHeaderColors": "Falha ao salvar o tema do cabeçalho",
+    "gridColumns": "Colunas da Grade",
+    "gridColumnsDescription": "Personalize o número de colunas exibidas em cada ponto de interrupção de largura de tela.",
+    "column": "coluna",
+    "columns": "colunas",
+    "gridColumnsSaved": "Colunas da grade salvas!",
+    "failedToSaveGridColumns": "Falha ao salvar colunas da grade"
   }
 }

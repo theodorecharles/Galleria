@@ -1537,6 +1537,12 @@
     "failedToSaveHeaderTheme": "Anpassad CSS sparad!",
     "failedToSaveHeaderColors": "Huvudtema sparat!",
     "errorSavingHeaderTheme": "Huvudfärger sparade!",
-    "errorSavingHeaderColors": "Misslyckades med att spara huvudtema"
+    "errorSavingHeaderColors": "Misslyckades med att spara huvudtema",
+    "gridColumns": "Rutnätskolumner",
+    "gridColumnsDescription": "Anpassa antalet kolumner som visas vid varje skärmbreddsbrytningspunkt.",
+    "column": "kolumn",
+    "columns": "kolumner",
+    "gridColumnsSaved": "Rutnätskolumner sparade!",
+    "failedToSaveGridColumns": "Misslyckades med att spara rutnätskolumner"
   }
 }
