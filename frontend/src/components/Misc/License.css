@@ -105,6 +105,37 @@
   line-height: 1.6;
 }
 
+/* Photo Grid Light Theme */
+[data-photo-grid-theme="light"] .license-container h1 {
+  color: #1e1e1e;
+}
+
+[data-photo-grid-theme="light"] .license-section h3 {
+  color: #1e1e1e;
+}
+
+[data-photo-grid-theme="light"] .license-section p {
+  color: rgba(0, 0, 0, 0.75);
+}
+
+[data-photo-grid-theme="light"] .license-full-text {
+  background-color: rgba(0, 0, 0, 0.03);
+  color: rgba(0, 0, 0, 0.8);
+}
+
+[data-photo-grid-theme="light"] .license-notice {
+  background-color: rgba(74, 222, 128, 0.1);
+}
+
+[data-photo-grid-theme="light"] .license-attribution-example {
+  background-color: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-photo-grid-theme="light"] .license-attribution-example code {
+  color: rgba(0, 0, 0, 0.85);
+}
+
 @media (max-width: 768px) {
   .license-page {
     padding: 1.5rem 1rem 0 1rem;
