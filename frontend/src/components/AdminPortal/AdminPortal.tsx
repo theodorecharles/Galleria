@@ -428,7 +428,12 @@ export default function AdminPortal() {
         headerBorderOpacity: data.headerBorderOpacity ?? 0.2,
         headerDropdownTheme: data.headerDropdownTheme || 'light',
         photoGridTheme: data.photoGridTheme || 'dark',
-        customCSS: data.customCSS || ''
+        customCSS: data.customCSS || '',
+        gridColumns0: data.gridColumns0,
+        gridColumns600: data.gridColumns600,
+        gridColumns900: data.gridColumns900,
+        gridColumns1200: data.gridColumns1200,
+        gridColumns1600: data.gridColumns1600
       };
       info('[AdminPortal] Setting branding state to:', brandingData);
       setBranding(brandingData);

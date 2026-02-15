@@ -39,23 +39,43 @@ export const reconstructPhoto = (data: any[], albumName: string): Photo => {
 };
 
 /**
- * Get number of columns based on window width and photo count
+ * Get number of columns based on window width and photo count.
+ * When custom grid column values are set in branding, those values
+ * are used directly (bypassing the small-album special logic).
  */
 export const getNumColumns = (photoCount: number): number => {
-  // Always use 1 column on mobile (< 512px)
-  if (window.innerWidth < 512) return 1;
-  
-  // For albums with fewer than 12 images, use 2 columns
+  const width = window.innerWidth;
+
+  // Check for custom grid column settings from branding
+  const branding = (window as any).__RUNTIME_BRANDING__;
+  const custom0 = branding?.gridColumns0;
+  const custom600 = branding?.gridColumns600;
+  const custom900 = branding?.gridColumns900;
+  const custom1200 = branding?.gridColumns1200;
+  const custom1600 = branding?.gridColumns1600;
+  const hasCustom = custom0 != null || custom600 != null || custom900 != null || custom1200 != null || custom1600 != null;
+
+  if (hasCustom) {
+    // Use custom values with defaults as fallback
+    if (width >= 1600) return custom1600 ?? 5;
+    if (width >= 1200) return custom1200 ?? 4;
+    if (width >= 900) return custom900 ?? 3;
+    if (width >= 600) return custom600 ?? 2;
+    return custom0 ?? 1;
+  }
+
+  // Default behavior: 1 column on mobile
+  if (width < 600) return 1;
+
+  // Small-album special logic
   if (photoCount < 12) return 2;
-  
-  // For albums with 12-23 images, use 3 columns
   if (photoCount >= 12 && photoCount <= 23) return 3;
-  
-  // For albums with > 24 images, use responsive columns based on width
-  if (window.innerWidth >= 1600) return 5;
-  if (window.innerWidth >= 1200) return 4;
-  if (window.innerWidth >= 900) return 3;
-  if (window.innerWidth >= 600) return 2;
+
+  // Responsive columns based on width
+  if (width >= 1600) return 5;
+  if (width >= 1200) return 4;
+  if (width >= 900) return 3;
+  if (width >= 600) return 2;
   return 1;
 };
 
