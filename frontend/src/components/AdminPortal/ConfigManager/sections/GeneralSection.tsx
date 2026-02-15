@@ -1351,14 +1351,14 @@ const GeneralSection: React.FC<GeneralSectionProps> = ({
           </div>
 
           {/* Grid Columns */}
-          <div className="branding-group">
+          <div className="branding-group full-width">
             <label className="branding-label" style={{ display: 'block', marginBottom: '0.5rem' }}>
               {t('general.gridColumns')}
             </label>
             <p className="branding-description">
               {t('general.gridColumnsDescription')}
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.5rem 1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '0.5rem 1.5rem' }}>
               {([
                 { field: 'gridColumns0' as const, label: '< 600px', defaultVal: 1 },
                 { field: 'gridColumns600' as const, label: '600–899px', defaultVal: 2 },
