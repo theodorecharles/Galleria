@@ -27,6 +27,9 @@ interface AlbumContentPanelGridProps {
   viewMode: ViewMode;
   deletingPhotoId: string | null;
   selectedAlbum: string;
+  selectMode: boolean;
+  selectedPhotoIds: Set<string>;
+  onTogglePhotoSelect: (photoId: string, withShift: boolean) => void;
   onPhotoDragStart: (event: any, setActiveId?: (id: string | null) => void) => void;
   onPhotoDragEnd: (event: any, setActiveId?: (id: string | null) => void) => void;
   onOpenEditModal: (photo: Photo) => void;
@@ -47,6 +50,9 @@ const AlbumContentPanelGrid: React.FC<AlbumContentPanelGridProps> = ({
   selectedAlbum,
   activeId,
   viewMode,
+  selectMode,
+  selectedPhotoIds,
+  onTogglePhotoSelect,
   onPhotoDragStart,
   onPhotoDragEnd,
   onOpenEditModal,
@@ -273,6 +279,9 @@ const AlbumContentPanelGrid: React.FC<AlbumContentPanelGridProps> = ({
                   canEdit={canEdit && !hasActiveUploads}
                   activeOverlayId={activeOverlayId}
                   setActiveOverlayId={setActiveOverlayId}
+                  selectMode={selectMode}
+                  isSelected={selectedPhotoIds.has(photo.id)}
+                  onToggleSelect={onTogglePhotoSelect}
                 />
               ))}
             </SortableContext>
@@ -290,9 +299,12 @@ const AlbumContentPanelGrid: React.FC<AlbumContentPanelGridProps> = ({
                   onDelete={onDeletePhoto}
                   deletingPhotoId={deletingPhotoId}
                   canEdit={canEdit && !hasActiveUploads}
+                  selectMode={selectMode}
+                  isSelected={false}
+                  onToggleSelect={onTogglePhotoSelect}
                 />
               ))}
-              
+
               {/* Existing album photos (already in album before upload) */}
               {Array.isArray(albumPhotos) && albumPhotos.filter(photo => photo && photo.id).map((photo) => (
                 <AlbumListItem
@@ -302,6 +314,9 @@ const AlbumContentPanelGrid: React.FC<AlbumContentPanelGridProps> = ({
                   onDelete={onDeletePhoto}
                   deletingPhotoId={deletingPhotoId}
                   canEdit={canEdit && !hasActiveUploads}
+                  selectMode={selectMode}
+                  isSelected={selectedPhotoIds.has(photo.id)}
+                  onToggleSelect={onTogglePhotoSelect}
                 />
               ))}
             </SortableContext>

@@ -39,6 +39,8 @@ export interface ConfirmModalConfig {
   onConfirm: () => void;
   confirmText?: string;
   isDanger?: boolean;
+  /** Optional explicit modal title. When omitted, the modal infers one from `photo`/defaults. */
+  title?: string;
   photo?: {
     thumbnail: string;
     title?: string;

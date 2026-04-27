@@ -126,6 +126,75 @@ export const createPhotoHandlers = (props: PhotoHandlersProps) => {
     }
   };
 
+  /**
+   * Bulk-delete the supplied photo IDs (format: "album/filename").
+   * Shows a single confirmation, then issues parallel DELETE requests against the
+   * existing per-photo endpoint. Updates local state for each successful delete and
+   * surfaces a single toast summarising the result.
+   */
+  const handleBulkDeletePhotos = async (
+    photoIds: string[],
+    onCompleted?: (deletedIds: string[]) => void
+  ): Promise<void> => {
+    if (!photoIds || photoIds.length === 0) return;
+
+    const count = photoIds.length;
+    showConfirmation({
+      title: t('albumsManager.deleteSelectedQuestion', { count }),
+      message: t('albumsManager.deleteSelectedWarning', { count }),
+      confirmText: t('albumsManager.deleteSelected'),
+      isDanger: true,
+      onConfirm: async () => {
+        const results = await Promise.all(photoIds.map(async (photoId) => {
+          // photoId is "album/filename"
+          const sep = photoId.indexOf('/');
+          if (sep < 0) return { photoId, ok: false } as const;
+          const album = photoId.slice(0, sep);
+          const filename = decodeURIComponent(photoId.slice(sep + 1));
+          try {
+            const res = await fetchWithRateLimitCheck(
+              `${API_URL}/api/albums/${encodeURIComponent(album)}/photos/${encodeURIComponent(filename)}`,
+              {
+                method: 'DELETE',
+                credentials: 'include',
+              }
+            );
+            if (res.ok) {
+              trackPhotoDeleted(album, filename, filename);
+              return { photoId, ok: true } as const;
+            }
+            return { photoId, ok: false } as const;
+          } catch {
+            return { photoId, ok: false } as const;
+          }
+        }));
+
+        const succeededIds = results.filter(r => r.ok).map(r => r.photoId);
+        const failedCount = results.length - succeededIds.length;
+
+        if (succeededIds.length > 0) {
+          // Remove deleted photos from both local state and original order
+          const succeededSet = new Set(succeededIds);
+          setAlbumPhotos((prev: Photo[]) => prev.filter((p: Photo) => !succeededSet.has(p.id)));
+          setOriginalPhotoOrder((prev: Photo[]) => prev.filter((p: Photo) => !succeededSet.has(p.id)));
+        }
+
+        if (failedCount === 0) {
+          setMessage({ type: 'success', text: t('albumsManager.photosDeleted', { count: succeededIds.length }) });
+        } else if (succeededIds.length === 0) {
+          setMessage({ type: 'error', text: t('albumsManager.failedToDeletePhotos', { count: failedCount }) });
+        } else {
+          setMessage({
+            type: 'error',
+            text: t('albumsManager.bulkDeletePartial', { succeeded: succeededIds.length, failed: failedCount }),
+          });
+        }
+
+        if (onCompleted) onCompleted(succeededIds);
+      },
+    });
+  };
+
   const handleDeletePhoto = async (
     album: string,
     filename: string,
@@ -366,6 +435,7 @@ export const createPhotoHandlers = (props: PhotoHandlersProps) => {
 
   return {
     handleDeletePhoto,
+    handleBulkDeletePhotos,
     handleRetryOptimization,
     handleRetryAI,
     handleShuffleClick,

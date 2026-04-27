@@ -4,12 +4,12 @@
  * Orchestrates header controls and photo/video grid/list view
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import AlbumContentPanelHeader from './AlbumContentPanelHeader';
 import AlbumContentPanelGrid from './AlbumContentPanelGrid';
 import { Photo, UploadingImage } from '../types';
-import { ShuffleIcon } from '../../../icons';
+import { ShuffleIcon, TrashIcon, CloseIcon, CheckmarkIcon } from '../../../icons';
 import '../../PhotosModal.css';
 
 type ViewMode = 'grid' | 'list';
@@ -45,6 +45,7 @@ interface AlbumContentPanelProps {
   onPhotoDragEnd: (event: any, setActiveId?: (id: string | null) => void) => void;
   onOpenEditModal: (photo: Photo) => void;
   onDeletePhoto: (album: string, filename: string, photoTitle?: string, thumbnail?: string, mediaType?: 'photo' | 'video') => void;
+  onBulkDeletePhotos: (photoIds: string[], onCompleted?: (deletedIds: string[]) => void) => void;
   onRetryOptimization?: (album: string, filename: string) => void;
   onRetryAI?: (album: string, filename: string) => void;
   onRetryUpload?: (filename: string, albumName: string) => void;
@@ -86,6 +87,7 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
   onPhotoDragEnd,
   onOpenEditModal,
   onDeletePhoto,
+  onBulkDeletePhotos,
   onRetryOptimization,
   onRetryAI,
   onRetryUpload,
@@ -104,6 +106,101 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
   const [photoActiveId, setPhotoActiveId] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(54);
+
+  // Multi-select state for bulk operations (ticket #622)
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(() => new Set());
+  const lastSelectedIdRef = useRef<string | null>(null);
+
+  // Stable list of selectable photo ids (matches the order the grid renders them in)
+  const selectablePhotoIds = useMemo(
+    () => (Array.isArray(albumPhotos) ? albumPhotos.filter(p => p && p.id).map(p => p.id) : []),
+    [albumPhotos]
+  );
+
+  // Drop selections that no longer correspond to a real photo (e.g. after a delete or album change)
+  useEffect(() => {
+    if (selectedPhotoIds.size === 0) return;
+    const valid = new Set(selectablePhotoIds);
+    let changed = false;
+    const next = new Set<string>();
+    selectedPhotoIds.forEach(id => {
+      if (valid.has(id)) {
+        next.add(id);
+      } else {
+        changed = true;
+      }
+    });
+    if (changed) setSelectedPhotoIds(next);
+  }, [selectablePhotoIds, selectedPhotoIds]);
+
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false);
+    setSelectedPhotoIds(new Set());
+    lastSelectedIdRef.current = null;
+  }, []);
+
+  const toggleSelectMode = useCallback(() => {
+    setSelectMode(prev => !prev);
+    // Always clear selection on transition; safe because new Set() === empty
+    setSelectedPhotoIds(new Set());
+    lastSelectedIdRef.current = null;
+  }, []);
+
+  // Reset selection when album changes
+  useEffect(() => {
+    exitSelectMode();
+  }, [selectedAlbum, exitSelectMode]);
+
+  const handleTogglePhotoSelect = useCallback((photoId: string, withShift: boolean) => {
+    setSelectedPhotoIds(prev => {
+      const next = new Set(prev);
+      const anchor = lastSelectedIdRef.current;
+      if (withShift && anchor && anchor !== photoId) {
+        const ids = selectablePhotoIds;
+        const a = ids.indexOf(anchor);
+        const b = ids.indexOf(photoId);
+        if (a >= 0 && b >= 0) {
+          const [start, end] = a < b ? [a, b] : [b, a];
+          // Range-select adds photos in the range without deselecting existing ones
+          for (let i = start; i <= end; i++) next.add(ids[i]);
+          lastSelectedIdRef.current = photoId;
+          return next;
+        }
+      }
+      if (next.has(photoId)) {
+        next.delete(photoId);
+      } else {
+        next.add(photoId);
+      }
+      lastSelectedIdRef.current = photoId;
+      return next;
+    });
+  }, [selectablePhotoIds]);
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedPhotoIds(prev => {
+      // If everything's selected, clear; otherwise select all
+      if (prev.size === selectablePhotoIds.length && selectablePhotoIds.length > 0) {
+        return new Set();
+      }
+      return new Set(selectablePhotoIds);
+    });
+  }, [selectablePhotoIds]);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedPhotoIds.size === 0) return;
+    const ids = Array.from(selectedPhotoIds);
+    onBulkDeletePhotos(ids, () => {
+      // Whether all or some succeeded, leave select mode for a clean state
+      exitSelectMode();
+    });
+  }, [selectedPhotoIds, onBulkDeletePhotos, exitSelectMode]);
+
+  const showBulkActionBar = selectMode;
+  // Hide reorder bar while in select mode (drag is disabled, so the bar is meaningless)
+  const showReorderBar = hasEverDragged && canEdit && !selectMode;
+  const allSelected = selectablePhotoIds.length > 0 && selectedPhotoIds.size === selectablePhotoIds.length;
 
   // Measure actual header height on mount (accounts for safe-area-inset-top)
   useEffect(() => {
@@ -170,7 +267,7 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
     <>
       <div className={`photos-modal-backdrop ${isClosing ? 'closing' : ''}`} onClick={handleClose} />
       <div
-        className={`photos-modal ${isDragging ? 'drag-over' : ''} ${isClosing ? 'closing' : ''} ${hasEverDragged ? 'has-reorder-bar' : ''}`}
+        className={`photos-modal ${isDragging ? 'drag-over' : ''} ${isClosing ? 'closing' : ''} ${(showReorderBar || showBulkActionBar) ? 'has-reorder-bar' : ''} ${selectMode ? 'select-mode' : ''}`}
         style={{
           top: `${headerHeight}px`,
           height: `calc(100vh - ${headerHeight}px)`,
@@ -187,6 +284,9 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
           albumPhotos={albumPhotos}
           uploadingImages={uploadingImages}
           viewMode={viewMode}
+          selectMode={selectMode}
+          canSelect={canEdit && albumPhotos.length > 0}
+          onToggleSelectMode={toggleSelectMode}
           onClose={handleClose}
           onUploadPhotos={onUploadPhotos}
           onDeleteAlbum={onDeleteAlbum}
@@ -209,6 +309,9 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
           viewMode={viewMode}
           deletingPhotoId={deletingPhotoId}
           selectedAlbum={selectedAlbum}
+          selectMode={selectMode}
+          selectedPhotoIds={selectedPhotoIds}
+          onTogglePhotoSelect={handleTogglePhotoSelect}
           onPhotoDragStart={onPhotoDragStart}
           onPhotoDragEnd={onPhotoDragEnd}
           onOpenEditModal={onOpenEditModal}
@@ -220,8 +323,45 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
           canEdit={canEdit}
         />
 
+        {/* Bulk-action bar (shown while in select mode) - takes priority over reorder bar */}
+        {showBulkActionBar && (
+          <div className="photos-reorder-bar photos-bulk-action-bar" role="region" aria-label={t('albumsManager.bulkActionsAria')}>
+            <div className="photos-reorder-left">
+              <button
+                onClick={handleSelectAll}
+                className="photos-btn photos-btn-ghost"
+                title={allSelected ? t('albumsManager.deselectAll') : t('albumsManager.selectAll')}
+              >
+                <CheckmarkIcon width="16" height="16" />
+                <span>{allSelected ? t('albumsManager.deselectAll') : t('albumsManager.selectAll')}</span>
+              </button>
+              <span className="bulk-selected-count" aria-live="polite">
+                {t('albumsManager.selectedCount', { count: selectedPhotoIds.size })}
+              </span>
+            </div>
+            <div className="photos-reorder-right">
+              <button
+                onClick={exitSelectMode}
+                className="photos-btn photos-btn-ghost"
+              >
+                <CloseIcon width="16" height="16" />
+                <span>{t('common.cancel')}</span>
+              </button>
+              <button
+                onClick={handleDeleteSelected}
+                className="photos-btn photos-btn-danger"
+                disabled={selectedPhotoIds.size === 0}
+                title={t('albumsManager.deleteSelected')}
+              >
+                <TrashIcon width="16" height="16" />
+                <span>{t('albumsManager.deleteSelected')}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Reorder Controls (shown when dragging) - Now part of modal layout */}
-        {hasEverDragged && canEdit && (
+        {showReorderBar && (
           <div className="photos-reorder-bar">
             <div className="photos-reorder-left">
               <button

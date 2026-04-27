@@ -872,6 +872,7 @@ const AlbumsManager: React.FC<AlbumsManagerProps> = ({
               onPhotoDragEnd={(event, setActiveId) => photoManagement.handlePhotoDragEnd(event, setActiveId)}
               onOpenEditModal={openEditModal}
               onDeletePhoto={photoHandlers.handleDeletePhoto}
+              onBulkDeletePhotos={photoHandlers.handleBulkDeletePhotos}
               onRetryOptimization={photoHandlers.handleRetryOptimization}
               onRetryAI={photoHandlers.handleRetryAI}
               onRetryUpload={uploadHandlers.handleRetryUpload}
