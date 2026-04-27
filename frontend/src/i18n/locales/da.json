@@ -53,7 +53,9 @@
     "headBackHome": "Gå tilbage til start"
   },
   "photoModal": {
-    "navigationHint": "← tryk på piletasterne for at navigere →"
+    "navigationHint": "← tryk på piletasterne for at navigere →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "seo": {
     "homepageTitle": "{{siteName}} - Galleri",

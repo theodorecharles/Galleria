@@ -53,7 +53,9 @@
     "headBackHome": "Vrátit se domů"
   },
   "photoModal": {
-    "navigationHint": "← stiskněte šipky pro navigaci →"
+    "navigationHint": "← stiskněte šipky pro navigaci →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "seo": {
     "homepageTitle": "{{siteName}} - Galerie",

@@ -53,7 +53,9 @@
     "headBackHome": "Kembali ke Halaman Utama"
   },
   "photoModal": {
-    "navigationHint": "← tekan kekunci anak panah untuk navigasi →"
+    "navigationHint": "← tekan kekunci anak panah untuk navigasi →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "seo": {
     "homepageTitle": "{{siteName}} - Galeri",

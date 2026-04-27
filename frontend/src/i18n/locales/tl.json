@@ -53,7 +53,9 @@
     "headBackHome": "Bumalik sa Tahanan"
   },
   "photoModal": {
-    "navigationHint": "← pindutin ang mga arrow key upang mag-navigate →"
+    "navigationHint": "← pindutin ang mga arrow key upang mag-navigate →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "header": {
     "albums": "Mga Album",

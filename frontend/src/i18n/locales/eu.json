@@ -53,7 +53,9 @@
     "headBackHome": "Itzuli Etxera"
   },
   "photoModal": {
-    "navigationHint": "← gezi teklekin nabigatu →"
+    "navigationHint": "← gezi teklekin nabigatu →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "seo": {
     "homepageTitle": "{{siteName}} - Galeria",

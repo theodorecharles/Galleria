@@ -53,7 +53,9 @@
     "headBackHome": "Grįžti namo"
   },
   "photoModal": {
-    "navigationHint": "← naudokite rodyklių klavišus navigacijai →"
+    "navigationHint": "← naudokite rodyklių klavišus navigacijai →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "seo": {
     "homepageTitle": "{{siteName}} - Galerija",

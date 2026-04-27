@@ -53,7 +53,9 @@
     "headBackHome": "ホームに戻る"
   },
   "photoModal": {
-    "navigationHint": "← 矢印キーを押して移動 →"
+    "navigationHint": "← 矢印キーを押して移動 →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "header": {
     "albums": "アルバム",

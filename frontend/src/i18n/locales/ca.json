@@ -53,7 +53,9 @@
     "headBackHome": "Torna a casa"
   },
   "photoModal": {
-    "navigationHint": "← prem les tecles de fletxa per navegar →"
+    "navigationHint": "← prem les tecles de fletxa per navegar →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "seo": {
     "homepageTitle": "{{siteName}} - Galeria",

@@ -53,7 +53,9 @@
     "headBackHome": "Επιστροφή στην Αρχική Σελίδα"
   },
   "photoModal": {
-    "navigationHint": "← πατήστε τα πλήκτρα βέλους για πλοήγηση →"
+    "navigationHint": "← πατήστε τα πλήκτρα βέλους για πλοήγηση →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "seo": {
     "homepageTitle": "{{siteName}} - Γκαλερί",

@@ -287,6 +287,23 @@
   height: 20px;
 }
 
+/* Position counter shown between prev/next buttons */
+.modal-navigation-counter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  padding: 0 0.5rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  user-select: none;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 /* Image Title */
 .modal-image-title {
   position: absolute;
