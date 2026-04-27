@@ -1168,39 +1168,35 @@ router.patch("/:album/rename", requireManager, async (req: Request, res: Respons
     // This way if DB update fails, filesystem is unchanged
     const db = getDatabase();
     
-    // Start transaction with foreign keys temporarily disabled
-    // This is needed because share_links has FK to albums(name) without ON UPDATE CASCADE
+    // share_links.album has ON UPDATE CASCADE (see database.ts), so renaming
+    // the album row cascades automatically. The explicit share_links UPDATE
+    // below is kept as a safety net for older databases that pre-date the
+    // migrate-share-links-cascade.js migration.
     const transaction = db.transaction(() => {
-      // Temporarily disable foreign keys for this transaction
-      db.pragma('foreign_keys = OFF');
-      
       // Update albums table
       const result = db.prepare(`
-        UPDATE albums 
+        UPDATE albums
         SET name = ?, updated_at = CURRENT_TIMESTAMP
         WHERE name = ?
       `).run(sanitizedNewName, sanitizedOldName);
-      
+
       if (result.changes === 0) {
         throw new Error('Album not found in database');
       }
-      
+
       // Update image_metadata table
       db.prepare(`
-        UPDATE image_metadata 
+        UPDATE image_metadata
         SET album = ?, updated_at = CURRENT_TIMESTAMP
         WHERE album = ?
       `).run(sanitizedNewName, sanitizedOldName);
-      
+
       // Update share_links table
       db.prepare(`
-        UPDATE share_links 
+        UPDATE share_links
         SET album = ?
         WHERE album = ?
       `).run(sanitizedNewName, sanitizedOldName);
-      
-      // Re-enable foreign keys
-      db.pragma('foreign_keys = ON');
     });
     
     transaction();
