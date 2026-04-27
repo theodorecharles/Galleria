@@ -429,6 +429,28 @@ function escapeHtml(str) {
 }
 
 /**
+ * Strip sequences from user-supplied CSS that could break out of a <style>
+ * raw-text element or smuggle in script content. Matches the same patterns
+ * blocked by the backend validator (see backend/src/routes/branding.ts).
+ *
+ * Defense-in-depth: backend rejects bad input on save, but a stale config.json
+ * may still contain legacy payloads. We never want those reaching the browser.
+ */
+function sanitizeCustomCSS(css) {
+  if (typeof css !== "string" || !css) return "";
+  // Block any closing tag (</style, </script, etc.), HTML comments (<!--),
+  // and script-tag openers (<script). Also catch HTML-entity-encoded variants
+  // even though entities are not decoded inside <style> raw text — belt &
+  // braces.
+  const dangerous = /<\s*\/|<\s*!|<\s*script|&lt;\s*\/|&lt;\s*!|&lt;\s*script|&#0*60;\s*\/|&#0*60;\s*!|&#0*60;\s*script/gi;
+  if (dangerous.test(css)) {
+    warn("[Frontend] customCSS contained disallowed sequences; stripping before injection");
+    return css.replace(dangerous, "");
+  }
+  return css;
+}
+
+/**
  * Replace runtime placeholders with current config values
  */
 function replaceRuntimePlaceholders(html, apiUrl) {
@@ -722,7 +744,7 @@ app.get(/^\/.*/, async (req, res) => {
           };
 
           // Inject custom CSS if present
-          const customCSS = configFile.branding?.customCSS || "";
+          const customCSS = sanitizeCustomCSS(configFile.branding?.customCSS || "");
           let htmlWithCustomCSS = htmlWithPlaceholders;
           if (customCSS) {
             htmlWithCustomCSS = htmlWithPlaceholders.replace(
@@ -893,7 +915,7 @@ app.get(/^\/.*/, async (req, res) => {
           };
 
           // Inject custom CSS if present
-          const customCSS = configFile.branding?.customCSS || "";
+          const customCSS = sanitizeCustomCSS(configFile.branding?.customCSS || "");
           let htmlWithCustomCSS = htmlWithPlaceholders;
           if (customCSS) {
             htmlWithCustomCSS = htmlWithPlaceholders.replace(
@@ -1086,7 +1108,7 @@ app.get(/^\/.*/, async (req, res) => {
           };
 
           // Inject custom CSS if present
-          const customCSS = configFile.branding?.customCSS || "";
+          const customCSS = sanitizeCustomCSS(configFile.branding?.customCSS || "");
           let htmlWithCustomCSS = htmlWithPlaceholders;
           if (customCSS) {
             htmlWithCustomCSS = htmlWithPlaceholders.replace(
@@ -1206,7 +1228,7 @@ app.get(/^\/.*/, async (req, res) => {
     };
 
     // Inject custom CSS if present
-    const customCSS = configFile.branding?.customCSS || "";
+    const customCSS = sanitizeCustomCSS(configFile.branding?.customCSS || "");
     if (customCSS) {
       modifiedHtml = modifiedHtml.replace(
         '</head>',
