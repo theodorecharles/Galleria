@@ -37,8 +37,8 @@ interface ContentModalProps {
 const ContentModal: React.FC<ContentModalProps> = ({
   selectedPhoto,
   album,
-  currentIndex: _currentIndex, // Unused but kept for future UI features
-  totalPhotos: _totalPhotos, // Unused but kept for future UI features
+  currentIndex,
+  totalPhotos,
   onNavigatePrev,
   onNavigateNext,
   onClose,
@@ -691,6 +691,8 @@ const ContentModal: React.FC<ContentModalProps> = ({
               showHint={showNavigationHint}
               onPrevious={handleNavigatePrev}
               onNext={handleNavigateNext}
+              currentIndex={currentIndex}
+              totalPhotos={totalPhotos}
               style={{}}
             />
 

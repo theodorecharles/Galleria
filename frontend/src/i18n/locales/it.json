@@ -53,7 +53,9 @@
     "headBackHome": "Torna a casa"
   },
   "photoModal": {
-    "navigationHint": "← premi i tasti freccia per navigare →"
+    "navigationHint": "← premi i tasti freccia per navigare →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "header": {
     "albums": "Album",

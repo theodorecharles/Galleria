@@ -53,7 +53,9 @@
     "headBackHome": "Gå tillbaka hem"
   },
   "photoModal": {
-    "navigationHint": "← tryck på piltangenterna för att navigera →"
+    "navigationHint": "← tryck på piltangenterna för att navigera →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "header": {
     "albums": "Album",

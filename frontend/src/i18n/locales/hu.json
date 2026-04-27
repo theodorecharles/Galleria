@@ -53,7 +53,9 @@
     "headBackHome": "Vissza a kezdőlapra"
   },
   "photoModal": {
-    "navigationHint": "← nyomd meg a nyílbillentyűket a navigáláshoz →"
+    "navigationHint": "← nyomd meg a nyílbillentyűket a navigáláshoz →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "seo": {
     "homepageTitle": "{{siteName}} - Galéria",

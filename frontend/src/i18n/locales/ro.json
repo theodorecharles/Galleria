@@ -53,7 +53,9 @@
     "headBackHome": "Întoarce-te acasă"
   },
   "photoModal": {
-    "navigationHint": "← apasă tastele săgeată pentru a naviga →"
+    "navigationHint": "← apasă tastele săgeată pentru a naviga →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "header": {
     "albums": "Albume",

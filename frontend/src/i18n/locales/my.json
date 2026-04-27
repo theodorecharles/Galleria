@@ -53,7 +53,9 @@
     "headBackHome": "နေအိမ်သို့ ပြန်သွားပါ"
   },
   "photoModal": {
-    "navigationHint": "← လမ်းညွှန်ချက်များကို သုံး၍ သွားပါ →"
+    "navigationHint": "← လမ်းညွှန်ချက်များကို သုံး၍ သွားပါ →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "seo": {
     "homepageTitle": "{{siteName}} - ဂယ်လရီယာ",

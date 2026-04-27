@@ -53,7 +53,9 @@
     "headBackHome": "Вернуться домой"
   },
   "photoModal": {
-    "navigationHint": "← нажмите стрелки для навигации →"
+    "navigationHint": "← нажмите стрелки для навигации →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "header": {
     "albums": "Альбомы",

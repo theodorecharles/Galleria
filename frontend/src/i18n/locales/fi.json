@@ -53,7 +53,9 @@
     "headBackHome": "Palaa kotiin"
   },
   "photoModal": {
-    "navigationHint": "← käytä nuolinäppäimiä navigointiin →"
+    "navigationHint": "← käytä nuolinäppäimiä navigointiin →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "seo": {
     "homepageTitle": "{{siteName}} - Galleria",

@@ -53,7 +53,9 @@
     "headBackHome": "Redi Domi"
   },
   "photoModal": {
-    "navigationHint": "← sagittas preme ad navigandum →"
+    "navigationHint": "← sagittas preme ad navigandum →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "seo": {
     "homepageTitle": "{{siteName}} - Galleria",

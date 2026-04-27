@@ -53,7 +53,9 @@
     "headBackHome": "홈으로 돌아가기"
   },
   "photoModal": {
-    "navigationHint": "← 화살표 키를 눌러 탐색하세요 →"
+    "navigationHint": "← 화살표 키를 눌러 탐색하세요 →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "header": {
     "albums": "앨범",

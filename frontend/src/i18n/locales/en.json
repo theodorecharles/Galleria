@@ -53,7 +53,9 @@
     "headBackHome": "Head Back Home"
   },
   "photoModal": {
-    "navigationHint": "← press arrow keys to navigate →"
+    "navigationHint": "← press arrow keys to navigate →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "Photo {{current}} of {{total}}"
   },
   "seo": {
     "homepageTitle": "{{siteName}} - Galleria",

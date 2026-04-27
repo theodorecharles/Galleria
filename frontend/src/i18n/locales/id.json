@@ -53,7 +53,9 @@
     "headBackHome": "Kembali ke Beranda"
   },
   "photoModal": {
-    "navigationHint": "← tekan tombol panah untuk menavigasi →"
+    "navigationHint": "← tekan tombol panah untuk menavigasi →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "header": {
     "albums": "Album",

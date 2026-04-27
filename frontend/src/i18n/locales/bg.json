@@ -53,7 +53,9 @@
     "headBackHome": "Върни се у дома"
   },
   "photoModal": {
-    "navigationHint": "← натиснете стрелките за навигация →"
+    "navigationHint": "← натиснете стрелките за навигация →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "seo": {
     "homepageTitle": "{{siteName}} - Галерия",
