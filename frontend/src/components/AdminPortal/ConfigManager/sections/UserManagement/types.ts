@@ -9,7 +9,8 @@ export interface User {
   auth_methods: string[];
   status?: string;
   picture?: string;
-  invite_token?: string | null;
+  // invite_token is no longer returned by GET /api/auth-extended/users —
+  // admins fetch it on demand via GET /api/auth-extended/users/:userId/invite-link.
 }
 
 export interface Passkey {

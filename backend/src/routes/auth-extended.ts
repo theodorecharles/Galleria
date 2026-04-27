@@ -1430,24 +1430,28 @@ router.delete('/passkey/:id', requireAuth, async (req: Request, res: Response) =
 /**
  * List all users (admin only)
  *
- * SECURITY: This endpoint returns `invite_token` for users in the `invited`
- * state so the admin UI can render a "Copy Invite Link" affordance. The
+ * SECURITY: This endpoint MUST NOT return `invite_token` for any user. The
  * invite token is sufficient on its own to complete the invitation and take
  * over the invited account (see POST /invite/:token/complete, which is
- * unauthenticated by design). It MUST therefore stay gated by requireAdmin —
- * downgrading this to requireAuth leaks invite tokens to viewers/managers and
- * creates a direct privilege-escalation path.
+ * unauthenticated by design), so disclosing it on every page-load of the
+ * admin user list — even to admins — needlessly widens the blast radius of a
+ * compromised admin session and blocks future token-rotation / one-time-use
+ * controls. Admins fetch the token on demand via
+ * GET /users/:userId/invite-link when they explicitly click "Copy Link".
+ *
+ * Endpoint also stays gated by requireAdmin — downgrading to requireAuth
+ * would expose user metadata (roles, auth methods, MFA state, etc.) to
+ * viewers/managers.
  */
 router.get('/users', requireAdmin, (req: Request, res: Response) => {
   try {
     const users = getAllUsers();
-    
+
     // Remove sensitive data and add computed fields
     const sanitizedUsers = users.map((user: User) => {
       // Determine display status based on user state
       let displayStatus = null;
-      let inviteToken = null;
-      
+
       if (user.status === 'invited') {
         // Check if invite has expired
         if (user.invite_expires_at) {
@@ -1460,11 +1464,8 @@ router.get('/users', requireAdmin, (req: Request, res: Response) => {
         } else {
           displayStatus = 'invited';
         }
-        
-        // Include invite token for invited/expired users (needed for copy link functionality)
-        inviteToken = user.invite_token;
       }
-      
+
       return {
         id: user.id,
         email: user.email,
@@ -1475,7 +1476,7 @@ router.get('/users', requireAdmin, (req: Request, res: Response) => {
         passkey_count: user.passkeys?.length || 0,
         is_active: user.is_active,
         status: displayStatus, // Only show status if invited or expired
-        invite_token: inviteToken, // Include for invited users
+        // invite_token is intentionally NOT returned here — see SECURITY note above.
         created_at: user.created_at,
         last_login_at: user.last_login_at,
       };
@@ -1485,6 +1486,36 @@ router.get('/users', requireAdmin, (req: Request, res: Response) => {
   } catch (err) {
     error('[AuthExtended] List users error:', err);
     res.status(500).json({ error: 'Failed to list users' });
+  }
+});
+
+/**
+ * Fetch the invite link/token for a single invited user (admin only).
+ *
+ * Separated from GET /users so that the raw `invite_token` is only disclosed
+ * in response to an explicit admin action (clicking "Copy Invite Link"),
+ * rather than being baked into every list response. Returns 404 if the user
+ * does not exist or is not in an invited/expired state.
+ */
+router.get('/users/:userId/invite-link', requireAdmin, (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user id' });
+    }
+
+    const user = getUserById(userId);
+    if (!user || user.status !== 'invited' || !user.invite_token) {
+      return res.status(404).json({ error: 'No active invite for this user' });
+    }
+
+    return res.json({
+      invite_token: user.invite_token,
+      invite_expires_at: user.invite_expires_at,
+    });
+  } catch (err) {
+    error('[AuthExtended] Fetch invite link error:', err);
+    return res.status(500).json({ error: 'Failed to fetch invite link' });
   }
 });
 
