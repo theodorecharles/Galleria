@@ -1164,10 +1164,64 @@ router.patch("/:album/rename", requireManager, async (req: Request, res: Respons
       return;
     }
 
-    // Update database FIRST before touching filesystem
-    // This way if DB update fails, filesystem is unchanged
+    // Rename filesystem directories FIRST, tracking each successful rename
+    // so we can roll back on a later filesystem or database failure. This
+    // keeps the album consistent across DB and disk: either every rename
+    // sticks or none of them do.
+    const renamedPaths: Array<{ from: string; to: string }> = [];
+    const rollbackFsRenames = () => {
+      for (const { from, to } of [...renamedPaths].reverse()) {
+        try {
+          if (fs.existsSync(to)) {
+            fs.renameSync(to, from);
+          }
+        } catch (rollbackErr) {
+          error('[AlbumManagement] Failed to rollback filesystem rename', { from, to, err: rollbackErr });
+        }
+      }
+    };
+
+    const videoDir = req.app.get("videoDir");
+
+    try {
+      // Rename photos directory
+      fs.renameSync(oldAlbumPath, newAlbumPath);
+      renamedPaths.push({ from: oldAlbumPath, to: newAlbumPath });
+      info(`Renamed photos directory: ${sanitizedOldName} -> ${sanitizedNewName}`);
+
+      // Rename optimized directories
+      for (const dir of ['thumbnail', 'modal', 'download']) {
+        const oldOptimizedPath = path.join(optimizedDir, dir, sanitizedOldName);
+        const newOptimizedPath = path.join(optimizedDir, dir, sanitizedNewName);
+        if (fs.existsSync(oldOptimizedPath)) {
+          fs.renameSync(oldOptimizedPath, newOptimizedPath);
+          renamedPaths.push({ from: oldOptimizedPath, to: newOptimizedPath });
+          info(`Renamed optimized/${dir}: ${sanitizedOldName} -> ${sanitizedNewName}`);
+        }
+      }
+
+      // Rename video directory if it exists
+      if (videoDir) {
+        const oldVideoPath = path.join(videoDir, sanitizedOldName);
+        const newVideoPath = path.join(videoDir, sanitizedNewName);
+        if (fs.existsSync(oldVideoPath)) {
+          fs.renameSync(oldVideoPath, newVideoPath);
+          renamedPaths.push({ from: oldVideoPath, to: newVideoPath });
+          info(`Renamed video directory: ${sanitizedOldName} -> ${sanitizedNewName}`);
+        }
+      }
+    } catch (fsErr) {
+      error('[AlbumManagement] Filesystem rename failed, rolling back partial renames', fsErr);
+      rollbackFsRenames();
+      res.status(500).json({ error: 'Failed to rename album directories' });
+      return;
+    }
+
+    // Update database after all filesystem renames have succeeded.
+    // If the transaction throws, roll back every filesystem rename so the
+    // album is left in its original on-disk state.
     const db = getDatabase();
-    
+
     // share_links.album has ON UPDATE CASCADE (see database.ts), so renaming
     // the album row cascades automatically. The explicit share_links UPDATE
     // below is kept as a safety net for older databases that pre-date the
@@ -1198,34 +1252,15 @@ router.patch("/:album/rename", requireManager, async (req: Request, res: Respons
         WHERE album = ?
       `).run(sanitizedNewName, sanitizedOldName);
     });
-    
-    transaction();
-    info(`Updated database: ${sanitizedOldName} -> ${sanitizedNewName}`);
 
-    // Now rename filesystem directories
-    // Rename photos directory
-    fs.renameSync(oldAlbumPath, newAlbumPath);
-    info(`Renamed photos directory: ${sanitizedOldName} -> ${sanitizedNewName}`);
-
-    // Rename optimized directories
-    ['thumbnail', 'modal', 'download'].forEach(dir => {
-      const oldOptimizedPath = path.join(optimizedDir, dir, sanitizedOldName);
-      const newOptimizedPath = path.join(optimizedDir, dir, sanitizedNewName);
-      if (fs.existsSync(oldOptimizedPath)) {
-        fs.renameSync(oldOptimizedPath, newOptimizedPath);
-        info(`Renamed optimized/${dir}: ${sanitizedOldName} -> ${sanitizedNewName}`);
-      }
-    });
-
-    // Rename video directory if it exists
-    const videoDir = req.app.get("videoDir");
-    if (videoDir) {
-      const oldVideoPath = path.join(videoDir, sanitizedOldName);
-      const newVideoPath = path.join(videoDir, sanitizedNewName);
-      if (fs.existsSync(oldVideoPath)) {
-        fs.renameSync(oldVideoPath, newVideoPath);
-        info(`Renamed video directory: ${sanitizedOldName} -> ${sanitizedNewName}`);
-      }
+    try {
+      transaction();
+      info(`Updated database: ${sanitizedOldName} -> ${sanitizedNewName}`);
+    } catch (dbErr) {
+      error('[AlbumManagement] Database transaction failed, rolling back filesystem renames', dbErr);
+      rollbackFsRenames();
+      res.status(500).json({ error: 'Failed to update database' });
+      return;
     }
 
     // Invalidate cache for both old and new album names
