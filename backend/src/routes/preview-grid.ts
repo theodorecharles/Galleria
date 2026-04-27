@@ -7,11 +7,25 @@ import { Router, Request, Response } from "express";
 import sharp from "sharp";
 import fs from "fs";
 import path from "path";
-import { getShareLinkBySecret, isShareLinkExpired, getImagesForHomepage } from "../database.js";
+import { getShareLinkBySecret, isShareLinkExpired, getImagesForHomepage, getAlbumState } from "../database.js";
 import { DATA_DIR } from "../config.js";
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 
 const router = Router();
+
+/**
+ * Sanitize album name - mirrors the shared sanitizer used by album/share-link routes.
+ * Allows letters, numbers, spaces, hyphens, and underscores.
+ */
+const sanitizeName = (name: string): string | null => {
+  if (!name || name.includes("..") || name.includes("/") || name.includes("\\")) {
+    return null;
+  }
+  if (!/^[a-zA-Z0-9 _-]+$/.test(name)) {
+    return null;
+  }
+  return name.trim();
+};
 
 /**
  * Create a circular avatar with white border
@@ -232,39 +246,54 @@ async function generatePhotoGrid(options: PhotoGridOptions): Promise<Buffer> {
 router.get("/album/:albumName", async (req: Request, res: Response): Promise<void> => {
   try {
     const { albumName } = req.params;
+
+    // Validate the param before doing any filesystem or DB work
+    const sanitizedAlbum = sanitizeName(albumName);
+    if (!sanitizedAlbum) {
+      res.status(404).json({ error: "Album not found" });
+      return;
+    }
+
+    // Only expose previews for albums that are actually published. Unpublished
+    // albums must not be scrape-able by guessing directory names.
+    const albumState = getAlbumState(sanitizedAlbum);
+    if (!albumState || !albumState.published) {
+      res.status(404).json({ error: "Album not found" });
+      return;
+    }
+
     const photosDir = req.app.get("photosDir");
-    
-    const albumPath = path.join(photosDir, albumName);
-    
+    const albumPath = path.join(photosDir, sanitizedAlbum);
+
     if (!fs.existsSync(albumPath) || !fs.statSync(albumPath).isDirectory()) {
       res.status(404).json({ error: "Album not found" });
       return;
     }
-    
+
     // Get photos from album
     const files = fs.readdirSync(albumPath)
       .filter(file => /\.(jpg|jpeg|png|gif)$/i.test(file))
       .map(filename => ({ filename }));
-    
+
     if (files.length === 0) {
       res.status(404).json({ error: "No photos in album" });
       return;
     }
-    
+
     // Generate grid
     const gridBuffer = await generatePhotoGrid({
       photosDir,
-      albumName,
+      albumName: sanitizedAlbum,
       photos: files
     });
-    
+
     // Set cache headers (cache for 1 hour)
     res.set({
       'Content-Type': 'image/jpeg',
       'Cache-Control': 'public, max-age=3600',
-      'ETag': `"grid-${albumName}-${files.length}"`,
+      'ETag': `"grid-${sanitizedAlbum}-${files.length}"`,
     });
-    
+
     res.send(gridBuffer);
   } catch (err) {
     error("[PreviewGrid] Failed to generate album preview grid:", err);
