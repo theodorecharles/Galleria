@@ -282,36 +282,71 @@ export function disableMFA(userId: number): boolean {
 }
 
 /**
- * Verify backup code and remove it if valid
+ * Verify backup code and remove it if valid.
+ *
+ * Backup codes are single-use. To prevent a TOCTOU race where two concurrent
+ * MFA verifications presenting the same code both read the original list,
+ * both bcrypt-match, and both write back the same filtered list (consuming
+ * the code once in the DB but accepting it N times), the read/match/update
+ * is performed inside a `BEGIN IMMEDIATE` transaction. The row is re-read
+ * inside the transaction, and the UPDATE is conditional on the old JSON
+ * snapshot so a concurrent writer that committed first causes us to fail
+ * closed.
  */
 export function verifyBackupCode(user: User, code: string): boolean {
   if (!user.backup_codes || user.backup_codes.length === 0) {
     return false;
   }
-  
-  // Find matching backup code
-  let matchIndex = -1;
-  for (let i = 0; i < user.backup_codes.length; i++) {
-    if (bcrypt.compareSync(code, user.backup_codes[i])) {
-      matchIndex = i;
-      break;
-    }
-  }
-  
-  if (matchIndex === -1) return false;
-  
-  // Remove used backup code
+
   const db = getDatabase();
-  const remainingCodes = user.backup_codes.filter((_, i) => i !== matchIndex);
-  
-  const stmt = db.prepare(`
-    UPDATE users 
-    SET backup_codes = ?, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
-  `);
-  
-  stmt.run(JSON.stringify(remainingCodes), user.id);
-  return true;
+
+  const verifyAndConsume = db.transaction((): boolean => {
+    // Re-read backup_codes inside the transaction so we match against
+    // the canonical current state, not the caller's stale snapshot.
+    const row = db
+      .prepare('SELECT backup_codes FROM users WHERE id = ?')
+      .get(user.id) as { backup_codes: string | null } | undefined;
+
+    if (!row || !row.backup_codes) return false;
+
+    const currentCodesJson = row.backup_codes;
+    const currentCodes: string[] = JSON.parse(currentCodesJson);
+    if (currentCodes.length === 0) return false;
+
+    let matchIndex = -1;
+    for (let i = 0; i < currentCodes.length; i++) {
+      if (bcrypt.compareSync(code, currentCodes[i])) {
+        matchIndex = i;
+        break;
+      }
+    }
+
+    if (matchIndex === -1) return false;
+
+    const remainingCodes = currentCodes.filter((_, i) => i !== matchIndex);
+
+    // Conditional UPDATE: only succeeds if the row's backup_codes still
+    // matches the JSON we read. If a concurrent transaction committed
+    // first, this UPDATE affects 0 rows and we report failure.
+    const stmt = db.prepare(`
+      UPDATE users
+      SET backup_codes = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND backup_codes = ?
+    `);
+
+    const result = stmt.run(
+      JSON.stringify(remainingCodes),
+      user.id,
+      currentCodesJson
+    );
+
+    return result.changes === 1;
+  });
+
+  // .immediate() runs the transaction with BEGIN IMMEDIATE, acquiring a
+  // RESERVED lock at the start so concurrent writers (in other processes
+  // under PM2 cluster mode) serialize rather than racing.
+  return verifyAndConsume.immediate();
 }
 
 /**
