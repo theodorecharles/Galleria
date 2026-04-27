@@ -39,6 +39,21 @@ function log(message) {
   console.log(`${colors.blue}[Homepage SSR]${colors.reset} ${message}`);
 }
 
+/**
+ * Strip sequences from user-supplied CSS that could break out of a <style>
+ * raw-text element or smuggle in script content. Mirrors the same logic in
+ * frontend/server.js and backend/src/routes/branding.ts.
+ */
+function sanitizeCustomCSS(css) {
+  if (typeof css !== 'string' || !css) return '';
+  const dangerous = /<\s*\/|<\s*!|<\s*script|&lt;\s*\/|&lt;\s*!|&lt;\s*script|&#0*60;\s*\/|&#0*60;\s*!|&#0*60;\s*script/gi;
+  if (dangerous.test(css)) {
+    log(`${colors.yellow}WARNING: customCSS contained disallowed sequences; stripping before injection${colors.reset}`);
+    return css.replace(dangerous, '');
+  }
+  return css;
+}
+
 function success(message) {
   console.log(`${colors.green}✓${colors.reset} ${message}`);
 }
@@ -283,7 +298,7 @@ async function generateHomepageHtml() {
     };
 
     // Inject custom CSS if present
-    const customCSS = config.branding?.customCSS || "";
+    const customCSS = sanitizeCustomCSS(config.branding?.customCSS || "");
     if (customCSS) {
       html = html.replace(
         '</head>',
