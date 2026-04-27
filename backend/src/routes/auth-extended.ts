@@ -1531,11 +1531,48 @@ router.delete('/users/:userId', requireAdmin, async (req: Request, res: Response
           return;
         }
         
-        // Destroy sessions belonging to the deleted user
+        // Destroy sessions belonging to the deleted user.
+        // Sessions can be created by three auth flows, each storing the user
+        // identifier in a different shape:
+        //   - credential login (/login):           session.userId = <db id>
+        //   - passkey auth-verify:                  session.userId = <db id>
+        //                                           session.user.id  = <db id>
+        //   - Passport / Google OAuth:             session.passport.user = { id: googleProfileId, email, ... }
+        // Match all of them. Numeric ids are normalized via Number() in case a
+        // session store serialized ids as strings; OAuth sessions are matched
+        // by email since session.passport.user.id is the Google profile id,
+        // not the database user id.
         if (sessions) {
+          const targetId = Number(userId);
+          const targetEmail = targetUser.email ? targetUser.email.toLowerCase() : null;
           Object.keys(sessions).forEach((sid) => {
             const session = sessions[sid];
-            if (session?.passport?.user === userId) {
+            if (!session) return;
+
+            const credentialUserId = session.userId !== undefined ? Number(session.userId) : NaN;
+            const sessionUserObjId = session.user?.id !== undefined ? Number(session.user.id) : NaN;
+            const passportUser = session.passport?.user;
+            const passportUserId =
+              passportUser && typeof passportUser === 'object' && passportUser.id !== undefined
+                ? Number(passportUser.id)
+                : typeof passportUser === 'number'
+                  ? passportUser
+                  : NaN;
+            const passportEmail =
+              passportUser && typeof passportUser === 'object' && typeof passportUser.email === 'string'
+                ? passportUser.email.toLowerCase()
+                : null;
+            const sessionUserEmail =
+              typeof session.user?.email === 'string' ? session.user.email.toLowerCase() : null;
+
+            const belongsToDeletedUser =
+              credentialUserId === targetId ||
+              sessionUserObjId === targetId ||
+              passportUserId === targetId ||
+              (targetEmail !== null &&
+                (passportEmail === targetEmail || sessionUserEmail === targetEmail));
+
+            if (belongsToDeletedUser) {
               sessionStore.destroy(sid, (destroyErr) => {
                 if (destroyErr) {
                   error(`Failed to destroy session ${sid}:`, destroyErr);
