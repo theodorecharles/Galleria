@@ -8,7 +8,9 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import rateLimit from 'express-rate-limit';
 import { requireAdmin } from '../auth/middleware.js';
+import { csrfProtection } from '../security.js';
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,8 +18,24 @@ const __dirname = path.dirname(__filename);
 
 const router = Router();
 
+// Apply CSRF protection to all state-changing routes in this router.
+// (csrfProtection no-ops on GET/HEAD/OPTIONS, so it's safe to mount globally.)
+router.use(csrfProtection);
+
+// Strict per-IP rate limit for the restart endpoint. Restarting the process
+// is destructive to every connected user, so even an authenticated admin
+// should not be able to loop it. The global /api limiter is too permissive
+// for this specific action; cap to a handful of attempts per 15 minutes.
+const restartLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3,
+  message: { success: false, error: 'Too many restart attempts. Please wait before trying again.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Restart endpoint - triggers container restart or PM2 restart
-router.post('/restart', requireAdmin, (req, res) => {
+router.post('/restart', restartLimiter, requireAdmin, (req, res) => {
   try {
     // Get user info for logging
     const userId = (req.session as any)?.userId;
