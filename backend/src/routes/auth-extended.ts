@@ -140,12 +140,23 @@ async function verifyReauth(
         return { ok: false, status: 401, reason: 'Passkey verification failed' };
       }
       // Consume the challenge and bump the credential counter so the assertion
-      // cannot be replayed.
-      updatePasskeyCounter(
+      // cannot be replayed. The counter update is a compare-and-swap against
+      // `result.passkey.counter`; if a concurrent assertion already advanced
+      // the counter we MUST reject this one as a replay rather than accepting
+      // the auth and silently failing to advance the counter.
+      const counterAdvanced = updatePasskeyCounter(
         user.id,
         result.passkey.id,
+        result.passkey.counter,
         verification.authenticationInfo.newCounter
       );
+      if (!counterAdvanced) {
+        warn('[AuthExtended] Re-auth passkey counter CAS failed — possible replay', {
+          userId: user.id,
+          passkeyId: result.passkey.id,
+        });
+        return { ok: false, status: 401, reason: 'Passkey verification failed' };
+      }
       challenges.delete(`passkey-auth-${passkeySessionId}`);
       return { ok: true };
     } catch (err) {
@@ -1375,8 +1386,24 @@ router.post('/passkey/auth-verify', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Passkey verification failed' });
     }
 
-    // Update counter
-    updatePasskeyCounter(user.id, passkey.id, verification.authenticationInfo.newCounter);
+    // Compare-and-swap on the credential counter. If another assertion won
+    // the race and already advanced the stored counter past what we verified
+    // against, treat this as a replay and reject — accepting it would mean
+    // two assertions succeeded against the same stored counter, which is
+    // exactly what the WebAuthn signature counter is designed to prevent.
+    const counterAdvanced = updatePasskeyCounter(
+      user.id,
+      passkey.id,
+      passkey.counter,
+      verification.authenticationInfo.newCounter
+    );
+    if (!counterAdvanced) {
+      warn('[Passkey Login] Counter CAS failed — possible replay', {
+        userId: user.id,
+        passkeyId: passkey.id,
+      });
+      return res.status(401).json({ error: 'Passkey verification failed' });
+    }
     challenges.delete(`passkey-auth-${sessionId}`);
 
     // Create session
