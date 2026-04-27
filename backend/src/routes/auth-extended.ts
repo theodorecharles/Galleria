@@ -98,6 +98,78 @@ function getUserIdFromRequest(req: Request): number | null {
 // Store temporary challenges in memory (in production, use Redis or session store)
 const challenges = new Map<string, { challenge: string; userId?: number; user?: User; expires: number }>();
 
+/**
+ * Verify a sensitive-action re-authentication proof.
+ *
+ * Accepts either a valid password (when the user has a `password_hash`) or a
+ * fresh passkey assertion bound to the user's own credential. This closes a
+ * bypass where users without a password (Google OAuth / passkey-only) could
+ * pass through `if (user.password_hash && !verifyPassword(...))` because the
+ * `&&` short-circuits to `false` when `password_hash` is empty, allowing MFA
+ * to be disabled or backup codes to be regenerated with no proof.
+ */
+async function verifyReauth(
+  user: User,
+  body: any
+): Promise<{ ok: true } | { ok: false; status: number; reason: string }> {
+  const { password, passkeyCredential, passkeySessionId } = body || {};
+
+  // Path 1: passkey assertion (preferred when supplied — works for every user
+  // with at least one registered passkey, including OAuth-only accounts).
+  if (passkeyCredential && passkeySessionId) {
+    const stored = challenges.get(`passkey-auth-${passkeySessionId}`);
+    if (!stored || stored.expires < Date.now()) {
+      return { ok: false, status: 400, reason: 'Invalid or expired challenge' };
+    }
+
+    const result = getPasskeyByCredentialId(passkeyCredential.id);
+    // The credential MUST belong to the currently authenticated user — never
+    // accept a passkey owned by someone else as proof of re-authentication.
+    if (!result || result.user.id !== user.id) {
+      return { ok: false, status: 401, reason: 'Passkey verification failed' };
+    }
+
+    try {
+      const verification = await verifyPasskeyAuthentication(
+        passkeyCredential,
+        stored.challenge,
+        result.passkey.credentialPublicKey,
+        result.passkey.counter
+      );
+      if (!verification.verified) {
+        return { ok: false, status: 401, reason: 'Passkey verification failed' };
+      }
+      // Consume the challenge and bump the credential counter so the assertion
+      // cannot be replayed.
+      updatePasskeyCounter(
+        user.id,
+        result.passkey.id,
+        verification.authenticationInfo.newCounter
+      );
+      challenges.delete(`passkey-auth-${passkeySessionId}`);
+      return { ok: true };
+    } catch (err) {
+      error('[AuthExtended] Re-auth passkey verification error:', err);
+      return { ok: false, status: 401, reason: 'Passkey verification failed' };
+    }
+  }
+
+  // Path 2: password (only valid when the account actually has one).
+  if (user.password_hash) {
+    if (!password || !verifyPassword(user, password)) {
+      return { ok: false, status: 401, reason: 'Invalid password' };
+    }
+    return { ok: true };
+  }
+
+  // No password on the account and no passkey assertion — reject.
+  return {
+    ok: false,
+    status: 401,
+    reason: 'Re-authentication required. Provide a passkey assertion to continue.',
+  };
+}
+
 // Clean up expired challenges every 5 minutes
 setInterval(() => {
   const now = Date.now();
@@ -1020,16 +1092,18 @@ router.post('/mfa/disable', requireAuth, async (req: Request, res: Response) => 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
-    const { password } = req.body;
 
     const user = getUserById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Verify password before disabling MFA
-    if (user.password_hash && !verifyPassword(user, password)) {
-      return res.status(401).json({ error: 'Invalid password' });
+    // Require a fresh re-auth proof (password OR passkey assertion). Without
+    // this, users who authenticate via Google OAuth or passkey only (no
+    // `password_hash`) could disable MFA with no second-factor check.
+    const reauth = await verifyReauth(user, req.body);
+    if (!reauth.ok) {
+      return res.status(reauth.status).json({ error: reauth.reason });
     }
 
     disableMFA(userId);
@@ -1069,16 +1143,18 @@ router.post('/mfa/backup-codes', requireAuth, async (req: Request, res: Response
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
-    const { password } = req.body;
 
     const user = getUserById(userId);
     if (!user || !user.mfa_enabled) {
       return res.status(400).json({ error: 'MFA is not enabled' });
     }
 
-    // Verify password
-    if (user.password_hash && !verifyPassword(user, password)) {
-      return res.status(401).json({ error: 'Invalid password' });
+    // Require a fresh re-auth proof (password OR passkey assertion). Without
+    // this, users without a `password_hash` could mint new backup codes from a
+    // hijacked Google session and defeat the second factor.
+    const reauth = await verifyReauth(user, req.body);
+    if (!reauth.ok) {
+      return res.status(reauth.status).json({ error: reauth.reason });
     }
 
     // Generate new backup codes
@@ -1429,17 +1505,29 @@ router.delete('/passkey/:id', requireAuth, async (req: Request, res: Response) =
 
 /**
  * List all users (admin only)
+ *
+ * SECURITY: This endpoint MUST NOT return `invite_token` for any user. The
+ * invite token is sufficient on its own to complete the invitation and take
+ * over the invited account (see POST /invite/:token/complete, which is
+ * unauthenticated by design), so disclosing it on every page-load of the
+ * admin user list — even to admins — needlessly widens the blast radius of a
+ * compromised admin session and blocks future token-rotation / one-time-use
+ * controls. Admins fetch the token on demand via
+ * GET /users/:userId/invite-link when they explicitly click "Copy Link".
+ *
+ * Endpoint also stays gated by requireAdmin — downgrading to requireAuth
+ * would expose user metadata (roles, auth methods, MFA state, etc.) to
+ * viewers/managers.
  */
-router.get('/users', requireAuth, (req: Request, res: Response) => {
+router.get('/users', requireAdmin, (req: Request, res: Response) => {
   try {
     const users = getAllUsers();
-    
+
     // Remove sensitive data and add computed fields
     const sanitizedUsers = users.map((user: User) => {
       // Determine display status based on user state
       let displayStatus = null;
-      let inviteToken = null;
-      
+
       if (user.status === 'invited') {
         // Check if invite has expired
         if (user.invite_expires_at) {
@@ -1452,11 +1540,8 @@ router.get('/users', requireAuth, (req: Request, res: Response) => {
         } else {
           displayStatus = 'invited';
         }
-        
-        // Include invite token for invited/expired users (needed for copy link functionality)
-        inviteToken = user.invite_token;
       }
-      
+
       return {
         id: user.id,
         email: user.email,
@@ -1467,7 +1552,7 @@ router.get('/users', requireAuth, (req: Request, res: Response) => {
         passkey_count: user.passkeys?.length || 0,
         is_active: user.is_active,
         status: displayStatus, // Only show status if invited or expired
-        invite_token: inviteToken, // Include for invited users
+        // invite_token is intentionally NOT returned here — see SECURITY note above.
         created_at: user.created_at,
         last_login_at: user.last_login_at,
       };
@@ -1477,6 +1562,50 @@ router.get('/users', requireAuth, (req: Request, res: Response) => {
   } catch (err) {
     error('[AuthExtended] List users error:', err);
     res.status(500).json({ error: 'Failed to list users' });
+  }
+});
+
+/**
+ * Fetch the outstanding invitation link for a single invited user (admin only).
+ *
+ * Separated from GET /users so that the raw `invite_token` is only disclosed
+ * in response to an explicit admin action (clicking "Copy Invite Link"),
+ * rather than being baked into every list response. Admins must request tokens
+ * one at a time, and only admins can.
+ */
+router.get('/users/:userId/invite-link', requireAdmin, (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    if (Number.isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user id' });
+    }
+
+    const user = getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.status !== 'invited' || !user.invite_token) {
+      return res.status(400).json({ error: 'User does not have an outstanding invitation' });
+    }
+
+    let expired = false;
+    if (user.invite_expires_at) {
+      const expiresAt = new Date(user.invite_expires_at);
+      if (expiresAt < new Date()) {
+        expired = true;
+      }
+    }
+
+    return res.json({
+      inviteUrl: generateInvitationUrl(user.invite_token),
+      inviteToken: user.invite_token,
+      expired,
+      expiresAt: user.invite_expires_at || null,
+    });
+  } catch (err) {
+    error('[AuthExtended] Get invite link error:', err);
+    return res.status(500).json({ error: 'Failed to get invite link' });
   }
 });
 
@@ -1531,11 +1660,48 @@ router.delete('/users/:userId', requireAdmin, async (req: Request, res: Response
           return;
         }
         
-        // Destroy sessions belonging to the deleted user
+        // Destroy sessions belonging to the deleted user.
+        // Sessions can be created by three auth flows, each storing the user
+        // identifier in a different shape:
+        //   - credential login (/login):           session.userId = <db id>
+        //   - passkey auth-verify:                  session.userId = <db id>
+        //                                           session.user.id  = <db id>
+        //   - Passport / Google OAuth:             session.passport.user = { id: googleProfileId, email, ... }
+        // Match all of them. Numeric ids are normalized via Number() in case a
+        // session store serialized ids as strings; OAuth sessions are matched
+        // by email since session.passport.user.id is the Google profile id,
+        // not the database user id.
         if (sessions) {
+          const targetId = Number(userId);
+          const targetEmail = targetUser.email ? targetUser.email.toLowerCase() : null;
           Object.keys(sessions).forEach((sid) => {
             const session = sessions[sid];
-            if (session?.passport?.user === userId) {
+            if (!session) return;
+
+            const credentialUserId = session.userId !== undefined ? Number(session.userId) : NaN;
+            const sessionUserObjId = session.user?.id !== undefined ? Number(session.user.id) : NaN;
+            const passportUser = session.passport?.user;
+            const passportUserId =
+              passportUser && typeof passportUser === 'object' && passportUser.id !== undefined
+                ? Number(passportUser.id)
+                : typeof passportUser === 'number'
+                  ? passportUser
+                  : NaN;
+            const passportEmail =
+              passportUser && typeof passportUser === 'object' && typeof passportUser.email === 'string'
+                ? passportUser.email.toLowerCase()
+                : null;
+            const sessionUserEmail =
+              typeof session.user?.email === 'string' ? session.user.email.toLowerCase() : null;
+
+            const belongsToDeletedUser =
+              credentialUserId === targetId ||
+              sessionUserObjId === targetId ||
+              passportUserId === targetId ||
+              (targetEmail !== null &&
+                (passportEmail === targetEmail || sessionUserEmail === targetEmail));
+
+            if (belongsToDeletedUser) {
               sessionStore.destroy(sid, (destroyErr) => {
                 if (destroyErr) {
                   error(`Failed to destroy session ${sid}:`, destroyErr);

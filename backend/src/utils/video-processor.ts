@@ -96,6 +96,11 @@ export async function getVideoMetadata(videoPath: string): Promise<VideoMetadata
         reject(new Error(`Failed to parse ffprobe output: ${err}`));
       }
     });
+
+    ffprobe.on('error', (err) => {
+      error('[VideoProcessor] Failed to spawn ffprobe:', err);
+      reject(new Error(`Failed to spawn ffprobe: ${err.message}`));
+    });
   });
 }
 
@@ -252,6 +257,11 @@ export async function rotateVideo(
         if (onProgress) onProgress(100);
         resolve();
       }
+    });
+
+    ffmpeg.on('error', (err) => {
+      error('[VideoProcessor] Failed to spawn ffmpeg for rotation:', err);
+      reject(new Error(`Failed to spawn ffmpeg for rotation: ${err.message}`));
     });
   });
 }
@@ -475,6 +485,11 @@ export async function generateHLS(
         resolve();
       }
     });
+
+    ffmpeg.on('error', (err) => {
+      error(`[VideoProcessor] Failed to spawn ffmpeg for ${resolution.name} HLS generation:`, err);
+      reject(new Error(`Failed to spawn ffmpeg for HLS generation: ${err.message}`));
+    });
   });
 }
 
@@ -515,6 +530,11 @@ export async function extractThumbnail(
         info(`[VideoProcessor] ${size}px thumbnail extracted successfully`);
         resolve();
       }
+    });
+
+    ffmpeg.on('error', (err) => {
+      error('[VideoProcessor] Failed to spawn ffmpeg for thumbnail extraction:', err);
+      reject(new Error(`Failed to spawn ffmpeg for thumbnail extraction: ${err.message}`));
     });
   });
 }

@@ -8,7 +8,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { csrfProtection } from "../security.js";
-import { requireAuth, requireAdmin } from "../auth/middleware.js";
+import { requireAdmin } from "../auth/middleware.js";
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 import { sendNotificationToUser } from '../push-notifications.js';
 import { translateNotification } from '../i18n-backend.js';
@@ -49,6 +49,93 @@ async function notifyAllAdmins(title: string, body: string, tag: string, notific
 
 const CONFIG_PATH = path.join(DATA_DIR, "config.json");
 const LOGS_DIR = path.join(DATA_DIR, "logs");
+
+/**
+ * Sentinel string returned in GET /api/config in place of any non-empty
+ * sensitive value. The PUT handler treats this exact string as "leave the
+ * stored value alone", restoring the on-disk value before persisting. This
+ * keeps plaintext secrets off the wire (and out of browser memory / dev
+ * tools) while preserving the admin-editor round-trip.
+ */
+const SECRET_PLACEHOLDER = "__SECRET_UNCHANGED__";
+
+/**
+ * Dot-notation paths to fields whose plaintext values must never appear
+ * in API responses. Paths that don't exist in a given config are silently
+ * skipped, so adding new sensitive fields here is safe.
+ */
+const SENSITIVE_CONFIG_PATHS: readonly string[] = [
+  "environment.auth.sessionSecret",
+  "environment.auth.google.clientSecret",
+  "analytics.openobserve.password",
+  "openai.apiKey",
+  "pushNotifications.vapidPrivateKey",
+  "email.smtp.auth.user",
+  "email.smtp.auth.pass",
+];
+
+function getDeep(obj: any, dottedPath: string): any {
+  const parts = dottedPath.split(".");
+  let cursor = obj;
+  for (const key of parts) {
+    if (cursor === null || cursor === undefined || typeof cursor !== "object") {
+      return undefined;
+    }
+    cursor = cursor[key];
+  }
+  return cursor;
+}
+
+function setDeep(obj: any, dottedPath: string, value: any): void {
+  const parts = dottedPath.split(".");
+  let cursor = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const key = parts[i];
+    if (
+      cursor[key] === null ||
+      cursor[key] === undefined ||
+      typeof cursor[key] !== "object"
+    ) {
+      // Path doesn't exist in target — don't materialize it.
+      return;
+    }
+    cursor = cursor[key];
+  }
+  cursor[parts[parts.length - 1]] = value;
+}
+
+/**
+ * Returns a deep clone of the config with every non-empty sensitive field
+ * replaced by SECRET_PLACEHOLDER. Empty strings (and absent fields) are
+ * preserved so the UI can distinguish "not configured" from "configured
+ * but masked".
+ */
+function maskSensitiveFields(config: any): any {
+  const masked = JSON.parse(JSON.stringify(config));
+  for (const dottedPath of SENSITIVE_CONFIG_PATHS) {
+    const value = getDeep(masked, dottedPath);
+    if (typeof value === "string" && value.length > 0) {
+      setDeep(masked, dottedPath, SECRET_PLACEHOLDER);
+    }
+  }
+  return masked;
+}
+
+/**
+ * Mutates `newConfig` in place: any sensitive field whose value is exactly
+ * SECRET_PLACEHOLDER (i.e. the admin saved the form without rotating that
+ * secret) is rewritten to the value currently on disk. Posting an explicit
+ * empty string still clears the secret — admin intent is preserved.
+ */
+function restoreSensitiveFields(newConfig: any, currentConfig: any): void {
+  for (const dottedPath of SENSITIVE_CONFIG_PATHS) {
+    const submitted = getDeep(newConfig, dottedPath);
+    if (submitted === SECRET_PLACEHOLDER) {
+      const stored = getDeep(currentConfig, dottedPath);
+      setDeep(newConfig, dottedPath, stored);
+    }
+  }
+}
 
 /**
  * GET /api/config/runtime
@@ -102,16 +189,21 @@ router.use(csrfProtection);
 
 /**
  * GET /api/config
- * Get current configuration (excluding sensitive fields)
+ * Get current configuration (admin only — payload contains plaintext
+ * secrets such as session/OAuth/OpenAI/VAPID/SMTP/OpenObserve credentials
+ * and the authorized-email allowlist, which must never reach viewers or
+ * managers).
  */
-router.get("/", requireAuth, (req, res) => {
+router.get("/", requireAdmin, (req, res) => {
   try {
     const configData = fs.readFileSync(CONFIG_PATH, "utf8");
     const config = JSON.parse(configData);
 
-    // Return full config for admin to edit
-    // (sensitive fields will be masked on frontend if needed)
-    res.json(config);
+    // Mask credentials before sending to the admin UI. The PUT handler
+    // recognises SECRET_PLACEHOLDER and restores the on-disk value, so the
+    // editor round-trip works without exposing plaintext secrets to the
+    // browser, devtools, or any proxy along the way.
+    res.json(maskSensitiveFields(config));
   } catch (err) {
     error("[Config] Failed to read config:", err);
     res.status(500).json({ error: "Failed to read configuration" });
@@ -179,6 +271,11 @@ router.put("/", requireAdmin, express.json(), async (req, res) => {
     // Read current config to preserve structure
     const currentConfigData = fs.readFileSync(CONFIG_PATH, "utf8");
     const currentConfig = JSON.parse(currentConfigData);
+
+    // Any sensitive field the client posted back as the placeholder means
+    // "I didn't touch this" — substitute the current on-disk value before
+    // merging so masked secrets aren't overwritten with the sentinel.
+    restoreSensitiveFields(newConfig, currentConfig);
 
     // Merge new config with current (preserving any fields not sent)
     const updatedConfig = {

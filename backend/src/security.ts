@@ -180,9 +180,30 @@ export function csrfProtection(req: any, res: any, next: any) {
   if (origin) {
     // Get dynamic allowed origins (includes config.json values)
     const allowedOrigins = getAllowedOrigins();
-    
-    // Check exact match first
-    let isAllowedOrigin = allowedOrigins.some((allowed: string) => origin.startsWith(allowed));
+
+    // Strict origin equality. Previously this used `origin.startsWith(allowed)`,
+    // which accepted a malicious origin like `https://www.example.com.attacker.com`
+    // when `https://www.example.com` was allowed. Parse both sides and compare
+    // the canonical `URL.origin` (scheme + host + port) so confusable suffixes
+    // can't bypass the check.
+    let normalizedOrigin: string | null = null;
+    try {
+      normalizedOrigin = new URL(origin).origin;
+    } catch (e) {
+      // Origin header was not a valid URL — reject below.
+    }
+
+    let isAllowedOrigin = false;
+    if (normalizedOrigin) {
+      isAllowedOrigin = allowedOrigins.some((allowed: string) => {
+        try {
+          return new URL(allowed).origin === normalizedOrigin;
+        } catch (e) {
+          warn('[CSRF] Skipping malformed allowed origin:', allowed);
+          return false;
+        }
+      });
+    }
     
     // If not in allowed list, check for localhost
     if (!isAllowedOrigin) {

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from 'react-i18next';
 import type { User } from "./types";
-import { getGravatarUrl, copyInvitationUrl } from "./utils";
+import { getGravatarUrl, userManagementAPI } from "./utils";
 import { error, info } from '../../../../../utils/logger';
 
 interface UserCardProps {
@@ -46,10 +46,14 @@ export const UserCard: React.FC<UserCardProps> = ({
   }
 
   const handleCopyInvite = async () => {
-    if (!user.invite_token) return;
-    
+    if (user.status !== "invited" && user.status !== "invite_expired") return;
+
     try {
-      await copyInvitationUrl(user.invite_token);
+      // Fetch the invite URL on demand from the admin-only endpoint instead of
+      // reading it from the bulk user list — the list response no longer
+      // exposes invite tokens.
+      const { inviteUrl } = await userManagementAPI.getInviteLink(user.id);
+      await navigator.clipboard.writeText(inviteUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -453,8 +457,10 @@ export const UserCard: React.FC<UserCardProps> = ({
       {/* User Actions */}
       {currentUser && (
         <>
-          {/* Invited/Expired Users - Show Copy Invite */}
-          {(user.status === "invited" || user.status === "invite_expired") && user.invite_token && (
+          {/* Invited/Expired Users - Show Copy Invite. The token itself is
+              fetched on-demand from a dedicated admin-only endpoint when the
+              admin clicks Copy, so the list response no longer carries it. */}
+          {(user.status === "invited" || user.status === "invite_expired") && (
             <div
               style={{
                 display: "flex",
