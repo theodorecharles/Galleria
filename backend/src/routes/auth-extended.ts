@@ -98,6 +98,78 @@ function getUserIdFromRequest(req: Request): number | null {
 // Store temporary challenges in memory (in production, use Redis or session store)
 const challenges = new Map<string, { challenge: string; userId?: number; user?: User; expires: number }>();
 
+/**
+ * Verify a sensitive-action re-authentication proof.
+ *
+ * Accepts either a valid password (when the user has a `password_hash`) or a
+ * fresh passkey assertion bound to the user's own credential. This closes a
+ * bypass where users without a password (Google OAuth / passkey-only) could
+ * pass through `if (user.password_hash && !verifyPassword(...))` because the
+ * `&&` short-circuits to `false` when `password_hash` is empty, allowing MFA
+ * to be disabled or backup codes to be regenerated with no proof.
+ */
+async function verifyReauth(
+  user: User,
+  body: any
+): Promise<{ ok: true } | { ok: false; status: number; reason: string }> {
+  const { password, passkeyCredential, passkeySessionId } = body || {};
+
+  // Path 1: passkey assertion (preferred when supplied — works for every user
+  // with at least one registered passkey, including OAuth-only accounts).
+  if (passkeyCredential && passkeySessionId) {
+    const stored = challenges.get(`passkey-auth-${passkeySessionId}`);
+    if (!stored || stored.expires < Date.now()) {
+      return { ok: false, status: 400, reason: 'Invalid or expired challenge' };
+    }
+
+    const result = getPasskeyByCredentialId(passkeyCredential.id);
+    // The credential MUST belong to the currently authenticated user — never
+    // accept a passkey owned by someone else as proof of re-authentication.
+    if (!result || result.user.id !== user.id) {
+      return { ok: false, status: 401, reason: 'Passkey verification failed' };
+    }
+
+    try {
+      const verification = await verifyPasskeyAuthentication(
+        passkeyCredential,
+        stored.challenge,
+        result.passkey.credentialPublicKey,
+        result.passkey.counter
+      );
+      if (!verification.verified) {
+        return { ok: false, status: 401, reason: 'Passkey verification failed' };
+      }
+      // Consume the challenge and bump the credential counter so the assertion
+      // cannot be replayed.
+      updatePasskeyCounter(
+        user.id,
+        result.passkey.id,
+        verification.authenticationInfo.newCounter
+      );
+      challenges.delete(`passkey-auth-${passkeySessionId}`);
+      return { ok: true };
+    } catch (err) {
+      error('[AuthExtended] Re-auth passkey verification error:', err);
+      return { ok: false, status: 401, reason: 'Passkey verification failed' };
+    }
+  }
+
+  // Path 2: password (only valid when the account actually has one).
+  if (user.password_hash) {
+    if (!password || !verifyPassword(user, password)) {
+      return { ok: false, status: 401, reason: 'Invalid password' };
+    }
+    return { ok: true };
+  }
+
+  // No password on the account and no passkey assertion — reject.
+  return {
+    ok: false,
+    status: 401,
+    reason: 'Re-authentication required. Provide a passkey assertion to continue.',
+  };
+}
+
 // Clean up expired challenges every 5 minutes
 setInterval(() => {
   const now = Date.now();
@@ -1020,16 +1092,18 @@ router.post('/mfa/disable', requireAuth, async (req: Request, res: Response) => 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
-    const { password } = req.body;
 
     const user = getUserById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Verify password before disabling MFA
-    if (user.password_hash && !verifyPassword(user, password)) {
-      return res.status(401).json({ error: 'Invalid password' });
+    // Require a fresh re-auth proof (password OR passkey assertion). Without
+    // this, users who authenticate via Google OAuth or passkey only (no
+    // `password_hash`) could disable MFA with no second-factor check.
+    const reauth = await verifyReauth(user, req.body);
+    if (!reauth.ok) {
+      return res.status(reauth.status).json({ error: reauth.reason });
     }
 
     disableMFA(userId);
@@ -1069,16 +1143,18 @@ router.post('/mfa/backup-codes', requireAuth, async (req: Request, res: Response
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
-    const { password } = req.body;
 
     const user = getUserById(userId);
     if (!user || !user.mfa_enabled) {
       return res.status(400).json({ error: 'MFA is not enabled' });
     }
 
-    // Verify password
-    if (user.password_hash && !verifyPassword(user, password)) {
-      return res.status(401).json({ error: 'Invalid password' });
+    // Require a fresh re-auth proof (password OR passkey assertion). Without
+    // this, users without a `password_hash` could mint new backup codes from a
+    // hijacked Google session and defeat the second factor.
+    const reauth = await verifyReauth(user, req.body);
+    if (!reauth.ok) {
+      return res.status(reauth.status).json({ error: reauth.reason });
     }
 
     // Generate new backup codes
