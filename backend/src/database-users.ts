@@ -316,84 +316,142 @@ export function verifyBackupCode(user: User, code: string): boolean {
 
 /**
  * Add passkey to user
+ *
+ * Wrapped in a SQLite transaction so the read-modify-write of the
+ * passkeys JSON blob is atomic. Without the transaction, two concurrent
+ * adds could each read the same row, append their own passkey, and the
+ * later write would clobber the earlier one (silent passkey loss).
  */
 export function addPasskey(userId: number, passkey: Omit<Passkey, 'created_at'>): boolean {
   const db = getDatabase();
-  const user = getUserById(userId);
-  if (!user) return false;
-  
-  const passkeys = user.passkeys || [];
-  passkeys.push({
-    ...passkey,
-    created_at: new Date().toISOString(),
-  });
-  
-  // Add 'passkey' to auth methods if not already there
-  const authMethods = [...user.auth_methods];
-  if (!authMethods.includes('passkey')) {
-    authMethods.push('passkey');
-  }
-  
+
   const stmt = db.prepare(`
-    UPDATE users 
+    UPDATE users
     SET passkeys = ?, auth_methods = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `);
-  
-  const result = stmt.run(JSON.stringify(passkeys), JSON.stringify(authMethods), userId);
-  return result.changes > 0;
+
+  const tx = db.transaction((uid: number, pk: Omit<Passkey, 'created_at'>): boolean => {
+    const user = getUserById(uid);
+    if (!user) return false;
+
+    const passkeys = user.passkeys || [];
+    passkeys.push({
+      ...pk,
+      created_at: new Date().toISOString(),
+    });
+
+    // Add 'passkey' to auth methods if not already there
+    const authMethods = [...user.auth_methods];
+    if (!authMethods.includes('passkey')) {
+      authMethods.push('passkey');
+    }
+
+    const result = stmt.run(JSON.stringify(passkeys), JSON.stringify(authMethods), uid);
+    return result.changes > 0;
+  });
+
+  return tx(userId, passkey);
 }
 
 /**
  * Remove passkey from user
+ *
+ * Wrapped in a SQLite transaction so a concurrent add or remove on the
+ * same user cannot be lost between this read and write.
  */
 export function removePasskey(userId: number, passkeyId: string): boolean {
   const db = getDatabase();
-  const user = getUserById(userId);
-  if (!user || !user.passkeys) return false;
-  
-  const passkeys = user.passkeys.filter(pk => pk.id !== passkeyId);
-  
-  // If no more passkeys, remove 'passkey' from auth methods
-  const authMethods = passkeys.length === 0
-    ? user.auth_methods.filter(m => m !== 'passkey')
-    : user.auth_methods;
-  
+
   const stmt = db.prepare(`
-    UPDATE users 
+    UPDATE users
     SET passkeys = ?, auth_methods = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `);
-  
-  const result = stmt.run(
-    passkeys.length > 0 ? JSON.stringify(passkeys) : null,
-    JSON.stringify(authMethods),
-    userId
-  );
-  
-  return result.changes > 0;
+
+  const tx = db.transaction((uid: number, pkId: string): boolean => {
+    const user = getUserById(uid);
+    if (!user || !user.passkeys) return false;
+
+    const passkeys = user.passkeys.filter(pk => pk.id !== pkId);
+
+    // If no more passkeys, remove 'passkey' from auth methods
+    const authMethods = passkeys.length === 0
+      ? user.auth_methods.filter(m => m !== 'passkey')
+      : user.auth_methods;
+
+    const result = stmt.run(
+      passkeys.length > 0 ? JSON.stringify(passkeys) : null,
+      JSON.stringify(authMethods),
+      uid
+    );
+
+    return result.changes > 0;
+  });
+
+  return tx(userId, passkeyId);
 }
 
 /**
- * Update passkey counter (for replay attack prevention)
+ * Update passkey counter (for replay attack prevention).
+ *
+ * The counter MUST advance monotonically — that's how WebAuthn detects
+ * cloned authenticators / replayed assertions. Pass the counter that was
+ * verified against (`expectedCurrentCounter`); the update is performed
+ * inside a SQLite transaction with a compare-and-swap check so two
+ * concurrent assertions cannot both succeed against the same stored
+ * counter.
+ *
+ * Returns `false` if:
+ *   - the user or passkey no longer exists
+ *   - the stored counter has already moved past `expectedCurrentCounter`
+ *     (another assertion won the race — caller MUST treat this as a
+ *     replay and reject the authentication)
+ *   - `newCounter` does not strictly advance the stored counter
  */
-export function updatePasskeyCounter(userId: number, passkeyId: string, newCounter: number): boolean {
+export function updatePasskeyCounter(
+  userId: number,
+  passkeyId: string,
+  expectedCurrentCounter: number,
+  newCounter: number
+): boolean {
   const db = getDatabase();
-  const user = getUserById(userId);
-  if (!user || !user.passkeys) return false;
-  
-  const passkeys = user.passkeys.map(pk => 
-    pk.id === passkeyId ? { ...pk, counter: newCounter } : pk
-  );
-  
+
   const stmt = db.prepare(`
-    UPDATE users 
+    UPDATE users
     SET passkeys = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `);
-  
-  const result = stmt.run(JSON.stringify(passkeys), userId);
-  return result.changes > 0;
+
+  const tx = db.transaction(
+    (uid: number, pkId: string, expected: number, next: number): boolean => {
+      const user = getUserById(uid);
+      if (!user || !user.passkeys) return false;
+
+      const current = user.passkeys.find(pk => pk.id === pkId);
+      if (!current) return false;
+
+      // Compare-and-swap: bail if the stored counter has moved since the
+      // caller verified the assertion. A concurrent (or replayed) assertion
+      // already advanced it — accepting this write would silently re-open
+      // the replay window the WebAuthn counter is meant to close.
+      if (current.counter !== expected) return false;
+
+      // Counters must strictly advance. A WebAuthn authenticator is allowed
+      // to keep counter at 0 (no signing counter), in which case the strict
+      // check is skipped — but anything > 0 must increase.
+      if (expected !== 0 && next <= expected) return false;
+
+      const passkeys = user.passkeys.map(pk =>
+        pk.id === pkId ? { ...pk, counter: next } : pk
+      );
+
+      const result = stmt.run(JSON.stringify(passkeys), uid);
+      return result.changes > 0;
+    }
+  );
+
+  return tx(userId, passkeyId, expectedCurrentCounter, newCounter);
 }
 
 /**
