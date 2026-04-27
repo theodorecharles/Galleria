@@ -8,7 +8,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { csrfProtection } from "../security.js";
-import { requireAuth, requireAdmin } from "../auth/middleware.js";
+import { requireAdmin } from "../auth/middleware.js";
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 import { sendNotificationToUser } from '../push-notifications.js';
 import { translateNotification } from '../i18n-backend.js';
@@ -102,15 +102,20 @@ router.use(csrfProtection);
 
 /**
  * GET /api/config
- * Get current configuration (excluding sensitive fields)
+ * Get current configuration (admin only — payload contains plaintext
+ * secrets such as session/OAuth/OpenAI/VAPID/SMTP/OpenObserve credentials
+ * and the authorized-email allowlist, which must never reach viewers or
+ * managers).
  */
-router.get("/", requireAuth, (req, res) => {
+router.get("/", requireAdmin, (req, res) => {
   try {
     const configData = fs.readFileSync(CONFIG_PATH, "utf8");
     const config = JSON.parse(configData);
 
-    // Return full config for admin to edit
-    // (sensitive fields will be masked on frontend if needed)
+    // Return full config for admin to edit. Admins legitimately need the
+    // existing secret values in the editor; the PUT handler performs a
+    // shallow merge of whatever the client posts back, so masking values
+    // here would cause saves to silently overwrite stored secrets.
     res.json(config);
   } catch (err) {
     error("[Config] Failed to read config:", err);
