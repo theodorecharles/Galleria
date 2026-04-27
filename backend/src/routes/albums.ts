@@ -571,7 +571,7 @@ const servePhotoEXIF = async (req: Request, res: Response, albumName: string, fi
   // Sanitize inputs to prevent path traversal
   const sanitizedAlbum = sanitizePath(albumName);
   const sanitizedFilename = filename.replace(/[^a-zA-Z0-9_. -]/g, '');
-  
+
   if (!sanitizedAlbum || !sanitizedFilename) {
     res.status(400).json({ error: "Invalid album or filename" });
     return;
@@ -583,22 +583,58 @@ const servePhotoEXIF = async (req: Request, res: Response, albumName: string, fi
     return;
   }
 
+  // Check if user is authenticated (Passport or credentials)
+  const isAuthenticated = (req.isAuthenticated && req.isAuthenticated()) || !!(req.session as any)?.userId;
+
+  // Check album published state — same gate as serveAlbumPhotos
+  const albumState = getAlbumState(sanitizedAlbum);
+
+  if (!albumState) {
+    res.status(404).json({ error: "Album not found" });
+    return;
+  }
+
+  if (!albumState.published && !isAuthenticated) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
   try {
     const photosDir = req.app.get("photosDir");
     const filePath = path.join(photosDir, sanitizedAlbum, sanitizedFilename);
-    
+
     // Check if file exists
     if (!fs.existsSync(filePath)) {
       res.status(404).json({ error: "Image not found" });
       return;
     }
 
-    // Extract EXIF data
-    const exif = await exifr.parse(filePath);
-    
+    // Extract EXIF data. For unauthenticated (public) callers, disable GPS
+    // parsing so coordinates never enter the response — privacy guarantee
+    // documented for public album variants. Authenticated admins still get
+    // the full payload.
+    const exif = isAuthenticated
+      ? await exifr.parse(filePath)
+      : await exifr.parse(filePath, { gps: false });
+
     if (!exif) {
       res.json({ message: "No EXIF data found" });
       return;
+    }
+
+    // Defense-in-depth: strip any residual GPS / coordinate keys for public
+    // responses in case exifr parses GPS via a different block (e.g. XMP).
+    if (!isAuthenticated && typeof exif === 'object') {
+      for (const key of Object.keys(exif)) {
+        if (
+          key.startsWith('GPS') ||
+          key === 'latitude' ||
+          key === 'longitude' ||
+          key === 'altitude'
+        ) {
+          delete (exif as Record<string, unknown>)[key];
+        }
+      }
     }
 
     res.json(exif);
