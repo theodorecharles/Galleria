@@ -261,6 +261,25 @@ router.put("/", requireManager, (req: Request, res: Response) => {
               .json({ error: "Custom CSS is too long (max 50KB)" });
             return;
           }
+          // Reject sequences that could break out of the <style> raw-text
+          // element or smuggle in script content when this string is
+          // server-side interpolated into <style id="custom-css">…</style>
+          // by frontend/server.js. Blocks </style, </script, <!--, <script
+          // and HTML-entity-encoded equivalents (defense-in-depth — entities
+          // are not decoded inside <style>, but the audit asked for them).
+          // Note: we deliberately allow ">" since CSS uses it for child
+          // combinators (e.g. ".a > .b").
+          const dangerousCSS = /<\s*\/|<\s*!|<\s*script|&lt;\s*\/|&lt;\s*!|&lt;\s*script|&#0*60;\s*\/|&#0*60;\s*!|&#0*60;\s*script/i;
+          if (dangerousCSS.test(value)) {
+            warn(
+              "[Branding] Rejected customCSS containing HTML-tag-like sequences",
+            );
+            res.status(400).json({
+              error:
+                "Custom CSS may not contain HTML tags, comments, or closing-tag sequences (e.g. </, <!, <script). Use only CSS rules.",
+            });
+            return;
+          }
         } else if (value.length > 500) {
           res
             .status(400)

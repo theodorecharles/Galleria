@@ -53,7 +53,9 @@
     "headBackHome": "Vrati se na početnu stranu"
   },
   "photoModal": {
-    "navigationHint": "← pritisni strelice za navigaciju →"
+    "navigationHint": "← pritisni strelice za navigaciju →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "seo": {
     "homepageTitle": "{{siteName}} - Galerija",

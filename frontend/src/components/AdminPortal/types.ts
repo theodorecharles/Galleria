@@ -77,6 +77,7 @@ export interface Album {
   photoCount?: number;
   published?: boolean;
   show_on_homepage?: boolean;
+  description?: string | null;
   sort_order?: number | null;
   folder_id?: number | null;
 }

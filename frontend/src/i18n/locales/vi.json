@@ -53,7 +53,9 @@
     "headBackHome": "Quay về Trang Chủ"
   },
   "photoModal": {
-    "navigationHint": "← nhấn phím mũi tên để điều hướng →"
+    "navigationHint": "← nhấn phím mũi tên để điều hướng →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "header": {
     "albums": "Album",

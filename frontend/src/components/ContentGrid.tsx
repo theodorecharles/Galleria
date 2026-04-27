@@ -44,6 +44,9 @@ const ContentGrid: React.FC<ContentGridProps> = ({ album, onAlbumNotFound, initi
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [albumPublished, setAlbumPublished] = useState<boolean>(true);
+  // Album-level description / caption (ticket #621). Empty string when there is no
+  // description so we can simply skip rendering. Reset on album change.
+  const [albumDescription, setAlbumDescription] = useState<string>('');
   const [imageDimensions, setImageDimensions] = useState<
     Record<string, { width: number; height: number }>
   >({});
@@ -124,6 +127,7 @@ const ContentGrid: React.FC<ContentGridProps> = ({ album, onAlbumNotFound, initi
     setColumnTransforms([]);
     renderIndexRef.current = 100;
     loadedImagesRef.current.clear(); // Reset loaded images tracking
+    setAlbumDescription(''); // Clear stale description on album switch (ticket #621)
   }, [album]);
 
   // Update column count when photos change
@@ -295,9 +299,13 @@ const ContentGrid: React.FC<ContentGridProps> = ({ album, onAlbumNotFound, initi
                 info(`ℹ️  Homepage shuffle disabled - displaying in order`);
               }
             } else {
-              // Regular album format or legacy homepage format (array of photos)
+              // Album JSON shape (ticket #621): { description: string|null, photos: [...] }
+              // Legacy shape (pre-#621): bare array of photo arrays. Both are tolerated.
               const photoArray = Array.isArray(staticData) ? staticData : (staticData.photos || []);
               staticPhotos = photoArray.map((data: string[]) => reconstructPhoto(data, album));
+              if (!Array.isArray(staticData) && typeof staticData?.description === 'string') {
+                setAlbumDescription(staticData.description);
+              }
               info(`✓ Loaded ${staticPhotos.length} photos from optimized static JSON (${album})`);
             }
             
@@ -340,10 +348,15 @@ const ContentGrid: React.FC<ContentGridProps> = ({ album, onAlbumNotFound, initi
           }
           const data = await response.json();
           const photosArray = Array.isArray(data) ? data : (data.photos || []);
-          
+
           // Check if album is published (from API response)
           const published = typeof data === 'object' && 'published' in data ? data.published : true;
           setAlbumPublished(published);
+
+          // Pull album-level description from API fallback path too (ticket #621)
+          if (typeof data === 'object' && typeof data?.description === 'string') {
+            setAlbumDescription(data.description);
+          }
           
           // Sort photos by creation date
           const sortedPhotos = photosArray.sort((a: Photo, b: Photo) => {
@@ -607,6 +620,9 @@ const ContentGrid: React.FC<ContentGridProps> = ({ album, onAlbumNotFound, initi
 
   return (
     <>
+      {albumDescription && album !== 'homepage' && (
+        <div className="album-description-public">{albumDescription}</div>
+      )}
       <div className="photo-grid" style={{ gridTemplateColumns: `repeat(${numColumns}, 1fr)` }}>
         {distributedColumns.map((column, columnIndex) => (
           <div 

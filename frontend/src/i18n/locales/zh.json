@@ -53,7 +53,9 @@
     "headBackHome": "返回主页"
   },
   "photoModal": {
-    "navigationHint": "← 按箭头键进行导航 →"
+    "navigationHint": "← 按箭头键进行导航 →",
+    "position": "{{current}} / {{total}}",
+    "positionAriaLabel": "[EN] Photo {{current}} of {{total}}"
   },
   "header": {
     "albums": "相册",

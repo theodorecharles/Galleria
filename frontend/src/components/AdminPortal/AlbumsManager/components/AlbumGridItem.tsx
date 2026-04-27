@@ -11,7 +11,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Photo, UploadingImage } from '../types';
 import { cacheBustValue } from '../../../../config';
-import { EditDocumentIcon, TrashIcon, HourglassIcon, VideoIcon } from '../../../icons';
+import { EditDocumentIcon, TrashIcon, HourglassIcon, VideoIcon, CheckmarkIcon } from '../../../icons';
 import { info } from '../../../../utils/logger';
 
 
@@ -35,7 +35,12 @@ interface AlbumGridItemProps {
   activeOverlayId?: string | null;
   setActiveOverlayId?: (id: string | null) => void;
   selectedAlbum?: string;
-  
+
+  // Multi-select (ticket #622)
+  selectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (photoId: string, withShift: boolean) => void;
+
   // Permissions
   canEdit: boolean;
 }
@@ -53,6 +58,9 @@ const AlbumGridItem: React.FC<AlbumGridItemProps> = ({
   activeOverlayId,
   setActiveOverlayId,
   selectedAlbum,
+  selectMode = false,
+  isSelected = false,
+  onToggleSelect,
   canEdit,
 }) => {
   const { t } = useTranslation();
@@ -72,9 +80,9 @@ const AlbumGridItem: React.FC<AlbumGridItemProps> = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ 
-    id: itemId, 
-    disabled: !canEdit || isUploading 
+  } = useSortable({
+    id: itemId,
+    disabled: !canEdit || isUploading || selectMode
   });
 
   const [showOverlay, setShowOverlay] = useState(false);
@@ -116,13 +124,23 @@ const AlbumGridItem: React.FC<AlbumGridItemProps> = ({
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (isUploading || isDragging) return; // Don't interfere with dragging
-    
+
     if (touchStartPos.current && !hasMoved.current) {
+      // In select mode, tap toggles selection (no overlay)
+      if (selectMode && photoData && onToggleSelect) {
+        e.preventDefault();
+        // Touch events don't have shift state — single-tap toggle only
+        onToggleSelect(photoData.id, false);
+        touchStartPos.current = null;
+        hasMoved.current = false;
+        return;
+      }
+
       e.preventDefault();
-      
+
       const target = e.target as HTMLElement;
       const clickedButton = target.closest('.btn-edit-photo, .btn-delete-photo, .btn-retry-photo');
-      
+
       if (clickedButton) {
         // Tapped a button - let the button handler deal with it
       } else if (showOverlay) {
@@ -135,6 +153,14 @@ const AlbumGridItem: React.FC<AlbumGridItemProps> = ({
     }
     touchStartPos.current = null;
     hasMoved.current = false;
+  };
+
+  const handleSelectClick = (e: React.MouseEvent) => {
+    // Mouse-driven selection (desktop). Only fires when select mode is on.
+    if (!selectMode || !photoData || !onToggleSelect) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onToggleSelect(photoData.id, e.shiftKey);
   };
 
   const handleTouchCancel = () => {
@@ -184,16 +210,23 @@ const AlbumGridItem: React.FC<AlbumGridItemProps> = ({
       ref={setNodeRef}
       style={style}
       data-photo-id={itemId}
-      className={`admin-photo-item ${isDragging ? 'dragging' : ''} ${showOverlay ? 'show-overlay' : ''} ${isUploading ? 'uploading' : ''} ${isDeleting ? 'crt-delete' : ''}`}
+      className={`admin-photo-item ${isDragging ? 'dragging' : ''} ${showOverlay ? 'show-overlay' : ''} ${isUploading ? 'uploading' : ''} ${isDeleting ? 'crt-delete' : ''} ${selectMode ? 'selectable' : ''} ${isSelected ? 'selected' : ''}`}
       {...(useCustomTouchHandlers ? {
         onTouchStart: handleTouchStart,
         onTouchMove: handleTouchMove,
         onTouchEnd: handleTouchEnd,
         onTouchCancel: handleTouchCancel,
       } : {})}
-      {...(canEdit && !isUploading ? attributes : {})}
-      {...(canEdit && !isUploading ? listeners : {})}
+      {...(selectMode && photoData ? { onClick: handleSelectClick } : {})}
+      {...(canEdit && !isUploading && !selectMode ? attributes : {})}
+      {...(canEdit && !isUploading && !selectMode ? listeners : {})}
     >
+      {/* Selection indicator (multi-select mode) */}
+      {selectMode && isComplete && (
+        <div className={`photo-select-indicator ${isSelected ? 'checked' : ''}`} aria-hidden="true">
+          {isSelected && <CheckmarkIcon width="16" height="16" />}
+        </div>
+      )}
       {/* Thumbnail or placeholder */}
       {isUploading ? (
         <div className="admin-photo-thumbnail uploading-placeholder"></div>
@@ -342,8 +375,8 @@ const AlbumGridItem: React.FC<AlbumGridItemProps> = ({
         </div>
       )}
 
-      {/* Action overlay for completed photos */}
-      {isComplete && canEdit && photoData && (
+      {/* Action overlay for completed photos (hidden in select mode) */}
+      {isComplete && canEdit && photoData && !selectMode && (
         <div className="photo-overlay" onClick={handleOverlayClick}>
           <div className="photo-actions">
             <button

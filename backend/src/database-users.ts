@@ -282,118 +282,211 @@ export function disableMFA(userId: number): boolean {
 }
 
 /**
- * Verify backup code and remove it if valid
+ * Verify backup code and remove it if valid.
+ *
+ * Backup codes are single-use. To prevent a TOCTOU race where two concurrent
+ * MFA verifications presenting the same code both read the original list,
+ * both bcrypt-match, and both write back the same filtered list (consuming
+ * the code once in the DB but accepting it N times), the read/match/update
+ * is performed inside a `BEGIN IMMEDIATE` transaction. The row is re-read
+ * inside the transaction, and the UPDATE is conditional on the old JSON
+ * snapshot so a concurrent writer that committed first causes us to fail
+ * closed.
  */
 export function verifyBackupCode(user: User, code: string): boolean {
   if (!user.backup_codes || user.backup_codes.length === 0) {
     return false;
   }
-  
-  // Find matching backup code
-  let matchIndex = -1;
-  for (let i = 0; i < user.backup_codes.length; i++) {
-    if (bcrypt.compareSync(code, user.backup_codes[i])) {
-      matchIndex = i;
-      break;
-    }
-  }
-  
-  if (matchIndex === -1) return false;
-  
-  // Remove used backup code
+
   const db = getDatabase();
-  const remainingCodes = user.backup_codes.filter((_, i) => i !== matchIndex);
-  
-  const stmt = db.prepare(`
-    UPDATE users 
-    SET backup_codes = ?, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
-  `);
-  
-  stmt.run(JSON.stringify(remainingCodes), user.id);
-  return true;
+
+  const verifyAndConsume = db.transaction((): boolean => {
+    // Re-read backup_codes inside the transaction so we match against
+    // the canonical current state, not the caller's stale snapshot.
+    const row = db
+      .prepare('SELECT backup_codes FROM users WHERE id = ?')
+      .get(user.id) as { backup_codes: string | null } | undefined;
+
+    if (!row || !row.backup_codes) return false;
+
+    const currentCodesJson = row.backup_codes;
+    const currentCodes: string[] = JSON.parse(currentCodesJson);
+    if (currentCodes.length === 0) return false;
+
+    let matchIndex = -1;
+    for (let i = 0; i < currentCodes.length; i++) {
+      if (bcrypt.compareSync(code, currentCodes[i])) {
+        matchIndex = i;
+        break;
+      }
+    }
+
+    if (matchIndex === -1) return false;
+
+    const remainingCodes = currentCodes.filter((_, i) => i !== matchIndex);
+
+    // Conditional UPDATE: only succeeds if the row's backup_codes still
+    // matches the JSON we read. If a concurrent transaction committed
+    // first, this UPDATE affects 0 rows and we report failure.
+    const stmt = db.prepare(`
+      UPDATE users
+      SET backup_codes = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND backup_codes = ?
+    `);
+
+    const result = stmt.run(
+      JSON.stringify(remainingCodes),
+      user.id,
+      currentCodesJson
+    );
+
+    return result.changes === 1;
+  });
+
+  // .immediate() runs the transaction with BEGIN IMMEDIATE, acquiring a
+  // RESERVED lock at the start so concurrent writers (in other processes
+  // under PM2 cluster mode) serialize rather than racing.
+  return verifyAndConsume.immediate();
 }
 
 /**
  * Add passkey to user
+ *
+ * Wrapped in a SQLite transaction so the read-modify-write of the
+ * passkeys JSON blob is atomic. Without the transaction, two concurrent
+ * adds could each read the same row, append their own passkey, and the
+ * later write would clobber the earlier one (silent passkey loss).
  */
 export function addPasskey(userId: number, passkey: Omit<Passkey, 'created_at'>): boolean {
   const db = getDatabase();
-  const user = getUserById(userId);
-  if (!user) return false;
-  
-  const passkeys = user.passkeys || [];
-  passkeys.push({
-    ...passkey,
-    created_at: new Date().toISOString(),
-  });
-  
-  // Add 'passkey' to auth methods if not already there
-  const authMethods = [...user.auth_methods];
-  if (!authMethods.includes('passkey')) {
-    authMethods.push('passkey');
-  }
-  
+
   const stmt = db.prepare(`
-    UPDATE users 
+    UPDATE users
     SET passkeys = ?, auth_methods = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `);
-  
-  const result = stmt.run(JSON.stringify(passkeys), JSON.stringify(authMethods), userId);
-  return result.changes > 0;
+
+  const tx = db.transaction((uid: number, pk: Omit<Passkey, 'created_at'>): boolean => {
+    const user = getUserById(uid);
+    if (!user) return false;
+
+    const passkeys = user.passkeys || [];
+    passkeys.push({
+      ...pk,
+      created_at: new Date().toISOString(),
+    });
+
+    // Add 'passkey' to auth methods if not already there
+    const authMethods = [...user.auth_methods];
+    if (!authMethods.includes('passkey')) {
+      authMethods.push('passkey');
+    }
+
+    const result = stmt.run(JSON.stringify(passkeys), JSON.stringify(authMethods), uid);
+    return result.changes > 0;
+  });
+
+  return tx(userId, passkey);
 }
 
 /**
  * Remove passkey from user
+ *
+ * Wrapped in a SQLite transaction so a concurrent add or remove on the
+ * same user cannot be lost between this read and write.
  */
 export function removePasskey(userId: number, passkeyId: string): boolean {
   const db = getDatabase();
-  const user = getUserById(userId);
-  if (!user || !user.passkeys) return false;
-  
-  const passkeys = user.passkeys.filter(pk => pk.id !== passkeyId);
-  
-  // If no more passkeys, remove 'passkey' from auth methods
-  const authMethods = passkeys.length === 0
-    ? user.auth_methods.filter(m => m !== 'passkey')
-    : user.auth_methods;
-  
+
   const stmt = db.prepare(`
-    UPDATE users 
+    UPDATE users
     SET passkeys = ?, auth_methods = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `);
-  
-  const result = stmt.run(
-    passkeys.length > 0 ? JSON.stringify(passkeys) : null,
-    JSON.stringify(authMethods),
-    userId
-  );
-  
-  return result.changes > 0;
+
+  const tx = db.transaction((uid: number, pkId: string): boolean => {
+    const user = getUserById(uid);
+    if (!user || !user.passkeys) return false;
+
+    const passkeys = user.passkeys.filter(pk => pk.id !== pkId);
+
+    // If no more passkeys, remove 'passkey' from auth methods
+    const authMethods = passkeys.length === 0
+      ? user.auth_methods.filter(m => m !== 'passkey')
+      : user.auth_methods;
+
+    const result = stmt.run(
+      passkeys.length > 0 ? JSON.stringify(passkeys) : null,
+      JSON.stringify(authMethods),
+      uid
+    );
+
+    return result.changes > 0;
+  });
+
+  return tx(userId, passkeyId);
 }
 
 /**
- * Update passkey counter (for replay attack prevention)
+ * Update passkey counter (for replay attack prevention).
+ *
+ * The counter MUST advance monotonically — that's how WebAuthn detects
+ * cloned authenticators / replayed assertions. Pass the counter that was
+ * verified against (`expectedCurrentCounter`); the update is performed
+ * inside a SQLite transaction with a compare-and-swap check so two
+ * concurrent assertions cannot both succeed against the same stored
+ * counter.
+ *
+ * Returns `false` if:
+ *   - the user or passkey no longer exists
+ *   - the stored counter has already moved past `expectedCurrentCounter`
+ *     (another assertion won the race — caller MUST treat this as a
+ *     replay and reject the authentication)
+ *   - `newCounter` does not strictly advance the stored counter
  */
-export function updatePasskeyCounter(userId: number, passkeyId: string, newCounter: number): boolean {
+export function updatePasskeyCounter(
+  userId: number,
+  passkeyId: string,
+  expectedCurrentCounter: number,
+  newCounter: number
+): boolean {
   const db = getDatabase();
-  const user = getUserById(userId);
-  if (!user || !user.passkeys) return false;
-  
-  const passkeys = user.passkeys.map(pk => 
-    pk.id === passkeyId ? { ...pk, counter: newCounter } : pk
-  );
-  
+
   const stmt = db.prepare(`
-    UPDATE users 
+    UPDATE users
     SET passkeys = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `);
-  
-  const result = stmt.run(JSON.stringify(passkeys), userId);
-  return result.changes > 0;
+
+  const tx = db.transaction(
+    (uid: number, pkId: string, expected: number, next: number): boolean => {
+      const user = getUserById(uid);
+      if (!user || !user.passkeys) return false;
+
+      const current = user.passkeys.find(pk => pk.id === pkId);
+      if (!current) return false;
+
+      // Compare-and-swap: bail if the stored counter has moved since the
+      // caller verified the assertion. A concurrent (or replayed) assertion
+      // already advanced it — accepting this write would silently re-open
+      // the replay window the WebAuthn counter is meant to close.
+      if (current.counter !== expected) return false;
+
+      // Counters must strictly advance. A WebAuthn authenticator is allowed
+      // to keep counter at 0 (no signing counter), in which case the strict
+      // check is skipped — but anything > 0 must increase.
+      if (expected !== 0 && next <= expected) return false;
+
+      const passkeys = user.passkeys.map(pk =>
+        pk.id === pkId ? { ...pk, counter: next } : pk
+      );
+
+      const result = stmt.run(JSON.stringify(passkeys), uid);
+      return result.changes > 0;
+    }
+  );
+
+  return tx(userId, passkeyId, expectedCurrentCounter, newCounter);
 }
 
 /**

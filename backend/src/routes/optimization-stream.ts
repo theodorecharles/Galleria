@@ -109,10 +109,19 @@ async function processQueue() {
 
     activeJobs.add(childProcess);
 
+    // Track whether this job has already settled (completed, errored, or
+    // timed out) so timeout/close/error each only run side-effects once.
+    // Without this, a timeout SIGTERM later triggers `close` with a
+    // non-zero code, double-firing onError and double-decrementing the
+    // active-job slot. See ticket #627.
+    let settled = false;
+
     // Add timeout to prevent hung processes (5 minutes)
     const timeout = setTimeout(() => {
       error(`[OptimizationStream] Job ${job.jobId} timed out after 5 minutes, killing process`);
       childProcess.kill('SIGTERM');
+      if (settled) return;
+      settled = true;
       activeJobs.delete(childProcess);
       job.onError('Optimization timed out');
       processQueue();
@@ -141,6 +150,8 @@ async function processQueue() {
     // Handle completion
     childProcess.on('close', (code) => {
       clearTimeout(timeout);
+      if (settled) return;
+      settled = true;
       activeJobs.delete(childProcess);
 
       if (code === 0) {
@@ -158,6 +169,8 @@ async function processQueue() {
     // Handle errors
     childProcess.on('error', (err) => {
       clearTimeout(timeout);
+      if (settled) return;
+      settled = true;
       activeJobs.delete(childProcess);
       error(`[OptimizationStream] Error in job ${job.jobId}:`, err);
       job.onError(err.message);

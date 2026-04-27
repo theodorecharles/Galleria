@@ -24,6 +24,7 @@ import {
   deleteAlbumState,
   setAlbumPublished,
   setAlbumShowOnHomepage,
+  setAlbumDescription,
   updateImageSortOrder,
   saveImageMetadata,
   updateAlbumSortOrder,
@@ -1461,14 +1462,79 @@ router.patch("/:album/show-on-homepage", requireManager, async (req: Request, re
       error(`[Homepage] Failed to regenerate homepage HTML:`, htmlResult.error);
     }
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       album: sanitizedAlbum,
-      showOnHomepage 
+      showOnHomepage
     });
   } catch (err) {
     error('[AlbumManagement] Failed to update album show_on_homepage state:', err);
     res.status(500).json({ error: 'Failed to update album show on homepage state' });
+  }
+});
+
+/**
+ * Update album description (caption shown beneath the title on the public page).
+ * Pass null or an empty string to clear the description.
+ */
+const ALBUM_DESCRIPTION_MAX_LENGTH = 2000;
+
+router.patch("/:album/description", requireManager, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { album } = req.params;
+    const { description } = req.body;
+
+    const sanitizedAlbum = sanitizeName(album);
+    if (!sanitizedAlbum) {
+      res.status(400).json({ error: 'Invalid album name' });
+      return;
+    }
+
+    if (description !== null && typeof description !== 'string') {
+      res.status(400).json({ error: 'Description must be a string or null' });
+      return;
+    }
+
+    if (typeof description === 'string' && description.length > ALBUM_DESCRIPTION_MAX_LENGTH) {
+      res.status(400).json({
+        error: `Description exceeds maximum length of ${ALBUM_DESCRIPTION_MAX_LENGTH} characters`
+      });
+      return;
+    }
+
+    const albumState = getAlbumState(sanitizedAlbum);
+    if (!albumState) {
+      res.status(404).json({ error: 'Album not found' });
+      return;
+    }
+
+    const success = setAlbumDescription(sanitizedAlbum, description ?? null);
+    if (!success) {
+      error(`[AlbumManagement] Failed to update description for "${sanitizedAlbum}"`);
+      res.status(500).json({ error: 'Failed to update album description' });
+      return;
+    }
+
+    info(`[AlbumManagement] Updated description for album "${sanitizedAlbum}"`);
+
+    // Invalidate album cache and regenerate static JSON so the public page picks up the change
+    invalidateAlbumCache(sanitizedAlbum);
+    const appRoot = req.app.get('appRoot');
+    const result = await generateStaticJSONFiles(appRoot);
+    if (!result.success) {
+      error(`[AlbumDescription] Failed to regenerate static JSON:`, result.error);
+    }
+
+    // Re-read so we return the normalized (trimmed / null) value to the client
+    const updated = getAlbumState(sanitizedAlbum);
+    res.json({
+      success: true,
+      album: sanitizedAlbum,
+      description: updated?.description ?? null,
+    });
+  } catch (err) {
+    error('[AlbumManagement] Failed to update album description:', err);
+    res.status(500).json({ error: 'Failed to update album description' });
   }
 });
 

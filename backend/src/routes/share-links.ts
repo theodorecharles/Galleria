@@ -5,7 +5,7 @@
 
 import { Router, Request, Response } from "express";
 import { csrfProtection } from "../security.js";
-import { requireAuth, requireManager } from '../auth/middleware.js';
+import { requireManager } from '../auth/middleware.js';
 import { 
   createShareLink, 
   getShareLinkBySecret, 
@@ -178,10 +178,10 @@ router.get("/validate/:secretKey", async (req: Request, res: Response): Promise<
 });
 
 /**
- * Get all share links for an album (admin only)
+ * Get all share links for an album (manager/admin only)
  * GET /api/share-links/album/:album
  */
-router.get("/album/:album", requireAuth, async (req: Request, res: Response): Promise<void> => {
+router.get("/album/:album", requireManager, async (req: Request, res: Response): Promise<void> => {
   try {
     const { album } = req.params;
     
