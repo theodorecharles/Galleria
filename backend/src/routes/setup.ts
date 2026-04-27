@@ -3,7 +3,7 @@
  * Handles initial setup and configuration for first-time users
  */
 
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -16,8 +16,38 @@ import { pipeline } from "stream/promises";
 import { createGunzip } from "zlib";
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 import { sendInstallationEvent } from '../utils/installation-analytics.js';
+import { getConfigExists } from '../config.js';
 
 const router = Router();
+
+/**
+ * Guard for OOBE-only endpoints. Once config.json exists, the initial setup
+ * has already been performed and these endpoints must refuse further calls —
+ * otherwise an unauthenticated attacker could overwrite the session secret,
+ * authorized emails, OAuth credentials, allowed origins/hosts, and provision
+ * a new admin user (full account takeover). See ticket #533.
+ *
+ * The post-OOBE equivalents live behind authenticated routes (e.g.
+ * /api/branding/upload-avatar).
+ */
+function refuseIfSetupComplete(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  if (getConfigExists()) {
+    warn(
+      `[Setup] Refusing ${req.method} ${req.path} — setup has already completed. ` +
+      `Source IP: ${req.ip || req.socket.remoteAddress}`
+    );
+    res.status(403).json({
+      error: "Setup has already completed. This endpoint is disabled.",
+      setupComplete: true,
+    });
+    return;
+  }
+  next();
+}
 
 // Configure multer for avatar uploads
 const upload = multer({
@@ -246,6 +276,7 @@ router.get("/status", async (req: Request, res: Response): Promise<void> => {
  */
 router.post(
   "/initialize",
+  refuseIfSetupComplete,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const {
@@ -755,6 +786,7 @@ router.post(
  */
 router.post(
   "/upload-avatar",
+  refuseIfSetupComplete,
   upload.single("avatar"),
   async (req: Request, res: Response): Promise<void> => {
     try {
