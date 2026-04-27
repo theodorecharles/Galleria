@@ -9,24 +9,12 @@ import { API_URL } from '../../../../config';
 import { createPortal } from 'react-dom';
 import ShareModal from '../../ShareModal';
 import MoveToFolderModal from './MoveToFolderModal';
-import { Photo, Folder } from '../types';
+import { Photo, Folder, ConfirmModalConfig } from '../types';
 import { cacheBustValue } from '../../../../config';
 import { MagicWandIcon } from '../../../icons';
 import { error } from '../../../../utils/logger';
 import VideoThumbnailPicker from './VideoThumbnailPicker';
 
-
-interface ConfirmModalConfig {
-  message: string;
-  onConfirm: () => void;
-  confirmText?: string;
-  isDanger?: boolean;
-  photo?: {
-    thumbnail: string;
-    title?: string;
-    filename: string;
-  };
-}
 
 interface ModalsCollectionProps {
   // Edit Photo Modal
