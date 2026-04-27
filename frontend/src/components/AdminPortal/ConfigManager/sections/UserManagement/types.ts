@@ -9,7 +9,6 @@ export interface User {
   auth_methods: string[];
   status?: string;
   picture?: string;
-  invite_token?: string | null;
 }
 
 export interface Passkey {

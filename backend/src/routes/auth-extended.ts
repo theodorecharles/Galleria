@@ -1505,17 +1505,21 @@ router.delete('/passkey/:id', requireAuth, async (req: Request, res: Response) =
 
 /**
  * List all users (admin only)
+ *
+ * Security note: requires `requireAdmin` — non-admin accounts must not be able
+ * to enumerate users. The response intentionally omits `invite_token`; admins
+ * who need an outstanding invite URL fetch it via
+ * `GET /users/:userId/invite-link` (one user at a time, admin-gated).
  */
-router.get('/users', requireAuth, (req: Request, res: Response) => {
+router.get('/users', requireAdmin, (req: Request, res: Response) => {
   try {
     const users = getAllUsers();
-    
+
     // Remove sensitive data and add computed fields
     const sanitizedUsers = users.map((user: User) => {
       // Determine display status based on user state
       let displayStatus = null;
-      let inviteToken = null;
-      
+
       if (user.status === 'invited') {
         // Check if invite has expired
         if (user.invite_expires_at) {
@@ -1528,11 +1532,8 @@ router.get('/users', requireAuth, (req: Request, res: Response) => {
         } else {
           displayStatus = 'invited';
         }
-        
-        // Include invite token for invited/expired users (needed for copy link functionality)
-        inviteToken = user.invite_token;
       }
-      
+
       return {
         id: user.id,
         email: user.email,
@@ -1543,7 +1544,6 @@ router.get('/users', requireAuth, (req: Request, res: Response) => {
         passkey_count: user.passkeys?.length || 0,
         is_active: user.is_active,
         status: displayStatus, // Only show status if invited or expired
-        invite_token: inviteToken, // Include for invited users
         created_at: user.created_at,
         last_login_at: user.last_login_at,
       };
@@ -1553,6 +1553,48 @@ router.get('/users', requireAuth, (req: Request, res: Response) => {
   } catch (err) {
     error('[AuthExtended] List users error:', err);
     res.status(500).json({ error: 'Failed to list users' });
+  }
+});
+
+/**
+ * Fetch the outstanding invitation link for a single invited user (admin only).
+ *
+ * Carved out from `GET /users` so invite tokens are never returned in bulk list
+ * responses — admins must request them one at a time, and only admins can.
+ */
+router.get('/users/:userId/invite-link', requireAdmin, (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    if (Number.isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user id' });
+    }
+
+    const user = getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.status !== 'invited' || !user.invite_token) {
+      return res.status(400).json({ error: 'User does not have an outstanding invitation' });
+    }
+
+    let expired = false;
+    if (user.invite_expires_at) {
+      const expiresAt = new Date(user.invite_expires_at);
+      if (expiresAt < new Date()) {
+        expired = true;
+      }
+    }
+
+    return res.json({
+      inviteUrl: generateInvitationUrl(user.invite_token),
+      inviteToken: user.invite_token,
+      expired,
+      expiresAt: user.invite_expires_at || null,
+    });
+  } catch (err) {
+    error('[AuthExtended] Get invite link error:', err);
+    return res.status(500).json({ error: 'Failed to get invite link' });
   }
 });
 
