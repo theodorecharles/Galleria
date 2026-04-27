@@ -1429,8 +1429,16 @@ router.delete('/passkey/:id', requireAuth, async (req: Request, res: Response) =
 
 /**
  * List all users (admin only)
+ *
+ * SECURITY: This endpoint returns `invite_token` for users in the `invited`
+ * state so the admin UI can render a "Copy Invite Link" affordance. The
+ * invite token is sufficient on its own to complete the invitation and take
+ * over the invited account (see POST /invite/:token/complete, which is
+ * unauthenticated by design). It MUST therefore stay gated by requireAdmin —
+ * downgrading this to requireAuth leaks invite tokens to viewers/managers and
+ * creates a direct privilege-escalation path.
  */
-router.get('/users', requireAuth, (req: Request, res: Response) => {
+router.get('/users', requireAdmin, (req: Request, res: Response) => {
   try {
     const users = getAllUsers();
     
