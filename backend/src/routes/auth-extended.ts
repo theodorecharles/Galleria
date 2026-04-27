@@ -1506,10 +1506,18 @@ router.delete('/passkey/:id', requireAuth, async (req: Request, res: Response) =
 /**
  * List all users (admin only)
  *
- * Security note: requires `requireAdmin` — non-admin accounts must not be able
- * to enumerate users. The response intentionally omits `invite_token`; admins
- * who need an outstanding invite URL fetch it via
- * `GET /users/:userId/invite-link` (one user at a time, admin-gated).
+ * SECURITY: This endpoint MUST NOT return `invite_token` for any user. The
+ * invite token is sufficient on its own to complete the invitation and take
+ * over the invited account (see POST /invite/:token/complete, which is
+ * unauthenticated by design), so disclosing it on every page-load of the
+ * admin user list — even to admins — needlessly widens the blast radius of a
+ * compromised admin session and blocks future token-rotation / one-time-use
+ * controls. Admins fetch the token on demand via
+ * GET /users/:userId/invite-link when they explicitly click "Copy Link".
+ *
+ * Endpoint also stays gated by requireAdmin — downgrading to requireAuth
+ * would expose user metadata (roles, auth methods, MFA state, etc.) to
+ * viewers/managers.
  */
 router.get('/users', requireAdmin, (req: Request, res: Response) => {
   try {
@@ -1544,6 +1552,7 @@ router.get('/users', requireAdmin, (req: Request, res: Response) => {
         passkey_count: user.passkeys?.length || 0,
         is_active: user.is_active,
         status: displayStatus, // Only show status if invited or expired
+        // invite_token is intentionally NOT returned here — see SECURITY note above.
         created_at: user.created_at,
         last_login_at: user.last_login_at,
       };
@@ -1559,8 +1568,10 @@ router.get('/users', requireAdmin, (req: Request, res: Response) => {
 /**
  * Fetch the outstanding invitation link for a single invited user (admin only).
  *
- * Carved out from `GET /users` so invite tokens are never returned in bulk list
- * responses — admins must request them one at a time, and only admins can.
+ * Separated from GET /users so that the raw `invite_token` is only disclosed
+ * in response to an explicit admin action (clicking "Copy Invite Link"),
+ * rather than being baked into every list response. Admins must request tokens
+ * one at a time, and only admins can.
  */
 router.get('/users/:userId/invite-link', requireAdmin, (req: Request, res: Response) => {
   try {

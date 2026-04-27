@@ -457,7 +457,9 @@ export const UserCard: React.FC<UserCardProps> = ({
       {/* User Actions */}
       {currentUser && (
         <>
-          {/* Invited/Expired Users - Show Copy Invite */}
+          {/* Invited/Expired Users - Show Copy Invite. The token itself is
+              fetched on-demand from a dedicated admin-only endpoint when the
+              admin clicks Copy, so the list response no longer carries it. */}
           {(user.status === "invited" || user.status === "invite_expired") && (
             <div
               style={{
