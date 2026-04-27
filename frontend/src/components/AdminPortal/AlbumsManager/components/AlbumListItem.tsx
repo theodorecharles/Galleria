@@ -4,7 +4,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Photo, UploadingImage } from '../types';
 import { API_URL } from '../../../../config';
-import { EditIcon, TrashIcon, VideoIcon } from '../../../icons';
+import { EditIcon, TrashIcon, VideoIcon, CheckmarkIcon } from '../../../icons';
 
 interface AlbumListItemProps {
   // Either an existing photo or an uploading image
@@ -19,6 +19,11 @@ interface AlbumListItemProps {
   // State
   deletingPhotoId: string | null;
   canEdit: boolean;
+
+  // Multi-select (ticket #622)
+  selectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (photoId: string, withShift: boolean) => void;
 }
 
 export const AlbumListItem: React.FC<AlbumListItemProps> = ({
@@ -29,6 +34,9 @@ export const AlbumListItem: React.FC<AlbumListItemProps> = ({
   onDelete,
   deletingPhotoId,
   canEdit,
+  selectMode = false,
+  isSelected = false,
+  onToggleSelect,
 }) => {
   const { t } = useTranslation();
   // Determine the data source
@@ -55,8 +63,15 @@ export const AlbumListItem: React.FC<AlbumListItemProps> = ({
     isDragging,
   } = useSortable({
     id: photoId,
-    disabled: !canEdit,
+    disabled: !canEdit || selectMode,
   });
+
+  const handleRowClick = (e: React.MouseEvent) => {
+    if (!selectMode || isUploading || !photoData || !onToggleSelect) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onToggleSelect(photoData.id, e.shiftKey);
+  };
   
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -99,10 +114,18 @@ export const AlbumListItem: React.FC<AlbumListItemProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`list-item ${isDragging ? 'dragging' : ''} ${isDeleting ? 'deleting' : ''} ${isUploading ? 'uploading' : ''}`}
-      {...attributes}
-      {...listeners}
+      className={`list-item ${isDragging ? 'dragging' : ''} ${isDeleting ? 'deleting' : ''} ${isUploading ? 'uploading' : ''} ${selectMode ? 'selectable' : ''} ${isSelected ? 'selected' : ''}`}
+      {...(selectMode ? { onClick: handleRowClick } : {})}
+      {...(!selectMode ? attributes : {})}
+      {...(!selectMode ? listeners : {})}
     >
+      {/* Selection indicator (multi-select mode) */}
+      {selectMode && !isUploading && (
+        <div className={`list-item-select ${isSelected ? 'checked' : ''}`} aria-hidden="true">
+          {isSelected && <CheckmarkIcon width="14" height="14" />}
+        </div>
+      )}
+
       {/* Thumbnail */}
       <div className="list-item-thumbnail">
         {thumbnailUrl ? (
@@ -135,8 +158,8 @@ export const AlbumListItem: React.FC<AlbumListItemProps> = ({
         )}
       </div>
 
-      {/* Actions */}
-      {isComplete && canEdit && (
+      {/* Actions (hidden in select mode) */}
+      {isComplete && canEdit && !selectMode && (
         <div className="list-item-actions">
           <button
             onClick={(e) => {

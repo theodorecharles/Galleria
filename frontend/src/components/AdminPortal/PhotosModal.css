@@ -760,3 +760,109 @@ label.photos-btn {
   }
 }
 
+/* ============================================================
+ * Multi-select / bulk delete (ticket #622)
+ * ============================================================ */
+
+/* Bulk action bar - reuses .photos-reorder-bar layout but with brand-danger accent */
+.photos-bulk-action-bar {
+  background: #1a1414;
+  border-top: 1px solid rgba(239, 68, 68, 0.25);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.bulk-selected-count {
+  color: #cfcfcf;
+  font-size: 0.95rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* While in select mode, show a subtle hover affordance and disable the
+   default cursor: grab from dnd-kit */
+.photos-modal.select-mode .admin-photo-item.selectable,
+.photos-modal.select-mode .list-item.selectable {
+  cursor: pointer;
+}
+
+/* Grid item: selection checkbox in upper-left corner */
+.admin-photo-item .photo-select-indicator {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  z-index: 5;
+  pointer-events: none;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.admin-photo-item .photo-select-indicator.checked {
+  background: var(--primary-color, #3b82f6);
+  border-color: var(--primary-color, #3b82f6);
+  transform: scale(1.05);
+}
+
+.admin-photo-item.selected {
+  outline: 3px solid var(--primary-color, #3b82f6);
+  outline-offset: -3px;
+  border-radius: 12px;
+}
+
+.admin-photo-item.selected .admin-photo-thumbnail {
+  filter: brightness(0.85);
+}
+
+/* Hide the hover overlay (edit/delete buttons) entirely when selecting */
+.photos-modal.select-mode .admin-photo-item .photo-overlay {
+  display: none !important;
+}
+
+/* List item: selection checkbox before the thumbnail */
+.list-item .list-item-select {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  margin-right: 0.5rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.list-item .list-item-select.checked {
+  background: var(--primary-color, #3b82f6);
+  border-color: var(--primary-color, #3b82f6);
+}
+
+.list-item.selected {
+  background: rgba(59, 130, 246, 0.12);
+  outline: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+/* Active state for the Select toggle button in the controls bar */
+.photos-btn.select-mode-active {
+  background: var(--primary-color, #3b82f6);
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+  .photos-bulk-action-bar .bulk-selected-count {
+    width: 100%;
+    text-align: center;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    order: 3;
+  }
+}

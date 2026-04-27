@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { UploadIcon, TrashIcon, LinkIcon, CloseIcon, EyeIcon, GridViewIcon, ListViewIcon } from '../../../icons';
+import { UploadIcon, TrashIcon, LinkIcon, CloseIcon, EyeIcon, GridViewIcon, ListViewIcon, CheckmarkIcon } from '../../../icons';
 import { showToast } from '../../../../utils/toast';
 
 type ViewMode = 'grid' | 'list';
@@ -23,6 +23,9 @@ interface AlbumContentPanelHeaderProps {
   albumPhotos: any[];
   uploadingImages: any[];
   viewMode: ViewMode;
+  selectMode: boolean;
+  canSelect: boolean;
+  onToggleSelectMode: () => void;
   onClose: () => void;
   onUploadPhotos: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDeleteAlbum: (albumName: string) => void;
@@ -42,6 +45,9 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
   albumPhotos,
   uploadingImages,
   viewMode,
+  selectMode,
+  canSelect,
+  onToggleSelectMode,
   onClose,
   onUploadPhotos,
   onDeleteAlbum,
@@ -279,9 +285,19 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
 
           {canEdit && (
             <>
-              <label 
+              <button
+                type="button"
+                className={`photos-btn ${selectMode ? 'photos-btn-success select-mode-active' : 'photos-btn-secondary'}`}
+                onClick={onToggleSelectMode}
+                disabled={hasActiveUploads || (!canSelect && !selectMode)}
+                title={selectMode ? t('albumsManager.exitSelectMode') : t('albumsManager.enterSelectMode')}
+              >
+                <CheckmarkIcon width="16" height="16" />
+                <span>{selectMode ? t('albumsManager.done') : t('albumsManager.select')}</span>
+              </button>
+              <label
                 className={`photos-btn photos-btn-primary ${hasActiveUploads ? 'disabled' : ''}`}
-                style={{ 
+                style={{
                   cursor: hasActiveUploads ? 'not-allowed' : 'pointer',
                   opacity: hasActiveUploads ? 0.6 : 1
                 }}

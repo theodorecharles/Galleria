@@ -991,11 +991,13 @@ const ModalsCollection: React.FC<ModalsCollectionProps> = ({
         >
           <div className="edit-modal confirm-modal" onClick={(e) => e.stopPropagation()}>
             <div className="edit-modal-header">
-              <h3>{confirmConfig.photo 
-                ? (confirmConfig.confirmText?.includes('video') || confirmConfig.confirmText?.includes('Video') 
-                    ? t('albumsManager.deleteVideoQuestion') 
-                    : t('albumsManager.deletePhotoQuestion'))
-                : t('albumsManager.confirmAction')}</h3>
+              <h3>{confirmConfig.title
+                ? confirmConfig.title
+                : confirmConfig.photo
+                  ? (confirmConfig.confirmText?.includes('video') || confirmConfig.confirmText?.includes('Video')
+                      ? t('albumsManager.deleteVideoQuestion')
+                      : t('albumsManager.deletePhotoQuestion'))
+                  : t('albumsManager.confirmAction')}</h3>
               <button 
                 className="modal-close-btn"
                 onClick={() => setShowConfirmModal(false)}
