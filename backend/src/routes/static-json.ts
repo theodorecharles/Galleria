@@ -90,13 +90,24 @@ export async function generateStaticJSONFiles(appRoot: string): Promise<{ succes
       }
     }
 
-    // Generate JSON for each album in parallel (optimized array format)
+    // Build a quick lookup for album metadata (description, etc.)
+    const albumMetaByName = new Map(albumsData.map(a => [a.name, a]));
+
+    // Generate JSON for each album in parallel (optimized array format).
+    // Format: { description: string|null, photos: [[filename, title, media_type, description], ...] }
+    // The description field is the album-level caption (ticket #621); photo-level
+    // description remains the last entry in each photo array.
     await Promise.all(
       albums.map(async (album) => {
         try {
           const images = getImagesInAlbum(album);
           const photos = images.map((img) => transformImageToArray(img, album, false));
-          await writeJSON(outputDir, `${album}.json`, photos);
+          const albumMeta = albumMetaByName.get(album);
+          const albumPayload = {
+            description: albumMeta?.description ?? null,
+            photos,
+          };
+          await writeJSON(outputDir, `${album}.json`, albumPayload);
         } catch (err) {
           error(`[StaticJSON] Error generating JSON for album "${album}":`, err);
         }

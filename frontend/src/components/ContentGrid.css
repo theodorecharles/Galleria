@@ -9,6 +9,19 @@
   align-items: start;
 }
 
+.album-description-public {
+  width: 100%;
+  max-width: 720px;
+  margin: 0.25rem auto 0.75rem;
+  padding: 0 1rem;
+  text-align: center;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.75);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
 .photo-column {
   display: flex;
   flex-direction: column;

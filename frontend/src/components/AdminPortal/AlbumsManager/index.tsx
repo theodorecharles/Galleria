@@ -853,6 +853,7 @@ const AlbumsManager: React.FC<AlbumsManagerProps> = ({
               onUploadPhotos={uploadHandlers.handleUploadPhotos}
               onDeleteAlbum={albumHandlers.handleDeleteAlbum}
               onRenameAlbum={albumHandlers.handleInlineRenameAlbum}
+              onUpdateDescription={albumHandlers.handleUpdateAlbumDescription}
               onShareAlbum={(albumName) => {
                 setShareAlbumName(albumName);
                 setShowShareModal(true);
