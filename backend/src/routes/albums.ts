@@ -266,6 +266,7 @@ router.get("/api/albums", (req: Request, res) => {
         name: albumName,
         published: state?.published ?? false,
         show_on_homepage: state?.show_on_homepage ?? true,
+        description: state?.description ?? null,
         folder_id: state?.folder_id ?? null
       };
     });
@@ -279,7 +280,7 @@ router.get("/api/albums", (req: Request, res) => {
       const state = updatedAlbumStates.find(a => a.name === albumName);
       return state?.published === true;
     });
-    
+
     // Group albums by folder for better structure
     const albumsWithFolder = publishedAlbums.map((albumName: string) => {
       const state = updatedAlbumStates.find(a => a.name === albumName);
@@ -287,10 +288,11 @@ router.get("/api/albums", (req: Request, res) => {
         name: albumName,
         folder_id: state?.folder_id ?? null,
         published: true, // Already filtered to published albums
-        show_on_homepage: state?.show_on_homepage ?? true
+        show_on_homepage: state?.show_on_homepage ?? true,
+        description: state?.description ?? null
       };
     });
-    
+
     res.json({
       albums: albumsWithFolder,
       folders: allFolders
@@ -405,7 +407,8 @@ const serveAlbumPhotos = (req: Request, res: Response, albumName: string): void 
     // Return cached photos with published state
     res.json({
       photos: cached.photos,
-      published: albumState.published
+      published: albumState.published,
+      description: albumState.description ?? null
     });
     return;
   }
@@ -415,20 +418,21 @@ const serveAlbumPhotos = (req: Request, res: Response, albumName: string): void 
   const fetchStart = Date.now();
   const photos = getContentInAlbum(photosDir, sanitizedAlbum);
   const fetchDuration = Date.now() - fetchStart;
-  
+
   // Store in cache
   albumCache.set(sanitizedAlbum, {
     photos,
     timestamp: now
   });
-  
+
   const totalDuration = Date.now() - startTime;
   debug(`[Albums] Fetched ${photos.length} photos in ${fetchDuration}ms, total request: ${totalDuration}ms`);
-  
+
   // Return photos with published state
   res.json({
     photos,
-    published: albumState.published
+    published: albumState.published,
+    description: albumState.description ?? null
   });
 };
 

@@ -40,6 +40,7 @@ export function initializeDatabase(): any {
       name TEXT NOT NULL UNIQUE,
       published BOOLEAN NOT NULL DEFAULT 0,
       show_on_homepage BOOLEAN NOT NULL DEFAULT 0,
+      description TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -156,6 +157,18 @@ export function initializeDatabase(): any {
     }
   } catch (err) {
     warn('[Database] Could not check/add folder_id column to albums:', err);
+  }
+
+  // Add description column to albums if it doesn't exist (migration)
+  try {
+    const tableInfo = db.pragma('table_info(albums)');
+    const hasDescription = tableInfo.some((col: any) => col.name === 'description');
+    if (!hasDescription) {
+      info('[Database] Adding description column to albums...');
+      db.exec('ALTER TABLE albums ADD COLUMN description TEXT');
+    }
+  } catch (err) {
+    warn('[Database] Could not check/add description column to albums:', err);
   }
   
   // Create share_links table if it doesn't exist
@@ -399,20 +412,22 @@ export function getAlbumState(name: string): {
   name: string;
   published: boolean;
   show_on_homepage: boolean;
+  description: string | null;
   created_at: string;
   updated_at: string;
 } | undefined {
   const db = getDatabase();
-  
+
   const stmt = db.prepare(`
-    SELECT * FROM albums 
+    SELECT * FROM albums
     WHERE name = ?
   `);
-  
+
   const result = stmt.get(name) as any;
   if (result) {
     result.published = Boolean(result.published);
     result.show_on_homepage = Boolean(result.show_on_homepage);
+    result.description = result.description ?? null;
   }
   return result;
 }
@@ -425,26 +440,28 @@ export function getAllAlbums(): Array<{
   name: string;
   published: boolean;
   show_on_homepage: boolean;
+  description: string | null;
   folder_id: number | null;
   sort_order: number | null;
   created_at: string;
   updated_at: string;
 }> {
   const db = getDatabase();
-  
+
   const stmt = db.prepare(`
-    SELECT * FROM albums 
-    ORDER BY 
+    SELECT * FROM albums
+    ORDER BY
       CASE WHEN sort_order IS NULL THEN 1 ELSE 0 END,
       sort_order ASC,
       name ASC
   `);
-  
+
   const results = stmt.all() as any[];
   return results.map(result => ({
     ...result,
     published: Boolean(result.published),
     show_on_homepage: Boolean(result.show_on_homepage),
+    description: result.description ?? null,
     folder_id: result.folder_id ?? null
   }));
 }
@@ -503,6 +520,29 @@ export function setAlbumPublished(name: string, published: boolean): boolean {
   `);
   
   const result = stmt.run(published ? 1 : 0, name);
+  return result.changes > 0;
+}
+
+/**
+ * Set album description (caption shown on the public album page).
+ * Pass null or empty string to clear the description.
+ */
+export function setAlbumDescription(name: string, description: string | null): boolean {
+  const db = getDatabase();
+
+  // Normalize: empty/whitespace-only strings are stored as NULL so the
+  // public page can cleanly skip rendering when there's nothing to show.
+  const normalized = description && description.trim().length > 0
+    ? description.trim()
+    : null;
+
+  const stmt = db.prepare(`
+    UPDATE albums
+    SET description = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE name = ?
+  `);
+
+  const result = stmt.run(normalized, name);
   return result.changes > 0;
 }
 

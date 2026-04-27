@@ -32,8 +32,12 @@ interface AlbumContentPanelHeaderProps {
   onPreviewAlbum: (albumName: string) => void;
   onViewModeChange: (mode: ViewMode) => void;
   onRenameAlbum: (oldName: string, newName: string) => Promise<void>;
+  onUpdateDescription: (albumName: string, description: string) => Promise<void>;
   canEdit: boolean;
 }
+
+// Keep in sync with backend ALBUM_DESCRIPTION_MAX_LENGTH (album-management.ts).
+const DESCRIPTION_MAX_LENGTH = 2000;
 
 const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
   selectedAlbum,
@@ -51,6 +55,7 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
   onPreviewAlbum,
   onViewModeChange,
   onRenameAlbum,
+  onUpdateDescription,
   canEdit,
 }) => {
   const { t } = useTranslation();
@@ -58,10 +63,17 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
   const [editedTitle, setEditedTitle] = React.useState(selectedAlbum);
   const [isSaving, setIsSaving] = React.useState(false);
   const titleInputRef = React.useRef<HTMLInputElement>(null);
-  
+
   const currentAlbum = localAlbums.find(a => a.name === selectedAlbum);
   const isPublished = currentAlbum?.published !== false;
   const showOnHomepage = currentAlbum?.show_on_homepage !== false;
+  const currentDescription: string = currentAlbum?.description ?? '';
+
+  // Description inline-edit state — mirrors the title inline-edit pattern.
+  const [isEditingDescription, setIsEditingDescription] = React.useState(false);
+  const [editedDescription, setEditedDescription] = React.useState(currentDescription);
+  const [isSavingDescription, setIsSavingDescription] = React.useState(false);
+  const descriptionTextareaRef = React.useRef<HTMLTextAreaElement>(null);
   
   // Count completed uploads (optimization + AI done)
   const completedUploads = uploadingImages.filter((img: any) => img.state === 'complete').length;
@@ -81,7 +93,31 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
   React.useEffect(() => {
     setIsEditingTitle(false);
     setEditedTitle(selectedAlbum);
+    setIsEditingDescription(false);
+    setEditedDescription(currentDescription);
+    // currentDescription depends on selectedAlbum + localAlbums; we want this to fire
+    // on album switch, so we deliberately scope the dep to selectedAlbum.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAlbum]);
+
+  // Keep edit buffer in sync when the underlying description changes outside this panel
+  // (e.g. another tab) and we're not actively editing.
+  React.useEffect(() => {
+    if (!isEditingDescription) {
+      setEditedDescription(currentDescription);
+    }
+  }, [currentDescription, isEditingDescription]);
+
+  // Focus textarea when entering description edit mode
+  React.useEffect(() => {
+    if (isEditingDescription && descriptionTextareaRef.current) {
+      descriptionTextareaRef.current.focus();
+      // Place cursor at the end rather than selecting everything — descriptions are longer
+      // than titles so select-all is rarely what you want.
+      const len = descriptionTextareaRef.current.value.length;
+      descriptionTextareaRef.current.setSelectionRange(len, len);
+    }
+  }, [isEditingDescription]);
   
   // Focus input when editing starts
   React.useEffect(() => {
@@ -144,6 +180,55 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
     }
   };
 
+  const handleStartEditDescription = () => {
+    if (canEdit) {
+      setIsEditingDescription(true);
+      setEditedDescription(currentDescription);
+    }
+  };
+
+  const handleCancelEditDescription = () => {
+    setIsEditingDescription(false);
+    setEditedDescription(currentDescription);
+  };
+
+  const handleSaveEditDescription = async () => {
+    const next = editedDescription;
+    // No-op if unchanged (compare normalized values — empty/whitespace == empty)
+    if (next.trim() === currentDescription.trim()) {
+      setIsEditingDescription(false);
+      return;
+    }
+
+    if (next.length > DESCRIPTION_MAX_LENGTH) {
+      showToast(`Description cannot exceed ${DESCRIPTION_MAX_LENGTH} characters`, 'error');
+      return;
+    }
+
+    setIsSavingDescription(true);
+    try {
+      await onUpdateDescription(selectedAlbum, next);
+      setIsEditingDescription(false);
+    } catch (err) {
+      console.error('Failed to update description:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update description';
+      showToast(errorMessage, 'error');
+    } finally {
+      setIsSavingDescription(false);
+    }
+  };
+
+  const handleDescriptionKeyDown = (e: React.KeyboardEvent) => {
+    // Cmd/Ctrl+Enter saves; Escape cancels. Plain Enter inserts a newline (textarea default).
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSaveEditDescription();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancelEditDescription();
+    }
+  };
+
   return (
     <div className="photos-modal-header">
       {/* Title Bar */}
@@ -181,7 +266,7 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
             </div>
           ) : (
             <>
-              <h2 
+              <h2
                 className={`photos-modal-title ${canEdit && !hasActiveUploads ? 'editable' : ''}`}
                 onClick={handleStartEdit}
                 title={canEdit && !hasActiveUploads ? t('albumsManager.clickToRename') : undefined}
@@ -197,6 +282,60 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
                 )}
               </span>
             </>
+          )}
+
+          {/* Album description (ticket #621) — editable inline below the title */}
+          {!isEditingTitle && (
+            isEditingDescription ? (
+              <div className="album-description-edit-container">
+                <textarea
+                  ref={descriptionTextareaRef}
+                  className="album-description-input"
+                  value={editedDescription}
+                  onChange={(e) => setEditedDescription(e.target.value)}
+                  onKeyDown={handleDescriptionKeyDown}
+                  disabled={isSavingDescription}
+                  maxLength={DESCRIPTION_MAX_LENGTH}
+                  placeholder={t('albumsManager.descriptionPlaceholder')}
+                  rows={3}
+                />
+                <div className="album-description-edit-actions">
+                  <span className="album-description-char-count">
+                    {editedDescription.length}/{DESCRIPTION_MAX_LENGTH}
+                  </span>
+                  <button
+                    className="album-title-btn album-title-btn-save"
+                    onClick={handleSaveEditDescription}
+                    disabled={isSavingDescription}
+                  >
+                    {isSavingDescription ? t('common.saving') : t('common.save')}
+                  </button>
+                  <button
+                    className="album-title-btn album-title-btn-cancel"
+                    onClick={handleCancelEditDescription}
+                    disabled={isSavingDescription}
+                  >
+                    {t('common.cancel')}
+                  </button>
+                </div>
+              </div>
+            ) : currentDescription ? (
+              <p
+                className={`album-description-display ${canEdit ? 'editable' : ''}`}
+                onClick={handleStartEditDescription}
+                title={canEdit ? t('albumsManager.clickToEditDescription') : undefined}
+              >
+                {currentDescription}
+              </p>
+            ) : canEdit ? (
+              <button
+                type="button"
+                className="album-description-add-btn"
+                onClick={handleStartEditDescription}
+              >
+                + {t('albumsManager.addDescription')}
+              </button>
+            ) : null
           )}
         </div>
         

@@ -58,26 +58,37 @@ try {
     ];
   }
 
-  // Get all albums (including unpublished)
+  // Get all albums (including unpublished). Description column may not yet exist
+  // on databases predating ticket #621 — fall back to NULL if so.
   console.log('\n📁 Fetching albums...');
-  const albums = db.prepare('SELECT name FROM albums ORDER BY sort_order, name').all();
+  let albums;
+  try {
+    albums = db.prepare('SELECT name, description FROM albums ORDER BY sort_order, name').all();
+  } catch (err) {
+    albums = db.prepare('SELECT name FROM albums ORDER BY sort_order, name').all()
+      .map(a => ({ ...a, description: null }));
+  }
   console.log(`   Found ${albums.length} albums (including unpublished)`);
 
-  // Generate JSON for each album
+  // Generate JSON for each album.
+  // Format: { description: string|null, photos: [[filename, title, media_type, description], ...] }
   console.log('\n📸 Generating album JSON files...');
   for (const albumRow of albums) {
     const album = albumRow.name;
     try {
       const images = db.prepare(`
-        SELECT filename, title, description, media_type 
-        FROM image_metadata 
-        WHERE album = ? 
+        SELECT filename, title, description, media_type
+        FROM image_metadata
+        WHERE album = ?
         ORDER BY sort_order, filename
       `).all(album);
-      
-      // Generate optimized format: array of [filename, title]
+
       const photos = images.map(transformImageToOptimized);
-      writeJSON(`${album}.json`, photos);
+      const albumPayload = {
+        description: albumRow.description || null,
+        photos,
+      };
+      writeJSON(`${album}.json`, albumPayload);
     } catch (error) {
       console.error(`   ⚠️  Error generating JSON for "${album}":`, error.message);
     }

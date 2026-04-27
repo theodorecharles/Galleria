@@ -323,6 +323,45 @@ export const createAlbumHandlers = (props: AlbumHandlersProps) => {
     window.dispatchEvent(new Event('albums-updated'));
   };
 
+  // Inline description editor for AlbumContentPanelHeader (ticket #621).
+  // Throws on failure so the caller can surface the error inline.
+  const handleUpdateAlbumDescription = async (
+    albumName: string,
+    description: string
+  ): Promise<void> => {
+    const trimmed = description.trim();
+    const payload = trimmed.length > 0 ? trimmed : null;
+
+    const res = await fetchWithRateLimitCheck(
+      `${API_URL}/api/albums/${encodeURIComponent(albumName)}/description`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ description: payload }),
+      }
+    );
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || t('albumsManager.failedToUpdateAlbum'));
+    }
+
+    // Update local cache so the UI reflects the new value without a full reload.
+    setLocalAlbums(
+      localAlbums.map(album =>
+        album.name === albumName
+          ? { ...album, description: payload }
+          : album
+      )
+    );
+
+    setMessage({ type: 'success', text: t('albumsManager.albumDescriptionSaved') });
+
+    // Refresh albums in parent state too (so the public-page JSON reload is consistent).
+    await loadAlbums();
+  };
+
   const handleMoveAlbumToFolder = async (
     albumName: string,
     folderId: number | null
@@ -376,6 +415,7 @@ export const createAlbumHandlers = (props: AlbumHandlersProps) => {
     handleOpenRenameModal,
     handleRenameAlbum,
     handleInlineRenameAlbum,
+    handleUpdateAlbumDescription,
     handleMoveAlbumToFolder,
   };
 };

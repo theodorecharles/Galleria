@@ -31,6 +31,7 @@ interface AlbumContentPanelProps {
   onUploadPhotos: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDeleteAlbum: (albumName: string) => void;
   onRenameAlbum: (oldName: string, newName: string) => Promise<void>;
+  onUpdateDescription: (albumName: string, description: string) => Promise<void>;
   onShareAlbum: (albumName: string) => void;
   onTogglePublished: (albumName: string, currentPublished: boolean) => void;
   onToggleHomepage: (albumName: string, currentShowOnHomepage: boolean) => void;
@@ -71,6 +72,7 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
   onUploadPhotos,
   onDeleteAlbum,
   onRenameAlbum,
+  onUpdateDescription,
   onShareAlbum,
   onTogglePublished,
   onToggleHomepage,
@@ -189,6 +191,7 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
           onUploadPhotos={onUploadPhotos}
           onDeleteAlbum={onDeleteAlbum}
           onRenameAlbum={onRenameAlbum}
+          onUpdateDescription={onUpdateDescription}
           onShareAlbum={onShareAlbum}
           onTogglePublished={onTogglePublished}
           onToggleHomepage={onToggleHomepage}
