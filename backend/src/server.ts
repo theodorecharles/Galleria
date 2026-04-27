@@ -766,8 +766,8 @@ i18nInitPromise.then(() => {
           error("[Startup] ✗ Failed to generate static JSON:", result.error);
         }
       })
-      .catch((error) => {
-        error("[Startup] ✗ Failed to generate static JSON:", error);
+      .catch((err) => {
+        error("[Startup] ✗ Failed to generate static JSON:", err);
       });
   }
   });
