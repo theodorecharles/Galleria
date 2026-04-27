@@ -103,6 +103,25 @@ export const userManagementAPI = {
     return await res.json();
   },
 
+  async getInviteLink(userId: number) {
+    const res = await fetch(
+      `${API_URL}/api/auth-extended/users/${userId}/invite-link`,
+      { credentials: 'include' }
+    );
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to fetch invitation link');
+    }
+
+    return (await res.json()) as {
+      inviteUrl: string;
+      inviteToken: string;
+      expired: boolean;
+      expiresAt: string | null;
+    };
+  },
+
   async resendInvite(userId: number) {
     const res = await fetch(`${API_URL}/api/auth-extended/invite/resend/${userId}`, {
       method: 'POST',
