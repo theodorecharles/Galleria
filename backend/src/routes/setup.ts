@@ -69,58 +69,70 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
+ * Pipe an HTTPS response through gunzip into a file using stream/promises
+ * pipeline(). pipeline() propagates errors from every stream in the chain
+ * (including socket resets on the response and truncated/non-gzip bodies on
+ * gunzip), ensures the destination is closed, and lets us unlink any partial
+ * file on failure. Returns true on success, false on failure.
+ */
+async function pipeResponseToGunzippedFile(
+  response: import('http').IncomingMessage,
+  dbPath: string
+): Promise<boolean> {
+  const gunzip = createGunzip();
+  const fileStream = createWriteStream(dbPath);
+  try {
+    await pipeline(response, gunzip, fileStream);
+    info('[Setup] GeoIP database downloaded successfully');
+    return true;
+  } catch (err) {
+    error('[Setup] Failed to download GeoIP database stream:', err);
+    // Clean up partial file (best-effort; ignore unlink errors so we always
+    // resolve the outer Promise).
+    await fs.promises.unlink(dbPath).catch(() => undefined);
+    return false;
+  }
+}
+
+/**
  * Download GeoIP database for location lookup
  * Uses DB-IP's free database (no registration required)
  */
 async function downloadGeoIPDatabase(dataDir: string): Promise<boolean> {
   try {
     const dbPath = path.join(dataDir, 'GeoLite2-City.mmdb');
-    
+
     // Skip if already exists
     if (fs.existsSync(dbPath)) {
       info('[Setup] GeoIP database already exists, skipping download');
       return true;
     }
-    
+
     info('[Setup] Downloading GeoIP database...');
-    
+
     // Get current year and month for DB-IP URL
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
-    
+
     // DB-IP free database URL (updated monthly)
     const dbipUrl = `https://download.db-ip.com/free/dbip-city-lite-${year}-${month}.mmdb.gz`;
-    
+
     return new Promise((resolve) => {
       https.get(dbipUrl, (response) => {
         if (response.statusCode === 302 || response.statusCode === 301) {
           // Follow redirect
           const redirectUrl = response.headers.location;
+          // Drain the redirect response so the socket can be reused / freed.
+          response.resume();
           if (redirectUrl) {
             info('[Setup] Following redirect to:', redirectUrl);
             https.get(redirectUrl, (redirectResponse) => {
               if (redirectResponse.statusCode === 200) {
-                const gunzip = createGunzip();
-                const fileStream = createWriteStream(dbPath);
-                
-                redirectResponse.pipe(gunzip).pipe(fileStream);
-                
-                fileStream.on('finish', () => {
-                  info('[Setup] GeoIP database downloaded successfully');
-                  resolve(true);
-                });
-                
-                fileStream.on('error', (err) => {
-                  error('[Setup] Failed to write GeoIP database:', err);
-                  // Clean up partial file
-                  if (fs.existsSync(dbPath)) {
-                    fs.unlinkSync(dbPath);
-                  }
-                  resolve(false);
-                });
+                pipeResponseToGunzippedFile(redirectResponse, dbPath).then(resolve);
               } else {
                 warn('[Setup] Failed to download GeoIP database (redirect response):', redirectResponse.statusCode);
+                redirectResponse.resume(); // discard body
                 resolve(false);
               }
             }).on('error', (err) => {
@@ -132,27 +144,11 @@ async function downloadGeoIPDatabase(dataDir: string): Promise<boolean> {
             resolve(false);
           }
         } else if (response.statusCode === 200) {
-          const gunzip = createGunzip();
-          const fileStream = createWriteStream(dbPath);
-          
-          response.pipe(gunzip).pipe(fileStream);
-          
-          fileStream.on('finish', () => {
-            info('[Setup] GeoIP database downloaded successfully');
-            resolve(true);
-          });
-          
-          fileStream.on('error', (err) => {
-            error('[Setup] Failed to write GeoIP database:', err);
-            // Clean up partial file
-            if (fs.existsSync(dbPath)) {
-              fs.unlinkSync(dbPath);
-            }
-            resolve(false);
-          });
+          pipeResponseToGunzippedFile(response, dbPath).then(resolve);
         } else {
           warn('[Setup] Failed to download GeoIP database, status:', response.statusCode);
           warn('[Setup] This is optional - location lookup will show "Location unknown"');
+          response.resume(); // discard body
           resolve(false);
         }
       }).on('error', (err) => {
