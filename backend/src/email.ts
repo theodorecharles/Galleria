@@ -27,19 +27,22 @@ export interface EmailConfig {
 
 /**
  * Translation helper function with variable interpolation
- * Replaces {{variable}} placeholders in translated strings
+ * Replaces {{variable}} placeholders in translated strings.
+ *
+ * Pass an explicit `locale` to render in the recipient's language. When omitted,
+ * falls back to the globally configured locale.
  */
-function t(key: string, variables?: Record<string, any>): string {
-  const locale = getGlobalLocale();
-  let translated = translateBackend(key, locale);
-  
+function t(key: string, variables?: Record<string, any>, locale?: string): string {
+  const effectiveLocale = locale ?? getGlobalLocale();
+  let translated = translateBackend(key, effectiveLocale);
+
   // Interpolate variables
   if (variables) {
     Object.entries(variables).forEach(([varName, value]) => {
       translated = translated.replace(new RegExp(`{{${varName}}}`, 'g'), String(value));
     });
   }
-  
+
   return translated;
 }
 
@@ -133,21 +136,21 @@ export async function sendInvitationEmail(
   const avatarPath = config.branding?.avatarPath || "/photos/avatar.png";
   const avatarUrl = `${frontendUrl}${avatarPath}`;
 
-  // Get translations for the global language setting
-  const locale = getGlobalLocale();
-  info(`[Email] Sending invitation email in language: ${locale}`);
+  // Render in the recipient's language (falls back to 'en' inside translateBackend)
+  info(`[Email] Sending invitation email in language: ${language}`);
+  const tr = (key: string, variables?: Record<string, any>) => t(key, variables, language);
 
   const mailOptions = {
     from: `"${emailConfig.from.name}" <${emailConfig.from.address}>`,
     to: toEmail,
-    subject: t('email.invitation.subject', { siteName }),
+    subject: tr('email.invitation.subject', { siteName }),
     html: `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${t('email.invitation.title', { siteName })}</title>
+        <title>${tr('email.invitation.title', { siteName })}</title>
         <style>
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -200,33 +203,33 @@ export async function sendInvitationEmail(
       <body>
         <div class="container">
           <img src="${avatarUrl}" alt="${siteName}" class="avatar" />
-          <h1>${t('email.invitation.title', { siteName })}</h1>
-          <p>${t('email.invitation.greeting')}</p>
-          <p>${t('email.invitation.body', { inviterName, siteName })}</p>
-          <p>${t('email.invitation.instructions')}</p>
-          <a href="${inviteUrl}" class="button">${t('email.invitation.button')}</a>
-          <p>${t('email.invitation.orCopyLink')}</p>
+          <h1>${tr('email.invitation.title', { siteName })}</h1>
+          <p>${tr('email.invitation.greeting')}</p>
+          <p>${tr('email.invitation.body', { inviterName, siteName })}</p>
+          <p>${tr('email.invitation.instructions')}</p>
+          <a href="${inviteUrl}" class="button">${tr('email.invitation.button')}</a>
+          <p>${tr('email.invitation.orCopyLink')}</p>
           <div class="code">${inviteUrl}</div>
-          <p><strong>${t('email.invitation.expiry')}</strong></p>
+          <p><strong>${tr('email.invitation.expiry')}</strong></p>
           <div class="footer">
-            <p>${t('email.invitation.footerIgnore')}</p>
-            <p>${t('email.invitation.footerAutomatic')}</p>
+            <p>${tr('email.invitation.footerIgnore')}</p>
+            <p>${tr('email.invitation.footerAutomatic')}</p>
           </div>
         </div>
       </body>
       </html>
     `,
     text: `
-${t('email.invitation.title', { siteName })}
+${tr('email.invitation.title', { siteName })}
 
-${t('email.invitation.body', { inviterName, siteName }).replace(/<\/?strong>/g, '')}
+${tr('email.invitation.body', { inviterName, siteName }).replace(/<\/?strong>/g, '')}
 
-${t('email.invitation.instructions')}
+${tr('email.invitation.instructions')}
 ${inviteUrl}
 
-${t('email.invitation.expiry')}
+${tr('email.invitation.expiry')}
 
-${t('email.invitation.footerIgnore')}
+${tr('email.invitation.footerIgnore')}
     `.trim(),
   };
 
@@ -275,25 +278,25 @@ export async function sendPasswordResetEmail(
   const avatarPath = config.branding?.avatarPath || "/photos/avatar.png";
   const avatarUrl = `${frontendUrl}${avatarPath}`;
 
-  // Get translations for the global language setting
-  const locale = getGlobalLocale();
-  info(`[Email] Sending password reset email in language: ${locale}`);
-  
-  const greeting = userName 
-    ? t('email.passwordReset.greeting', { userName })
-    : t('email.passwordReset.greetingFallback');
+  // Render in the recipient's language (falls back to 'en' inside translateBackend)
+  info(`[Email] Sending password reset email in language: ${language}`);
+  const tr = (key: string, variables?: Record<string, any>) => t(key, variables, language);
+
+  const greeting = userName
+    ? tr('email.passwordReset.greeting', { userName })
+    : tr('email.passwordReset.greetingFallback');
 
   const mailOptions = {
     from: `"${emailConfig.from.name}" <${emailConfig.from.address}>`,
     to: toEmail,
-    subject: t('email.passwordReset.subject', { siteName }),
+    subject: tr('email.passwordReset.subject', { siteName }),
     html: `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${t('email.passwordReset.title')} - ${siteName}</title>
+        <title>${tr('email.passwordReset.title')} - ${siteName}</title>
         <style>
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -352,45 +355,45 @@ export async function sendPasswordResetEmail(
       <body>
         <div class="container">
           <img src="${avatarUrl}" alt="${siteName}" class="avatar" />
-          <h1>${t('email.passwordReset.title')}</h1>
+          <h1>${tr('email.passwordReset.title')}</h1>
           <p>${greeting}</p>
-          <p>${t('email.passwordReset.body', { siteName })}</p>
-          <p>${t('email.passwordReset.instructions')}</p>
-          <a href="${resetUrl}" class="button">${t('email.passwordReset.button')}</a>
-          <p>${t('email.passwordReset.orCopyLink')}</p>
+          <p>${tr('email.passwordReset.body', { siteName })}</p>
+          <p>${tr('email.passwordReset.instructions')}</p>
+          <a href="${resetUrl}" class="button">${tr('email.passwordReset.button')}</a>
+          <p>${tr('email.passwordReset.orCopyLink')}</p>
           <div class="code">${resetUrl}</div>
           <div class="warning">
-            <strong>${t('email.passwordReset.warningTitle')}</strong>
+            <strong>${tr('email.passwordReset.warningTitle')}</strong>
             <ul>
-              <li>${t('email.passwordReset.warningExpiry')}</li>
-              <li>${t('email.passwordReset.warningIgnore')}</li>
-              <li>${t('email.passwordReset.warningNoChange')}</li>
+              <li>${tr('email.passwordReset.warningExpiry')}</li>
+              <li>${tr('email.passwordReset.warningIgnore')}</li>
+              <li>${tr('email.passwordReset.warningNoChange')}</li>
             </ul>
           </div>
           <div class="footer">
-            <p>${t('email.passwordReset.footerAutomatic')}</p>
-            <p>${t('email.passwordReset.footerContact')}</p>
+            <p>${tr('email.passwordReset.footerAutomatic')}</p>
+            <p>${tr('email.passwordReset.footerContact')}</p>
           </div>
         </div>
       </body>
       </html>
     `,
     text: `
-${t('email.passwordReset.subject', { siteName })}
+${tr('email.passwordReset.subject', { siteName })}
 
 ${greeting}
 
-${t('email.passwordReset.body', { siteName }).replace(/<\/?strong>/g, '')}
+${tr('email.passwordReset.body', { siteName }).replace(/<\/?strong>/g, '')}
 
-${t('email.passwordReset.instructions')}
+${tr('email.passwordReset.instructions')}
 ${resetUrl}
 
-${t('email.passwordReset.warningTitle')}
-- ${t('email.passwordReset.warningExpiry')}
-- ${t('email.passwordReset.warningIgnore')}
-- ${t('email.passwordReset.warningNoChange')}
+${tr('email.passwordReset.warningTitle')}
+- ${tr('email.passwordReset.warningExpiry')}
+- ${tr('email.passwordReset.warningIgnore')}
+- ${tr('email.passwordReset.warningNoChange')}
 
-${t('email.passwordReset.footerAutomatic')}
+${tr('email.passwordReset.footerAutomatic')}
     `.trim(),
   };
 
@@ -440,16 +443,16 @@ export async function sendTestEmail(toEmail: string, language: string = 'en'): P
   const config = getCurrentConfig();
   const siteName = config.branding?.siteName || "Galleria";
 
-  // Get translations for the global language setting
-  const locale = getGlobalLocale();
-  info(`[Email] Test email language: ${locale}`);
-  
+  // Render in the recipient's language (falls back to 'en' inside translateBackend)
+  info(`[Email] Test email language: ${language}`);
+  const tr = (key: string, variables?: Record<string, any>) => t(key, variables, language);
+
   const timestamp = new Date().toLocaleString();
 
   const mailOptions = {
     from: `"${emailConfig.from.name}" <${emailConfig.from.address}>`,
     to: toEmail,
-    subject: t('email.test.subject', { siteName }),
+    subject: tr('email.test.subject', { siteName }),
     html: `
       <!DOCTYPE html>
       <html>
@@ -488,27 +491,27 @@ export async function sendTestEmail(toEmail: string, language: string = 'en'): P
       </head>
       <body>
         <div class="container">
-          <div class="success">${t('email.test.success')}</div>
-          <h1>${t('email.test.title')}</h1>
-          <p>${t('email.test.body1')}</p>
-          <p>${t('email.test.body2', { siteName })}</p>
+          <div class="success">${tr('email.test.success')}</div>
+          <h1>${tr('email.test.title')}</h1>
+          <p>${tr('email.test.body1')}</p>
+          <p>${tr('email.test.body2', { siteName })}</p>
           <div class="footer">
-            <p>${t('email.test.footerTimestamp', { timestamp })}</p>
-            <p>${t('email.test.footerIgnore')}</p>
+            <p>${tr('email.test.footerTimestamp', { timestamp })}</p>
+            <p>${tr('email.test.footerIgnore')}</p>
           </div>
         </div>
       </body>
       </html>
     `,
     text: `
-${t('email.test.title')}
+${tr('email.test.title')}
 
-${t('email.test.success')} ${t('email.test.body1')}
+${tr('email.test.success')} ${tr('email.test.body1')}
 
-${t('email.test.body2', { siteName }).replace(/<\/?strong>/g, '')}
+${tr('email.test.body2', { siteName }).replace(/<\/?strong>/g, '')}
 
-${t('email.test.footerTimestamp', { timestamp })}
-${t('email.test.footerIgnore')}
+${tr('email.test.footerTimestamp', { timestamp })}
+${tr('email.test.footerIgnore')}
     `.trim(),
   };
 
