@@ -1374,6 +1374,13 @@ router.post('/passkey/auth-verify', async (req: Request, res: Response) => {
 
     const { user, passkey } = result;
 
+    // Reject deactivated accounts before doing any crypto work. Mirrors the
+    // is_active gate in the credential /login handler so that disabling a user
+    // also revokes their passkey-based access.
+    if (!user.is_active) {
+      return res.status(401).json({ error: 'Account is disabled' });
+    }
+
     // Verify authentication
     const verification = await verifyPasskeyAuthentication(
       credential,
