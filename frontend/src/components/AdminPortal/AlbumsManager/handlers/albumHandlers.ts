@@ -362,6 +362,59 @@ export const createAlbumHandlers = (props: AlbumHandlersProps) => {
     await loadAlbums();
   };
 
+  // Set or clear an album's cover photo (ticket #693).
+  // Pass `filename` to designate that photo as the cover, or `null` to clear and
+  // fall back to the first photo by sort order. Updates local state immediately
+  // for snappy UI feedback, then reloads albums.
+  const handleSetCoverPhoto = async (
+    albumName: string,
+    filename: string | null
+  ): Promise<void> => {
+    // Optimistic update so the cover badge moves without waiting for the network
+    setLocalAlbums(
+      localAlbums.map(album =>
+        album.name === albumName
+          ? {
+              ...album,
+              cover_photo: filename,
+              effective_cover_photo: filename ?? album.effective_cover_photo,
+            }
+          : album
+      )
+    );
+
+    try {
+      const res = await fetchWithRateLimitCheck(
+        `${API_URL}/api/albums/${encodeURIComponent(albumName)}/cover-photo`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ filename }),
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || t('albumsManager.failedToUpdateCoverPhoto'));
+      }
+
+      setMessage({
+        type: 'success',
+        text: filename
+          ? t('albumsManager.coverPhotoSet')
+          : t('albumsManager.coverPhotoCleared'),
+      });
+
+      await loadAlbums();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('albumsManager.failedToUpdateCoverPhoto');
+      setMessage({ type: 'error', text: message });
+      // Revert optimistic update by reloading authoritative state
+      await loadAlbums();
+    }
+  };
+
   const handleMoveAlbumToFolder = async (
     albumName: string,
     folderId: number | null
@@ -416,6 +469,7 @@ export const createAlbumHandlers = (props: AlbumHandlersProps) => {
     handleRenameAlbum,
     handleInlineRenameAlbum,
     handleUpdateAlbumDescription,
+    handleSetCoverPhoto,
     handleMoveAlbumToFolder,
   };
 };

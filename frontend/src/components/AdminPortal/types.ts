@@ -80,6 +80,10 @@ export interface Album {
   description?: string | null;
   sort_order?: number | null;
   folder_id?: number | null;
+  /** Filename of the photo explicitly designated as the album cover (ticket #693). */
+  cover_photo?: string | null;
+  /** Server-resolved cover filename: explicit cover_photo if set, else first photo by sort order. */
+  effective_cover_photo?: string | null;
 }
 
 export interface AlbumFolder {

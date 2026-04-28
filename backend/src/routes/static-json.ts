@@ -6,7 +6,7 @@
 import { Router, Request, Response } from "express";
 import fs from "fs";
 import path from "path";
-import { getAllAlbums, getImagesInAlbum, getImagesForHomepage } from "../database.js";
+import { getAllAlbums, getImagesInAlbum, getImagesForHomepage, getEffectiveCoverPhoto } from "../database.js";
 import { requireAuth, requireAdmin, requireManager } from '../auth/middleware.js';
 import { invalidateAlbumCache } from './albums.js';
 import { DATA_DIR } from '../config.js';
@@ -105,6 +105,8 @@ export async function generateStaticJSONFiles(appRoot: string): Promise<{ succes
           const albumMeta = albumMetaByName.get(album);
           const albumPayload = {
             description: albumMeta?.description ?? null,
+            cover_photo: albumMeta?.cover_photo ?? null,
+            effective_cover_photo: getEffectiveCoverPhoto(album),
             photos,
           };
           await writeJSON(outputDir, `${album}.json`, albumPayload);

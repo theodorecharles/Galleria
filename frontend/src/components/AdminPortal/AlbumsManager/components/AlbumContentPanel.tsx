@@ -32,6 +32,7 @@ interface AlbumContentPanelProps {
   onDeleteAlbum: (albumName: string) => void;
   onRenameAlbum: (oldName: string, newName: string) => Promise<void>;
   onUpdateDescription: (albumName: string, description: string) => Promise<void>;
+  onSetCoverPhoto: (albumName: string, filename: string | null) => Promise<void>;
   onShareAlbum: (albumName: string) => void;
   onTogglePublished: (albumName: string, currentPublished: boolean) => void;
   onToggleHomepage: (albumName: string, currentShowOnHomepage: boolean) => void;
@@ -74,6 +75,7 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
   onDeleteAlbum,
   onRenameAlbum,
   onUpdateDescription,
+  onSetCoverPhoto,
   onShareAlbum,
   onTogglePublished,
   onToggleHomepage,
@@ -321,6 +323,8 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
           onRetryUpload={onRetryUpload}
           setActiveId={setPhotoActiveId}
           canEdit={canEdit}
+          coverPhoto={localAlbums.find(a => a.name === selectedAlbum)?.cover_photo ?? null}
+          onSetCoverPhoto={onSetCoverPhoto}
         />
 
         {/* Bulk-action bar (shown while in select mode) - takes priority over reorder bar */}

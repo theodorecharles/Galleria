@@ -39,6 +39,8 @@ interface AlbumContentPanelGridProps {
   onRetryUpload?: (filename: string, albumName: string) => void;
   setActiveId: (id: string | null) => void;
   canEdit: boolean;
+  coverPhoto?: string | null;
+  onSetCoverPhoto?: (albumName: string, filename: string | null) => Promise<void>;
 }
 
 const AlbumContentPanelGrid: React.FC<AlbumContentPanelGridProps> = ({
@@ -61,6 +63,8 @@ const AlbumContentPanelGrid: React.FC<AlbumContentPanelGridProps> = ({
   onRetryAI,
   onRetryUpload,
   setActiveId,
+  coverPhoto,
+  onSetCoverPhoto,
 }) => {
   const { t } = useTranslation();
   // Detect if device supports touch
@@ -282,6 +286,8 @@ const AlbumContentPanelGrid: React.FC<AlbumContentPanelGridProps> = ({
                   selectMode={selectMode}
                   isSelected={selectedPhotoIds.has(photo.id)}
                   onToggleSelect={onTogglePhotoSelect}
+                  isCoverPhoto={!!coverPhoto && (photo.id.split('/').pop() || '') === coverPhoto}
+                  onSetCoverPhoto={onSetCoverPhoto}
                 />
               ))}
             </SortableContext>

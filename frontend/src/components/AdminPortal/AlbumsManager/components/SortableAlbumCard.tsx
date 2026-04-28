@@ -9,6 +9,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Album } from '../types';
 import { FolderMinusIcon, UploadIcon, ChevronUpIcon, ChevronDownIcon, FolderArrowIcon } from '../../../icons';
+import { API_URL, cacheBustValue } from '../../../../config';
 
 interface SortableAlbumCardProps {
   album: Album;
@@ -216,6 +217,19 @@ const SortableAlbumCard: React.FC<SortableAlbumCardProps> = ({
               <FolderArrowIcon width="16" height="16" />
             </button>
           )}
+        </div>
+      )}
+      {album.effective_cover_photo && (
+        <div className="album-card-thumbnail">
+          <img
+            src={`${API_URL}/optimized/thumbnail/${encodeURIComponent(album.name)}/${encodeURIComponent(album.effective_cover_photo)}?i=${cacheBustValue}`}
+            alt=""
+            loading="lazy"
+            onError={(e) => {
+              // Hide on error so we fall back to the icon-only header
+              (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
+            }}
+          />
         </div>
       )}
       <div className="album-card-header">

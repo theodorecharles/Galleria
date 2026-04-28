@@ -8,11 +8,11 @@ import { Router, Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import exifr from "exifr";
-import { 
-  getAlbumState, 
-  getPublishedAlbums, 
-  getAllAlbums, 
-  saveAlbum, 
+import {
+  getAlbumState,
+  getPublishedAlbums,
+  getAllAlbums,
+  saveAlbum,
   getAlbumMetadata,
   getAlbumsFromMetadata,
   getImagesInAlbum,
@@ -23,7 +23,8 @@ import {
   getAllFolders,
   getPublishedFolders,
   getAlbumsInFolder,
-  incrementAlbumViewCount
+  incrementAlbumViewCount,
+  getEffectiveCoverPhoto
 } from "../database.js";
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 
@@ -267,7 +268,9 @@ router.get("/api/albums", (req: Request, res) => {
         published: state?.published ?? false,
         show_on_homepage: state?.show_on_homepage ?? true,
         description: state?.description ?? null,
-        folder_id: state?.folder_id ?? null
+        folder_id: state?.folder_id ?? null,
+        cover_photo: state?.cover_photo ?? null,
+        effective_cover_photo: getEffectiveCoverPhoto(albumName)
       };
     });
     res.json({
@@ -289,7 +292,9 @@ router.get("/api/albums", (req: Request, res) => {
         folder_id: state?.folder_id ?? null,
         published: true, // Already filtered to published albums
         show_on_homepage: state?.show_on_homepage ?? true,
-        description: state?.description ?? null
+        description: state?.description ?? null,
+        cover_photo: state?.cover_photo ?? null,
+        effective_cover_photo: getEffectiveCoverPhoto(albumName)
       };
     });
 

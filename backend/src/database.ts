@@ -170,7 +170,21 @@ export function initializeDatabase(): any {
   } catch (err) {
     warn('[Database] Could not check/add description column to albums:', err);
   }
-  
+
+  // Add cover_photo column to albums if it doesn't exist (migration, ticket #693)
+  // Stores the filename (no album prefix) of the photo designated as the album cover.
+  // When NULL, the public/admin views fall back to the first photo by sort order.
+  try {
+    const tableInfo = db.pragma('table_info(albums)');
+    const hasCoverPhoto = tableInfo.some((col: any) => col.name === 'cover_photo');
+    if (!hasCoverPhoto) {
+      info('[Database] Adding cover_photo column to albums...');
+      db.exec('ALTER TABLE albums ADD COLUMN cover_photo TEXT');
+    }
+  } catch (err) {
+    warn('[Database] Could not check/add cover_photo column to albums:', err);
+  }
+
   // Create share_links table if it doesn't exist
   db.exec(`
     CREATE TABLE IF NOT EXISTS share_links (
@@ -413,6 +427,7 @@ export function getAlbumState(name: string): {
   published: boolean;
   show_on_homepage: boolean;
   description: string | null;
+  cover_photo: string | null;
   created_at: string;
   updated_at: string;
 } | undefined {
@@ -428,6 +443,7 @@ export function getAlbumState(name: string): {
     result.published = Boolean(result.published);
     result.show_on_homepage = Boolean(result.show_on_homepage);
     result.description = result.description ?? null;
+    result.cover_photo = result.cover_photo ?? null;
   }
   return result;
 }
@@ -441,6 +457,7 @@ export function getAllAlbums(): Array<{
   published: boolean;
   show_on_homepage: boolean;
   description: string | null;
+  cover_photo: string | null;
   folder_id: number | null;
   sort_order: number | null;
   created_at: string;
@@ -462,6 +479,7 @@ export function getAllAlbums(): Array<{
     published: Boolean(result.published),
     show_on_homepage: Boolean(result.show_on_homepage),
     description: result.description ?? null,
+    cover_photo: result.cover_photo ?? null,
     folder_id: result.folder_id ?? null
   }));
 }
@@ -543,6 +561,43 @@ export function setAlbumDescription(name: string, description: string | null): b
   `);
 
   const result = stmt.run(normalized, name);
+  return result.changes > 0;
+}
+
+/**
+ * Set album cover photo (ticket #693).
+ * Pass a filename (no album prefix) to designate that photo as the cover, or
+ * null to clear and fall back to the first photo by sort order.
+ */
+export function setAlbumCoverPhoto(name: string, filename: string | null): boolean {
+  const db = getDatabase();
+
+  // Normalize: empty/whitespace-only strings clear the cover.
+  const normalized = filename && filename.trim().length > 0 ? filename.trim() : null;
+
+  const stmt = db.prepare(`
+    UPDATE albums
+    SET cover_photo = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE name = ?
+  `);
+
+  const result = stmt.run(normalized, name);
+  return result.changes > 0;
+}
+
+/**
+ * Clear cover_photo for an album when the photo is no longer present.
+ * Returns true if the cover was cleared (the deleted file was the cover);
+ * false if the cover was something else or already null.
+ */
+export function clearAlbumCoverIfMatches(name: string, filename: string): boolean {
+  const db = getDatabase();
+  const stmt = db.prepare(`
+    UPDATE albums
+    SET cover_photo = NULL, updated_at = CURRENT_TIMESTAMP
+    WHERE name = ? AND cover_photo = ?
+  `);
+  const result = stmt.run(name, filename);
   return result.changes > 0;
 }
 
@@ -670,6 +725,43 @@ export function getAlbumsFromMetadata(): string[] {
   
   const results = stmt.all() as Array<{ album: string }>;
   return results.map(r => r.album);
+}
+
+/**
+ * Resolve the effective cover photo filename for an album (ticket #693).
+ * Returns the explicit cover_photo if set and the file still exists in image_metadata,
+ * otherwise falls back to the first photo (media_type='photo') by sort order.
+ * Returns null if the album has no photos.
+ */
+export function getEffectiveCoverPhoto(album: string): string | null {
+  const db = getDatabase();
+
+  const albumRow = db.prepare(`SELECT cover_photo FROM albums WHERE name = ?`).get(album) as any;
+  const explicit = albumRow?.cover_photo ?? null;
+
+  if (explicit) {
+    const exists = db.prepare(`
+      SELECT 1 FROM image_metadata
+      WHERE album = ? AND filename = ?
+      LIMIT 1
+    `).get(album, explicit);
+    if (exists) {
+      return explicit;
+    }
+  }
+
+  // Fallback: first photo (not video) by sort order, then filename
+  const fallback = db.prepare(`
+    SELECT filename FROM image_metadata
+    WHERE album = ? AND media_type = 'photo'
+    ORDER BY
+      CASE WHEN sort_order IS NULL THEN 1 ELSE 0 END,
+      sort_order ASC,
+      filename ASC
+    LIMIT 1
+  `).get(album) as any;
+
+  return fallback?.filename ?? null;
 }
 
 /**

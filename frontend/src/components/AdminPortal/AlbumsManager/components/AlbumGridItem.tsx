@@ -41,6 +41,10 @@ interface AlbumGridItemProps {
   isSelected?: boolean;
   onToggleSelect?: (photoId: string, withShift: boolean) => void;
 
+  // Cover photo (ticket #693)
+  isCoverPhoto?: boolean;
+  onSetCoverPhoto?: (albumName: string, filename: string | null) => Promise<void>;
+
   // Permissions
   canEdit: boolean;
 }
@@ -61,6 +65,8 @@ const AlbumGridItem: React.FC<AlbumGridItemProps> = ({
   selectMode = false,
   isSelected = false,
   onToggleSelect,
+  isCoverPhoto = false,
+  onSetCoverPhoto,
   canEdit,
 }) => {
   const { t } = useTranslation();
@@ -139,7 +145,7 @@ const AlbumGridItem: React.FC<AlbumGridItemProps> = ({
       e.preventDefault();
 
       const target = e.target as HTMLElement;
-      const clickedButton = target.closest('.btn-edit-photo, .btn-delete-photo, .btn-retry-photo');
+      const clickedButton = target.closest('.btn-edit-photo, .btn-delete-photo, .btn-retry-photo, .btn-cover-photo');
 
       if (clickedButton) {
         // Tapped a button - let the button handler deal with it
@@ -173,7 +179,7 @@ const AlbumGridItem: React.FC<AlbumGridItemProps> = ({
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (isUploading) return;
     const target = e.target as HTMLElement;
-    if (!target.closest('.btn-edit-photo, .btn-delete-photo, .btn-retry-photo')) {
+    if (!target.closest('.btn-edit-photo, .btn-delete-photo, .btn-retry-photo, .btn-cover-photo')) {
       setShowOverlay(false);
     }
   };
@@ -242,6 +248,13 @@ const AlbumGridItem: React.FC<AlbumGridItemProps> = ({
       {!isUploading && photoData?.media_type === 'video' && (
         <div className="video-icon-overlay">
           <VideoIcon width="20" height="20" />
+        </div>
+      )}
+
+      {/* Cover photo indicator (ticket #693) */}
+      {!isUploading && isCoverPhoto && (
+        <div className="cover-photo-badge" title={t('albumsManager.coverPhoto')} aria-label={t('albumsManager.coverPhoto')}>
+          ⭐
         </div>
       )}
 
@@ -396,6 +409,28 @@ const AlbumGridItem: React.FC<AlbumGridItemProps> = ({
             >
               <EditDocumentIcon width="16" height="16" />
             </button>
+            {photoData.media_type !== 'video' && onSetCoverPhoto && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  const filename = photoData.id.split('/').pop() || photoData.id;
+                  onSetCoverPhoto(photoData.album, isCoverPhoto ? null : decodeURIComponent(filename));
+                }}
+                onTouchEnd={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  const filename = photoData.id.split('/').pop() || photoData.id;
+                  onSetCoverPhoto(photoData.album, isCoverPhoto ? null : decodeURIComponent(filename));
+                }}
+                className={`btn-cover-photo ${isCoverPhoto ? 'is-cover' : ''}`}
+                title={isCoverPhoto ? t('albumsManager.clearCover') : t('albumsManager.setAsCover')}
+                aria-pressed={isCoverPhoto}
+                type="button"
+              >
+                ⭐
+              </button>
+            )}
             {photoData.optimizationError && onRetryOptimization && (
               <button
                 onClick={(e) => {

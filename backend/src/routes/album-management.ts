@@ -17,14 +17,16 @@ import { requireAuth, requireAdmin, requireManager } from '../auth/middleware.js
 import { sendNotificationToUser } from '../push-notifications.js';
 import { translateNotification } from '../i18n-backend.js';
 import { getAllUsers } from '../database-users.js';
-import { 
-  deleteAlbumMetadata, 
-  deleteImageMetadata, 
-  saveAlbum, 
+import {
+  deleteAlbumMetadata,
+  deleteImageMetadata,
+  saveAlbum,
   deleteAlbumState,
   setAlbumPublished,
   setAlbumShowOnHomepage,
   setAlbumDescription,
+  setAlbumCoverPhoto,
+  clearAlbumCoverIfMatches,
   updateImageSortOrder,
   saveImageMetadata,
   updateAlbumSortOrder,
@@ -33,7 +35,8 @@ import {
   setAlbumFolder,
   getAlbumsInFolder,
   setFolderPublished,
-  renameAlbum
+  renameAlbum,
+  getImageMetadata
 } from "../database.js";
 import { processVideo, VideoProcessingProgress } from "../utils/video-processor.js";
 import { invalidateAlbumCache } from "./albums.js";
@@ -800,6 +803,13 @@ router.delete("/:album/photos/:photo", requireManager, async (req: Request, res:
       info(`Deleted metadata for photo: ${sanitizedAlbum}/${sanitizedPhoto}`);
     }
 
+    // If this photo was the album's designated cover (ticket #693), clear it so
+    // the public/admin views fall back to the first photo by sort order.
+    const coverCleared = clearAlbumCoverIfMatches(sanitizedAlbum, sanitizedPhoto);
+    if (coverCleared) {
+      info(`[AlbumManagement] Cleared cover_photo for "${sanitizedAlbum}" (deleted photo was the cover)`);
+    }
+
     // Invalidate cache for this album
     invalidateAlbumCache(sanitizedAlbum);
 
@@ -1535,6 +1545,82 @@ router.patch("/:album/description", requireManager, async (req: Request, res: Re
   } catch (err) {
     error('[AlbumManagement] Failed to update album description:', err);
     res.status(500).json({ error: 'Failed to update album description' });
+  }
+});
+
+/**
+ * PATCH /api/albums/:album/cover-photo (ticket #693)
+ * Designate a photo as the album's cover, or pass null to clear and fall back
+ * to the first photo by sort order. Only photos (not videos) may be set as
+ * cover — videos have their own thumbnail picker.
+ */
+router.patch("/:album/cover-photo", requireManager, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { album } = req.params;
+    const { filename } = req.body;
+
+    const sanitizedAlbum = sanitizeName(album);
+    if (!sanitizedAlbum) {
+      res.status(400).json({ error: 'Invalid album name' });
+      return;
+    }
+
+    if (filename !== null && typeof filename !== 'string') {
+      res.status(400).json({ error: 'Filename must be a string or null' });
+      return;
+    }
+
+    const albumState = getAlbumState(sanitizedAlbum);
+    if (!albumState) {
+      res.status(404).json({ error: 'Album not found' });
+      return;
+    }
+
+    if (filename) {
+      // Reject path traversal
+      if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+        res.status(400).json({ error: 'Invalid filename' });
+        return;
+      }
+
+      // Verify the photo exists and is a photo (not a video)
+      const meta = getImageMetadata(sanitizedAlbum, filename);
+      if (!meta) {
+        res.status(404).json({ error: 'Photo not found in album' });
+        return;
+      }
+      if (meta.media_type === 'video') {
+        res.status(400).json({ error: 'Videos cannot be set as cover photo. Use the video thumbnail picker instead.' });
+        return;
+      }
+    }
+
+    const success = setAlbumCoverPhoto(sanitizedAlbum, filename ?? null);
+    if (!success) {
+      error(`[AlbumManagement] Failed to update cover_photo for "${sanitizedAlbum}"`);
+      res.status(500).json({ error: 'Failed to update cover photo' });
+      return;
+    }
+
+    info(`[AlbumManagement] Updated cover_photo for album "${sanitizedAlbum}" -> ${filename ?? '(cleared)'}`);
+
+    // Refresh static JSON + cache so consumers see the change
+    invalidateAlbumCache(sanitizedAlbum);
+    const appRoot = req.app.get('appRoot');
+    const result = await generateStaticJSONFiles(appRoot);
+    if (!result.success) {
+      error(`[CoverPhoto] Failed to regenerate static JSON:`, result.error);
+    }
+
+    const updated = getAlbumState(sanitizedAlbum);
+    res.json({
+      success: true,
+      album: sanitizedAlbum,
+      cover_photo: updated?.cover_photo ?? null,
+    });
+  } catch (err) {
+    error('[AlbumManagement] Failed to update cover photo:', err);
+    res.status(500).json({ error: 'Failed to update cover photo' });
   }
 });
 

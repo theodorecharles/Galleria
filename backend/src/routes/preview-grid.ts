@@ -7,7 +7,7 @@ import { Router, Request, Response } from "express";
 import sharp from "sharp";
 import fs from "fs";
 import path from "path";
-import { getShareLinkBySecret, isShareLinkExpired, getImagesForHomepage, getAlbumState } from "../database.js";
+import { getShareLinkBySecret, isShareLinkExpired, getImagesForHomepage, getAlbumState, getEffectiveCoverPhoto } from "../database.js";
 import { DATA_DIR } from "../config.js";
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 
@@ -96,6 +96,25 @@ interface PhotoGridOptions {
   photosDir: string;
   albumName: string;
   photos: Array<{ filename: string }>;
+}
+
+/**
+ * Promote the album's effective cover photo to the front of the file list (ticket #693)
+ * so that share-preview grids lead with the photo Ted designated as the cover.
+ * Falls back to the original ordering if no cover is set / the cover file is absent.
+ */
+function promoteCoverPhoto(
+  files: Array<{ filename: string }>,
+  albumName: string
+): Array<{ filename: string }> {
+  const cover = getEffectiveCoverPhoto(albumName);
+  if (!cover) return files;
+  const idx = files.findIndex(f => f.filename === cover);
+  if (idx <= 0) return files; // already first or not found
+  const reordered = [...files];
+  const [coverFile] = reordered.splice(idx, 1);
+  reordered.unshift(coverFile);
+  return reordered;
 }
 
 /**
@@ -280,18 +299,23 @@ router.get("/album/:albumName", async (req: Request, res: Response): Promise<voi
       return;
     }
 
+    // Promote designated cover photo (ticket #693) so the share preview leads with it
+    const orderedFiles = promoteCoverPhoto(files, sanitizedAlbum);
+
     // Generate grid
     const gridBuffer = await generatePhotoGrid({
       photosDir,
       albumName: sanitizedAlbum,
-      photos: files
+      photos: orderedFiles
     });
 
     // Set cache headers (cache for 1 hour)
+    // Include cover filename in ETag so the cached preview busts when Ted changes covers
+    const coverEtag = orderedFiles[0]?.filename || 'none';
     res.set({
       'Content-Type': 'image/jpeg',
       'Cache-Control': 'public, max-age=3600',
-      'ETag': `"grid-${sanitizedAlbum}-${files.length}"`,
+      'ETag': `"grid-${sanitizedAlbum}-${files.length}-${coverEtag}"`,
     });
 
     res.send(gridBuffer);
@@ -442,26 +466,31 @@ router.get("/shared/:secretKey", async (req: Request, res: Response): Promise<vo
     const files = fs.readdirSync(albumPath)
       .filter(file => /\.(jpg|jpeg|png|gif)$/i.test(file))
       .map(filename => ({ filename }));
-    
+
     if (files.length === 0) {
       res.status(404).json({ error: "No photos in album" });
       return;
     }
-    
+
+    // Promote designated cover photo (ticket #693)
+    const orderedFiles = promoteCoverPhoto(files, albumName);
+
     // Generate grid
     const gridBuffer = await generatePhotoGrid({
       photosDir,
       albumName,
-      photos: files
+      photos: orderedFiles
     });
-    
-    // Set cache headers (cache for 1 hour)
+
+    // Set cache headers (cache for 1 hour). Include cover filename so the share
+    // preview cache invalidates when Ted picks a new cover.
+    const coverEtag = orderedFiles[0]?.filename || 'none';
     res.set({
       'Content-Type': 'image/jpeg',
       'Cache-Control': 'public, max-age=3600',
-      'ETag': `"grid-shared-${secretKey}"`,
+      'ETag': `"grid-shared-${secretKey}-${coverEtag}"`,
     });
-    
+
     res.send(gridBuffer);
   } catch (err) {
     error("[PreviewGrid] Failed to generate shared album preview grid:", err);
