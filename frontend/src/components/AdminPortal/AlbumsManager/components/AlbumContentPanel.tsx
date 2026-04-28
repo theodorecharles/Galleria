@@ -319,6 +319,7 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
           onRetryOptimization={onRetryOptimization}
           onRetryAI={onRetryAI}
           onRetryUpload={onRetryUpload}
+          onUploadPhotos={onUploadPhotos}
           setActiveId={setPhotoActiveId}
           canEdit={canEdit}
         />

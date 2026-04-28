@@ -15,6 +15,7 @@ import AlbumGridItem from './AlbumGridItem';
 import { AlbumListItem } from './AlbumListItem';
 import { Photo, UploadingImage } from '../types';
 import { cacheBustValue } from '../../../../config';
+import { UploadIcon } from '../../../icons';
 
 
 type ViewMode = 'grid' | 'list';
@@ -37,6 +38,7 @@ interface AlbumContentPanelGridProps {
   onRetryOptimization?: (album: string, filename: string) => void;
   onRetryAI?: (album: string, filename: string) => void;
   onRetryUpload?: (filename: string, albumName: string) => void;
+  onUploadPhotos?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setActiveId: (id: string | null) => void;
   canEdit: boolean;
 }
@@ -60,6 +62,7 @@ const AlbumContentPanelGrid: React.FC<AlbumContentPanelGridProps> = ({
   onRetryOptimization,
   onRetryAI,
   onRetryUpload,
+  onUploadPhotos,
   setActiveId,
 }) => {
   const { t } = useTranslation();
@@ -224,6 +227,45 @@ const AlbumContentPanelGrid: React.FC<AlbumContentPanelGridProps> = ({
     ...uploadingImages.map((img) => img.photo?.id || `uploading-${uploadingImages.indexOf(img)}`),
     ...(Array.isArray(albumPhotos) ? albumPhotos.filter(p => p && p.id).map(p => p.id) : [])
   ];
+
+  // Empty-state: no photos yet and nothing uploading. Show a purposeful
+  // first-action affordance instead of a blank grid (ticket #694).
+  const isEmpty =
+    uploadingImages.length === 0 &&
+    (!Array.isArray(albumPhotos) || albumPhotos.filter(p => p && p.id).length === 0);
+
+  if (isEmpty) {
+    return (
+      <div className="photos-modal-content" id="photos-scroll-container">
+        <div className="album-empty-state">
+          {canEdit && onUploadPhotos ? (
+            <label
+              className="album-empty-state-dropzone"
+              aria-label={t('albumsManager.emptyAlbumUploadAria')}
+            >
+              <UploadIcon width="40" height="40" />
+              <span className="album-empty-state-text">
+                {t('albumsManager.emptyAlbumPrompt')}
+              </span>
+              <input
+                type="file"
+                multiple
+                accept="image/*,video/*"
+                onChange={onUploadPhotos}
+                style={{ display: 'none' }}
+              />
+            </label>
+          ) : (
+            <div className="album-empty-state-message">
+              <span className="album-empty-state-text">
+                {t('albumsManager.emptyAlbumReadOnly')}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 

@@ -3080,3 +3080,48 @@ body.dragging .ghost-folder-tile {
   transition: width 0.3s ease;
 }
 
+/* Empty-state for newly created / empty albums (ticket #694) */
+.album-empty-state {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  box-sizing: border-box;
+}
+
+.album-empty-state-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: min(420px, 100%);
+  padding: 2.5rem 1.5rem;
+  border: 2px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+  text-align: center;
+}
+
+.album-empty-state-dropzone:hover,
+.album-empty-state-dropzone:focus-within {
+  border-color: var(--primary-color);
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(74, 222, 128, 0.04);
+}
+
+.album-empty-state-text {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.album-empty-state-message {
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 1.5rem;
+}
+
