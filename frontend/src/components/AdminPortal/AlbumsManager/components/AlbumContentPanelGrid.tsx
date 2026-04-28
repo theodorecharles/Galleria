@@ -33,6 +33,7 @@ interface AlbumContentPanelGridProps {
   onPhotoDragStart: (event: any, setActiveId?: (id: string | null) => void) => void;
   onPhotoDragEnd: (event: any, setActiveId?: (id: string | null) => void) => void;
   onOpenEditModal: (photo: Photo) => void;
+  onUpdatePhotoMetadata: (filename: string, newTitle: string, newDescription: string) => Promise<boolean>;
   onDeletePhoto: (album: string, filename: string, photoTitle?: string, thumbnail?: string, mediaType?: 'photo' | 'video') => void;
   onRetryOptimization?: (album: string, filename: string) => void;
   onRetryAI?: (album: string, filename: string) => void;
@@ -56,6 +57,7 @@ const AlbumContentPanelGrid: React.FC<AlbumContentPanelGridProps> = ({
   onPhotoDragStart,
   onPhotoDragEnd,
   onOpenEditModal,
+  onUpdatePhotoMetadata,
   onDeletePhoto,
   onRetryOptimization,
   onRetryAI,
@@ -311,6 +313,7 @@ const AlbumContentPanelGrid: React.FC<AlbumContentPanelGridProps> = ({
                   key={photo.id}
                   photo={photo}
                   onEdit={onOpenEditModal}
+                  onUpdatePhotoMetadata={onUpdatePhotoMetadata}
                   onDelete={onDeletePhoto}
                   deletingPhotoId={deletingPhotoId}
                   canEdit={canEdit && !hasActiveUploads}

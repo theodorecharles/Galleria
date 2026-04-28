@@ -116,6 +116,7 @@ const AlbumsManager: React.FC<AlbumsManagerProps> = ({
     openEditModal,
     closeEditModal,
     handleEditSave,
+    updatePhotoMetadata,
   } = photoManagement;
   
   // Upload state (declare before useEffect that uses it)
@@ -871,6 +872,7 @@ const AlbumsManager: React.FC<AlbumsManagerProps> = ({
               onPhotoDragStart={(event, setActiveId) => photoManagement.handlePhotoDragStart(event, setActiveId)}
               onPhotoDragEnd={(event, setActiveId) => photoManagement.handlePhotoDragEnd(event, setActiveId)}
               onOpenEditModal={openEditModal}
+              onUpdatePhotoMetadata={updatePhotoMetadata}
               onDeletePhoto={photoHandlers.handleDeletePhoto}
               onBulkDeletePhotos={photoHandlers.handleBulkDeletePhotos}
               onRetryOptimization={photoHandlers.handleRetryOptimization}

@@ -44,6 +44,7 @@ interface AlbumContentPanelProps {
   onPhotoDragStart: (event: any, setActiveId?: (id: string | null) => void) => void;
   onPhotoDragEnd: (event: any, setActiveId?: (id: string | null) => void) => void;
   onOpenEditModal: (photo: Photo) => void;
+  onUpdatePhotoMetadata: (filename: string, newTitle: string, newDescription: string) => Promise<boolean>;
   onDeletePhoto: (album: string, filename: string, photoTitle?: string, thumbnail?: string, mediaType?: 'photo' | 'video') => void;
   onBulkDeletePhotos: (photoIds: string[], onCompleted?: (deletedIds: string[]) => void) => void;
   onRetryOptimization?: (album: string, filename: string) => void;
@@ -86,6 +87,7 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
   onPhotoDragStart,
   onPhotoDragEnd,
   onOpenEditModal,
+  onUpdatePhotoMetadata,
   onDeletePhoto,
   onBulkDeletePhotos,
   onRetryOptimization,
@@ -315,6 +317,7 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
           onPhotoDragStart={onPhotoDragStart}
           onPhotoDragEnd={onPhotoDragEnd}
           onOpenEditModal={onOpenEditModal}
+          onUpdatePhotoMetadata={onUpdatePhotoMetadata}
           onDeletePhoto={onDeletePhoto}
           onRetryOptimization={onRetryOptimization}
           onRetryAI={onRetryAI}

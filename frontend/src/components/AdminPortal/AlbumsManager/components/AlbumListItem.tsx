@@ -11,11 +11,13 @@ interface AlbumListItemProps {
   photo?: Photo;
   uploadingImage?: UploadingImage;
   uploadingIndex?: number;
-  
+
   // Handlers
   onEdit: (photo: Photo) => void;
   onDelete: (album: string, filename: string, photoTitle: string, thumbnail: string, mediaType?: 'photo' | 'video') => void;
-  
+  // Inline title save (ticket #695). Optional so legacy callers (e.g. uploading rows) work without it.
+  onUpdatePhotoMetadata?: (filename: string, newTitle: string, newDescription: string) => Promise<boolean>;
+
   // State
   deletingPhotoId: string | null;
   canEdit: boolean;
@@ -32,6 +34,7 @@ export const AlbumListItem: React.FC<AlbumListItemProps> = ({
   uploadingIndex,
   onEdit,
   onDelete,
+  onUpdatePhotoMetadata,
   deletingPhotoId,
   canEdit,
   selectMode = false,
@@ -52,7 +55,80 @@ export const AlbumListItem: React.FC<AlbumListItemProps> = ({
   const thumbnailUrl = photoData?.thumbnail || '';
   
   const isDeleting = deletingPhotoId === photoId;
-  
+
+  // Inline title edit (ticket #695) — mirrors the album-name pattern from AlbumContentPanelHeader.
+  // Only available for saved photos; rows that are still uploading or that lack a save handler
+  // fall back to read-only display.
+  const canInlineEdit = !!(
+    photoData?.id && onUpdatePhotoMetadata && canEdit && !isUploading && !selectMode
+  );
+  const [isEditingTitle, setIsEditingTitle] = React.useState(false);
+  const [editedTitle, setEditedTitle] = React.useState(title);
+  const [isSavingTitle, setIsSavingTitle] = React.useState(false);
+  const titleInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Reset edit state if the photo's title changes from outside (e.g. SSE update).
+  React.useEffect(() => {
+    if (!isEditingTitle) {
+      setEditedTitle(title);
+    }
+  }, [title, isEditingTitle]);
+
+  // Focus + select-all when entering edit mode so typing replaces the title immediately.
+  React.useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [isEditingTitle]);
+
+  const handleStartTitleEdit = () => {
+    if (!canInlineEdit) return;
+    setEditedTitle(title);
+    setIsEditingTitle(true);
+  };
+
+  const handleCancelTitleEdit = () => {
+    setIsEditingTitle(false);
+    setEditedTitle(title);
+  };
+
+  const handleSaveTitleEdit = async () => {
+    // Guard against double-fire: Enter triggers save → state flips → blur on unmount
+    // would otherwise call this again with the same edited value.
+    if (isSavingTitle || !isEditingTitle) return;
+    if (!photoData || !onUpdatePhotoMetadata) {
+      setIsEditingTitle(false);
+      return;
+    }
+    const trimmed = editedTitle.trim();
+    // No-op when unchanged or empty — empty would clobber the existing title.
+    if (!trimmed || trimmed === title) {
+      setIsEditingTitle(false);
+      setEditedTitle(title);
+      return;
+    }
+    setIsSavingTitle(true);
+    try {
+      const success = await onUpdatePhotoMetadata(filename, trimmed, photoData.description ?? '');
+      if (success) {
+        setIsEditingTitle(false);
+      }
+    } finally {
+      setIsSavingTitle(false);
+    }
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveTitleEdit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancelTitleEdit();
+    }
+  };
+
   // Drag and drop
   const {
     attributes,
@@ -153,8 +229,34 @@ export const AlbumListItem: React.FC<AlbumListItemProps> = ({
       <div className="list-item-title">
         {statusText ? (
           <div className="status-text">{statusText}</div>
+        ) : isEditingTitle ? (
+          <input
+            ref={titleInputRef}
+            type="text"
+            className="list-item-title-input"
+            value={editedTitle}
+            onChange={(e) => setEditedTitle(e.target.value)}
+            onKeyDown={handleTitleKeyDown}
+            onBlur={handleSaveTitleEdit}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            disabled={isSavingTitle}
+            maxLength={200}
+          />
         ) : (
-          <div className="title-text">{title}</div>
+          <div
+            className={`title-text ${canInlineEdit ? 'editable' : ''}`}
+            onDoubleClick={(e) => {
+              if (!canInlineEdit) return;
+              e.stopPropagation();
+              e.preventDefault();
+              handleStartTitleEdit();
+            }}
+            title={canInlineEdit ? t('albumsManager.doubleClickToEditTitle') : undefined}
+          >
+            {title}
+          </div>
         )}
       </div>
 

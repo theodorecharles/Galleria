@@ -1034,6 +1034,37 @@
   text-overflow: ellipsis;
 }
 
+/* Ticket #695 — inline title edit affordance in list view. */
+.title-text.editable {
+  cursor: text;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  transition: background 0.15s ease;
+}
+
+.title-text.editable:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.list-item-title-input {
+  width: 100%;
+  font-size: 1rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--primary-color, #4ade80);
+  border-radius: 4px;
+  padding: 4px 8px;
+  outline: none;
+  font-family: inherit;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.12);
+}
+
+.list-item-title-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .status-text {
   font-size: 0.75rem;
   color: #9ca3af;

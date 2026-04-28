@@ -298,6 +298,7 @@
     "deleteAlbumConfirm": "Are you sure you want to delete the album \"{{albumName}}\"?\n\nThis will permanently delete all photos in this album.\n\nThis action cannot be undone.",
     "renameAlbum": "Rename Album",
     "clickToRename": "Click to rename album",
+    "doubleClickToEditTitle": "Double-click to edit title",
     "addDescription": "Add a description",
     "clickToEditDescription": "Click to edit description",
     "descriptionPlaceholder": "Add a description for this album (when, where, what it was for)\u2026",
