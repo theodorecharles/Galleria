@@ -38,6 +38,14 @@ export default function SetupWizard() {
   const [adminPasswordConfirm, setAdminPasswordConfirm] = useState('');
   const [showRestartModal, setShowRestartModal] = useState(false);
   const [animationBoost, setAnimationBoost] = useState(false);
+
+  // One-shot setup token (ticket #687). The backend writes a token to
+  // data/setup.token (and logs it) when no config.json is present; the
+  // operator pastes it here to authorize the unauthenticated /initialize
+  // call. We poll /api/setup/token-status on mount to decide whether to
+  // render the input.
+  const [setupToken, setSetupToken] = useState('');
+  const [tokenRequired, setTokenRequired] = useState(false);
   
   // Trigger animation boost when step changes
   useEffect(() => {
@@ -64,7 +72,21 @@ export default function SetupWizard() {
   // Check setup status on mount
   useEffect(() => {
     checkSetupStatus();
+    checkTokenStatus();
   }, []);
+
+  const checkTokenStatus = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/setup/token-status`);
+      if (!response.ok) return;
+      const data = await response.json();
+      setTokenRequired(Boolean(data.tokenRequired));
+    } catch (err) {
+      // Non-fatal: if the endpoint is unreachable we hide the field.
+      // The backend will still reject /initialize without a valid token.
+      warn('Setup token status check failed:', err);
+    }
+  };
 
   // Sync currentLanguage with i18n language changes and force re-render
   useEffect(() => {
@@ -176,6 +198,11 @@ export default function SetupWizard() {
       }
     }
 
+    if (tokenRequired && !setupToken.trim()) {
+      setError(t('oobe.setupTokenRequired', 'Setup token is required. Find it in your server logs or in data/setup.token.'));
+      return;
+    }
+
     try {
       setSubmitting(true);
       
@@ -195,6 +222,7 @@ export default function SetupWizard() {
           googleClientSecret: authMethod === 'google' ? googleClientSecret : undefined,
           metaDescription: metaDescription || t('oobe.siteDescriptionPlaceholder', { siteName }),
           language: currentLanguage,
+          setupToken: tokenRequired ? setupToken.trim() : undefined,
         }),
       });
 
@@ -653,6 +681,33 @@ export default function SetupWizard() {
                 {t('oobe.customizeDescription')}
               </p>
 
+              {tokenRequired && (
+                <div className="form-group">
+                  <label htmlFor="setupToken">
+                    {t('oobe.setupTokenLabel', 'Setup token')} *
+                    <span className="field-hint">
+                      {t(
+                        'oobe.setupTokenHint',
+                        'Copy the token from your server logs or from the data/setup.token file on the server.'
+                      )}
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    id="setupToken"
+                    value={setupToken}
+                    onChange={(e) => setSetupToken(e.target.value)}
+                    placeholder={t(
+                      'oobe.setupTokenPlaceholder',
+                      'Paste the setup token here'
+                    )}
+                    autoComplete="off"
+                    spellCheck={false}
+                    required
+                  />
+                </div>
+              )}
+
               <div className="form-group">
                 <label htmlFor="avatar">
                   {t('oobe.avatarOptional')}
@@ -697,10 +752,10 @@ export default function SetupWizard() {
                 >
                   {t('oobe.backToAccount')}
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="button button-primary"
-                  disabled={submitting}
+                  disabled={submitting || (tokenRequired && !setupToken.trim())}
                 >
                   {submitting ? t('oobe.settingUp') : t('oobe.completeSetup')}
                 </button>

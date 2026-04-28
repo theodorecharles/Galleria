@@ -102,6 +102,12 @@ if (getConfigExists()) {
   info(
     "[Server] Setup mode detected - skipping production security validation"
   );
+  // Generate the one-shot setup token that gates /api/setup/initialize.
+  // The operator copies it from logs (or data/setup.token) into the OOBE
+  // wizard. See utils/setup-token.ts and ticket #687.
+  void import("./utils/setup-token.js").then(({ ensureSetupToken }) => {
+    ensureSetupToken();
+  });
 }
 
 // Initialize database lazily (on first use) to avoid ESM/CommonJS issues
