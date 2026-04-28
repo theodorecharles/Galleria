@@ -17,15 +17,26 @@ import { createGunzip } from "zlib";
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 import { sendInstallationEvent } from '../utils/installation-analytics.js';
 import { getConfigExists } from '../config.js';
+import { adminUserExists } from '../database-users.js';
+import {
+  setupTokenExists,
+  verifySetupToken,
+  consumeSetupToken,
+} from '../utils/setup-token.js';
 
 const router = Router();
 
 /**
- * Guard for OOBE-only endpoints. Once config.json exists, the initial setup
- * has already been performed and these endpoints must refuse further calls —
- * otherwise an unauthenticated attacker could overwrite the session secret,
- * authorized emails, OAuth credentials, allowed origins/hosts, and provision
- * a new admin user (full account takeover). See ticket #533.
+ * Guard for OOBE-only endpoints. Once config.json exists OR an admin user is
+ * already provisioned, the initial setup has already been performed and these
+ * endpoints must refuse further calls — otherwise an unauthenticated attacker
+ * could overwrite the session secret, authorized emails, OAuth credentials,
+ * allowed origins/hosts, and provision a new admin user (full account
+ * takeover). See tickets #533 and #687.
+ *
+ * The admin-user check is belt-and-suspenders for the corner case where
+ * data/config.json is missing or got truncated but the user database still
+ * has an admin row.
  *
  * The post-OOBE equivalents live behind authenticated routes (e.g.
  * /api/branding/upload-avatar).
@@ -38,6 +49,17 @@ function refuseIfSetupComplete(
   if (getConfigExists()) {
     warn(
       `[Setup] Refusing ${req.method} ${req.path} — setup has already completed. ` +
+      `Source IP: ${req.ip || req.socket.remoteAddress}`
+    );
+    res.status(403).json({
+      error: "Setup has already completed. This endpoint is disabled.",
+      setupComplete: true,
+    });
+    return;
+  }
+  if (adminUserExists()) {
+    warn(
+      `[Setup] Refusing ${req.method} ${req.path} — an admin user already exists. ` +
       `Source IP: ${req.ip || req.socket.remoteAddress}`
     );
     res.status(403).json({
@@ -69,58 +91,70 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
+ * Pipe an HTTPS response through gunzip into a file using stream/promises
+ * pipeline(). pipeline() propagates errors from every stream in the chain
+ * (including socket resets on the response and truncated/non-gzip bodies on
+ * gunzip), ensures the destination is closed, and lets us unlink any partial
+ * file on failure. Returns true on success, false on failure.
+ */
+async function pipeResponseToGunzippedFile(
+  response: import('http').IncomingMessage,
+  dbPath: string
+): Promise<boolean> {
+  const gunzip = createGunzip();
+  const fileStream = createWriteStream(dbPath);
+  try {
+    await pipeline(response, gunzip, fileStream);
+    info('[Setup] GeoIP database downloaded successfully');
+    return true;
+  } catch (err) {
+    error('[Setup] Failed to download GeoIP database stream:', err);
+    // Clean up partial file (best-effort; ignore unlink errors so we always
+    // resolve the outer Promise).
+    await fs.promises.unlink(dbPath).catch(() => undefined);
+    return false;
+  }
+}
+
+/**
  * Download GeoIP database for location lookup
  * Uses DB-IP's free database (no registration required)
  */
 async function downloadGeoIPDatabase(dataDir: string): Promise<boolean> {
   try {
     const dbPath = path.join(dataDir, 'GeoLite2-City.mmdb');
-    
+
     // Skip if already exists
     if (fs.existsSync(dbPath)) {
       info('[Setup] GeoIP database already exists, skipping download');
       return true;
     }
-    
+
     info('[Setup] Downloading GeoIP database...');
-    
+
     // Get current year and month for DB-IP URL
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
-    
+
     // DB-IP free database URL (updated monthly)
     const dbipUrl = `https://download.db-ip.com/free/dbip-city-lite-${year}-${month}.mmdb.gz`;
-    
+
     return new Promise((resolve) => {
       https.get(dbipUrl, (response) => {
         if (response.statusCode === 302 || response.statusCode === 301) {
           // Follow redirect
           const redirectUrl = response.headers.location;
+          // Drain the redirect response so the socket can be reused / freed.
+          response.resume();
           if (redirectUrl) {
             info('[Setup] Following redirect to:', redirectUrl);
             https.get(redirectUrl, (redirectResponse) => {
               if (redirectResponse.statusCode === 200) {
-                const gunzip = createGunzip();
-                const fileStream = createWriteStream(dbPath);
-                
-                redirectResponse.pipe(gunzip).pipe(fileStream);
-                
-                fileStream.on('finish', () => {
-                  info('[Setup] GeoIP database downloaded successfully');
-                  resolve(true);
-                });
-                
-                fileStream.on('error', (err) => {
-                  error('[Setup] Failed to write GeoIP database:', err);
-                  // Clean up partial file
-                  if (fs.existsSync(dbPath)) {
-                    fs.unlinkSync(dbPath);
-                  }
-                  resolve(false);
-                });
+                pipeResponseToGunzippedFile(redirectResponse, dbPath).then(resolve);
               } else {
                 warn('[Setup] Failed to download GeoIP database (redirect response):', redirectResponse.statusCode);
+                redirectResponse.resume(); // discard body
                 resolve(false);
               }
             }).on('error', (err) => {
@@ -132,27 +166,11 @@ async function downloadGeoIPDatabase(dataDir: string): Promise<boolean> {
             resolve(false);
           }
         } else if (response.statusCode === 200) {
-          const gunzip = createGunzip();
-          const fileStream = createWriteStream(dbPath);
-          
-          response.pipe(gunzip).pipe(fileStream);
-          
-          fileStream.on('finish', () => {
-            info('[Setup] GeoIP database downloaded successfully');
-            resolve(true);
-          });
-          
-          fileStream.on('error', (err) => {
-            error('[Setup] Failed to write GeoIP database:', err);
-            // Clean up partial file
-            if (fs.existsSync(dbPath)) {
-              fs.unlinkSync(dbPath);
-            }
-            resolve(false);
-          });
+          pipeResponseToGunzippedFile(response, dbPath).then(resolve);
         } else {
           warn('[Setup] Failed to download GeoIP database, status:', response.statusCode);
           warn('[Setup] This is optional - location lookup will show "Location unknown"');
+          response.resume(); // discard body
           resolve(false);
         }
       }).on('error', (err) => {
@@ -272,6 +290,20 @@ router.get("/status", async (req: Request, res: Response): Promise<void> => {
 });
 
 /**
+ * Report whether a one-shot setup token is required for /initialize.
+ *
+ * The OOBE wizard polls this endpoint to know whether to render the token
+ * input field. After /initialize completes the token file is deleted and
+ * this returns { tokenRequired: false }.
+ */
+router.get(
+  "/token-status",
+  (req: Request, res: Response): void => {
+    res.json({ tokenRequired: setupTokenExists() });
+  }
+);
+
+/**
  * Initialize configuration with user-provided values
  */
 router.post(
@@ -289,7 +321,36 @@ router.post(
         googleClientSecret,
         metaDescription,
         language,
+        setupToken,
       } = req.body;
+
+      // Verify the one-shot setup token. The token is generated on backend
+      // startup when no config.json exists and is written to data/setup.token
+      // (also logged to the console). It's consumed on successful init so it
+      // cannot be replayed. See utils/setup-token.ts and ticket #687.
+      if (setupTokenExists()) {
+        if (!verifySetupToken(setupToken)) {
+          warn(
+            `[Setup] Refusing /initialize — missing or invalid setup token. ` +
+            `Source IP: ${req.ip || req.socket.remoteAddress}`
+          );
+          res.status(401).json({
+            error:
+              "Invalid setup token. Copy the token from your server logs " +
+              "or from data/setup.token and paste it into the wizard.",
+          });
+          return;
+        }
+      } else {
+        // No token file means either an extremely old install pre-dating this
+        // change OR the token was already consumed. In the latter case the
+        // refuseIfSetupComplete guard above will already have rejected the
+        // request; reaching this branch means the install pre-dates the token
+        // mechanism, in which case the existing config / admin guards are
+        // still in effect and we accept the request to preserve OOBE for
+        // upgraders mid-flight.
+        info("[Setup] No setup token file present — proceeding with legacy guards.");
+      }
 
       // Validate required fields
       if (!siteName || !authorizedEmail || !authMethod) {
@@ -751,6 +812,9 @@ router.post(
       }).catch(err => {
         warn('[Setup] Failed to send setup_complete event:', err);
       });
+
+      // Consume (delete) the one-shot setup token so it cannot be replayed.
+      consumeSetupToken();
 
       res.json({
         success: true,

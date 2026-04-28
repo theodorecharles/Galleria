@@ -103,6 +103,33 @@ export function getUserByGoogleId(googleId: string): User | null {
 }
 
 /**
+ * Check whether at least one admin user exists.
+ *
+ * Used by the OOBE setup guard as a belt-and-suspenders check on top of
+ * `getConfigExists()`: if an admin already exists, refuse to re-run the
+ * unauthenticated setup wizard regardless of config.json state. Safe to call
+ * before the users table is created — returns false when the table is missing,
+ * the database is unreachable, or any query error occurs.
+ */
+export function adminUserExists(): boolean {
+  try {
+    const db = getDatabase();
+    // Confirm the users table exists before querying (during OOBE the table
+    // is only created inside /api/setup/initialize).
+    const tableCheck = db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+      .get();
+    if (!tableCheck) return false;
+    const row = db
+      .prepare("SELECT 1 FROM users WHERE role = 'admin' LIMIT 1")
+      .get();
+    return Boolean(row);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Create a new user
  */
 export function createUser(data: {

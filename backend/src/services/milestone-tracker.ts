@@ -31,37 +31,48 @@ export async function checkMilestones(): Promise<void> {
       const currentViews = data.views;
       const lastMilestone = data.lastMilestone;
 
-      // Check if any new milestones were reached
-      for (const milestone of MILESTONES) {
+      // Find the highest milestone the album has crossed since lastMilestone.
+      // Iterating in descending order and breaking on the first match ensures
+      // we send a single notification (and perform a single DB write) per tick
+      // even when an album's view count jumps past several thresholds at once.
+      let highestNewMilestone: number | null = null;
+      for (let i = MILESTONES.length - 1; i >= 0; i--) {
+        const milestone = MILESTONES[i];
         if (currentViews >= milestone && lastMilestone < milestone) {
-          // New milestone reached!
-          info(`[MilestoneTracker] 🎉 ${albumName} reached ${milestone} views!`);
-
-          // Send notification to all admins
-          const admins = getAllUsers().filter(u => u.role === 'admin');
-
-          for (const admin of admins) {
-            const title = await translateNotification('notifications.backend.albumViewMilestoneTitle', {
-              albumName,
-              milestone: milestone.toLocaleString()
-            });
-            const body = await translateNotification('notifications.backend.albumViewMilestoneBody', {
-              albumName,
-              milestone: milestone.toLocaleString()
-            });
-
-            await sendNotificationToUser(admin.id, {
-              title,
-              body,
-              tag: `milestone-${albumName}-${milestone}`,
-              requireInteraction: true
-            }, 'albumViewMilestone');
-          }
-
-          // Update milestone in database
-          updateAlbumMilestone(albumName, milestone);
-          milestonesReached++;
+          highestNewMilestone = milestone;
+          break;
         }
+      }
+
+      if (highestNewMilestone !== null) {
+        const milestone = highestNewMilestone;
+        // New milestone reached!
+        info(`[MilestoneTracker] 🎉 ${albumName} reached ${milestone} views!`);
+
+        // Send notification to all admins
+        const admins = getAllUsers().filter(u => u.role === 'admin');
+
+        for (const admin of admins) {
+          const title = await translateNotification('notifications.backend.albumViewMilestoneTitle', {
+            albumName,
+            milestone: milestone.toLocaleString()
+          });
+          const body = await translateNotification('notifications.backend.albumViewMilestoneBody', {
+            albumName,
+            milestone: milestone.toLocaleString()
+          });
+
+          await sendNotificationToUser(admin.id, {
+            title,
+            body,
+            tag: `milestone-${albumName}-${milestone}`,
+            requireInteraction: true
+          }, 'albumViewMilestone');
+        }
+
+        // Update milestone in database
+        updateAlbumMilestone(albumName, milestone);
+        milestonesReached++;
       }
     }
 
