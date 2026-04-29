@@ -368,9 +368,15 @@ router.post('/optimize', requireManager, (req, res) => {
         });
       }
       
-      // Clean up after 5 minutes
+      // Clean up after 5 minutes — only null the global if it's still THIS job.
+      // A new job may have replaced runningOptimizationJob in the interim
+      // (the reconnect guard above only blocks while !isComplete), and we
+      // must not stomp on the new job's tracking object.
+      const jobRef = runningOptimizationJob;
       setTimeout(() => {
-        runningOptimizationJob = null;
+        if (runningOptimizationJob === jobRef) {
+          runningOptimizationJob = null;
+        }
       }, 5 * 60 * 1000);
     }
   });
