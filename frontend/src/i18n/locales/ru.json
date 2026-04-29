@@ -384,7 +384,11 @@
     "failedToDeletePhotos_one": "[EN] Failed to delete {{count}} photo",
     "failedToDeletePhotos_other": "[EN] Failed to delete {{count}} photos",
     "bulkDeletePartial": "[EN] Deleted {{succeeded}} • {{failed}} failed",
-    "bulkActionsAria": "[EN] Bulk actions"
+    "bulkActionsAria": "[EN] Bulk actions",
+    "copyLink": "[EN] Copy link",
+    "copyAlbumLink": "[EN] Copy public album link",
+    "albumLinkCopied": "[EN] Album link copied to clipboard",
+    "failedToCopyLink": "[EN] Failed to copy link"
   },
   "settings": {
     "saved": "Настройки {{section}} сохранены!",

@@ -13,6 +13,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { UploadIcon, TrashIcon, LinkIcon, CloseIcon, EyeIcon, GridViewIcon, ListViewIcon, CheckmarkIcon } from '../../../icons';
 import { showToast } from '../../../../utils/toast';
+import { SITE_URL } from '../../../../config';
 
 type ViewMode = 'grid' | 'list';
 
@@ -221,6 +222,35 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
       showToast(errorMessage, 'error');
     } finally {
       setIsSavingDescription(false);
+    }
+  };
+
+  // Copy the public album URL to the clipboard. Used for published albums where the
+  // ShareModal flow (temporary signed links) doesn't apply — the album is already public,
+  // so we just need a quick way to grab the canonical URL without leaving the admin panel.
+  const handleCopyAlbumLink = async () => {
+    const base = (SITE_URL ?? window.location.origin).replace(/\/+$/, '');
+    const url = `${base}/album/${encodeURIComponent(selectedAlbum)}`;
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // Fallback for older browsers / non-secure contexts
+        const textarea = document.createElement('textarea');
+        textarea.value = url;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      showToast(t('albumsManager.albumLinkCopied'), 'success');
+    } catch (err) {
+      console.error('Failed to copy album link:', err);
+      showToast(t('albumsManager.failedToCopyLink'), 'error');
     }
   };
 
@@ -463,7 +493,7 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
                 <span>{t('common.delete')}</span>
               </button>
               
-              {!isPublished && (
+              {!isPublished ? (
                 <>
                   <button
                     onClick={() => onPreviewAlbum(selectedAlbum)}
@@ -482,6 +512,17 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
                     <span>{t('photo.share')}</span>
                   </button>
                 </>
+              ) : (
+                // Published albums: no temporary share link needed — the canonical URL is
+                // already public, so offer a one-click copy instead. (ticket #826)
+                <button
+                  onClick={handleCopyAlbumLink}
+                  className="photos-btn photos-btn-secondary"
+                  title={t('albumsManager.copyAlbumLink')}
+                >
+                  <LinkIcon width="16" height="16" />
+                  <span>{t('albumsManager.copyLink')}</span>
+                </button>
               )}
             </>
           )}
