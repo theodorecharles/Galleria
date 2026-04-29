@@ -207,6 +207,65 @@ export function getAllowedOrigins(): string[] {
   return uniqueOrigins;
 }
 
+/**
+ * Check whether a request origin is allowed to receive credentialed CORS
+ * responses. Mirrors the rules used by the global CORS middleware in
+ * `server.ts` and the CSRF origin check in `security.ts`:
+ *
+ *   1. Exact match (canonicalized via `URL.origin`) against `getAllowedOrigins()`.
+ *   2. Any localhost / 127.0.0.1 origin (development convenience).
+ *   3. Any IPv4 hostname on port 3000 or 3001 (Docker / Unraid direct access).
+ *
+ * Use this before reflecting `req.headers.origin` into
+ * `Access-Control-Allow-Origin` on routes that also send
+ * `Access-Control-Allow-Credentials: true`. Reflecting an unvalidated origin
+ * with credentials lets any third-party site read the response.
+ */
+export function isOriginAllowed(origin: string | undefined | null): boolean {
+  if (!origin) return false;
+
+  let normalizedOrigin: string;
+  let url: URL;
+  try {
+    url = new URL(origin);
+    normalizedOrigin = url.origin;
+  } catch (e) {
+    return false;
+  }
+
+  // Exact match against the allowlist (canonicalize both sides).
+  const allowedOrigins = getAllowedOrigins();
+  for (const allowed of allowedOrigins) {
+    try {
+      if (new URL(allowed).origin === normalizedOrigin) {
+        return true;
+      }
+    } catch (e) {
+      // Skip malformed entries.
+    }
+  }
+
+  // Localhost / loopback are always allowed (dev).
+  if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+    return true;
+  }
+
+  // IPv4 on Docker/Unraid frontend or backend port.
+  const ipPattern = /^\d+\.\d+\.\d+\.\d+$/;
+  if (ipPattern.test(url.hostname)) {
+    const port = url.port
+      ? parseInt(url.port)
+      : url.protocol === "https:"
+      ? 443
+      : 80;
+    if (port === 3000 || port === 3001) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // Export constants
 export const PORT = process.env.PORT
   ? parseInt(process.env.PORT)

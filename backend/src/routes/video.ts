@@ -9,6 +9,7 @@ import path from "path";
 import { error, info } from '../utils/logger.js';
 import { getAlbumState, getShareLinkBySecret, isShareLinkExpired } from '../database.js';
 import { requireAuth } from '../auth/middleware.js';
+import { isOriginAllowed } from '../config.js';
 
 const router = Router();
 
@@ -131,11 +132,14 @@ const serveMasterPlaylist = async (req: Request, res: Response, album: string, f
     // Set appropriate headers for HLS
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    
-    // Set CORS headers to allow credentials
+
+    // Set CORS headers to allow credentials — only for origins that are on the
+    // global CORS allowlist. Reflecting an unvalidated Origin with
+    // Allow-Credentials lets any third-party site read this response.
     const origin = req.headers.origin;
-    if (origin) {
+    if (origin && isOriginAllowed(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
 
@@ -222,11 +226,14 @@ router.get("/:album/:filename/:resolution/playlist.m3u8", async (req: Request, r
     // Set appropriate headers for HLS
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
     res.setHeader('Cache-Control', 'public, max-age=3600');
-    
-    // Set CORS headers to allow credentials
+
+    // Set CORS headers to allow credentials — only for origins that are on the
+    // global CORS allowlist. Reflecting an unvalidated Origin with
+    // Allow-Credentials lets any third-party site read this response.
     const origin = req.headers.origin;
-    if (origin) {
+    if (origin && isOriginAllowed(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
 
@@ -306,11 +313,14 @@ router.get("/:album/:filename/:resolution/:segment", async (req: Request, res: R
     // Set appropriate headers for MPEG-TS segments
     res.setHeader('Content-Type', 'video/mp2t');
     res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache segments for 1 year
-    
-    // Set CORS headers to allow credentials
+
+    // Set CORS headers to allow credentials — only for origins that are on the
+    // global CORS allowlist. Reflecting an unvalidated Origin with
+    // Allow-Credentials lets any third-party site read this response.
     const origin = req.headers.origin;
-    if (origin) {
+    if (origin && isOriginAllowed(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
 
@@ -441,6 +451,20 @@ router.get("/:album/:filename/original.mp4", requireAuth, async (req: Request, r
     const fileSize = stat.size;
     const range = req.headers.range;
 
+    // CORS headers to allow credentials — only set when the request origin is
+    // on the global CORS allowlist. Reflecting an unvalidated Origin (or `*`
+    // — which browsers reject anyway with credentials) would let any
+    // third-party site read this admin video.
+    const origin = req.headers.origin;
+    const corsHeaders: Record<string, string> =
+      origin && isOriginAllowed(origin)
+        ? {
+            'Access-Control-Allow-Origin': origin,
+            'Vary': 'Origin',
+            'Access-Control-Allow-Credentials': 'true',
+          }
+        : {};
+
     if (range) {
       // Handle range request (for seeking)
       const parts = range.replace(/bytes=/, "").split("-");
@@ -454,8 +478,7 @@ router.get("/:album/:filename/original.mp4", requireAuth, async (req: Request, r
         'Accept-Ranges': 'bytes',
         'Content-Length': chunksize,
         'Content-Type': 'video/mp4',
-        'Access-Control-Allow-Origin': req.headers.origin || '*',
-        'Access-Control-Allow-Credentials': 'true',
+        ...corsHeaders,
       });
 
       file.pipe(res);
@@ -465,8 +488,7 @@ router.get("/:album/:filename/original.mp4", requireAuth, async (req: Request, r
         'Content-Length': fileSize,
         'Content-Type': 'video/mp4',
         'Accept-Ranges': 'bytes',
-        'Access-Control-Allow-Origin': req.headers.origin || '*',
-        'Access-Control-Allow-Credentials': 'true',
+        ...corsHeaders,
       });
 
       fs.createReadStream(rotatedVideoPath).pipe(res);
