@@ -394,6 +394,18 @@ const upload = multer({
   }
 });
 
+const cleanupUploadedTempFile = async (file?: Express.Multer.File): Promise<void> => {
+  if (!file?.path) {
+    return;
+  }
+
+  try {
+    await fs.promises.unlink(file.path);
+  } catch (err: any) {
+    error(`[Upload] Failed to clean up temp file ${file.path}:`, err.message);
+  }
+};
+
 // Get the current directory path for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -857,14 +869,15 @@ router.post("/:album/upload", requireManager, (req: Request, res: Response, next
   try {
     const { album } = req.params;
     const { language = 'en' } = req.body;
+    const file = req.file as Express.Multer.File | undefined;
     
     const sanitizedAlbum = sanitizeName(album);
     if (!sanitizedAlbum) {
+      await cleanupUploadedTempFile(file);
       res.status(400).json({ error: 'Invalid album name' });
       return;
     }
 
-    const file = req.file as Express.Multer.File;
     if (!file) {
       res.status(400).json({ error: 'No file uploaded' });
       return;
@@ -873,6 +886,7 @@ router.post("/:album/upload", requireManager, (req: Request, res: Response, next
     // SECURITY: Sanitize filename to prevent path traversal attacks
     const sanitizedFilename = sanitizePhotoName(file.originalname);
     if (!sanitizedFilename) {
+      await cleanupUploadedTempFile(file);
       res.status(400).json({ error: 'Invalid filename. Use only alphanumeric characters, spaces, hyphens, underscores, and valid image/video extensions.' });
       return;
     }
@@ -881,6 +895,7 @@ router.post("/:album/upload", requireManager, (req: Request, res: Response, next
     const albumPath = path.join(photosDir, sanitizedAlbum);
     
     if (!fs.existsSync(albumPath)) {
+      await cleanupUploadedTempFile(file);
       res.status(404).json({ error: 'Album not found' });
       return;
     }
@@ -2015,4 +2030,3 @@ router.post('/:albumName/video/:filename/update-thumbnail', requireManager, asyn
 });
 
 export default router;
-
