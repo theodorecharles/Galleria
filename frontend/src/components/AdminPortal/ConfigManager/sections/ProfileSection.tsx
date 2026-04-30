@@ -125,8 +125,9 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          secret: mfaSetup.secret,
+          setupToken: mfaSetup.setupToken,
           token: mfaToken,
+          backupCodes: mfaSetup.backupCodes,
         }),
       });
 
@@ -412,4 +413,3 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
     </div>
   );
 };
-
