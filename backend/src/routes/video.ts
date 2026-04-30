@@ -26,6 +26,34 @@ const sanitizePath = (name: string): string | null => {
   return name;
 };
 
+const getShareKey = (req: Request): string | null => {
+  const shareKeyParam = req.query.key;
+  const shareKey = Array.isArray(shareKeyParam) ? shareKeyParam[0] : shareKeyParam;
+
+  if (shareKey && typeof shareKey === 'string' && /^[a-f0-9]{64}$/i.test(shareKey)) {
+    return shareKey;
+  }
+
+  return null;
+};
+
+const appendShareKeyToPlaylist = (playlist: string, shareKey: string): string => {
+  const encodedShareKey = encodeURIComponent(shareKey);
+
+  return playlist
+    .split('\n')
+    .map((line) => {
+      const trimmedLine = line.trim();
+      if (!trimmedLine || trimmedLine.startsWith('#') || /[?&]key=/.test(trimmedLine)) {
+        return line;
+      }
+
+      const separator = trimmedLine.includes('?') ? '&' : '?';
+      return `${line}${separator}key=${encodedShareKey}`;
+    })
+    .join('\n');
+};
+
 /**
  * Check if user has access to album (authenticated, published, or valid share link)
  */
@@ -34,14 +62,12 @@ const hasAlbumAccess = (req: Request, album: string): boolean => {
   const isAuthenticated = (req.isAuthenticated && req.isAuthenticated()) || !!(req.session as any)?.userId;
   
   // Check for share link in query parameter
-  // Note: req.query.key can be a string OR an array if multiple keys are provided
-  const shareKeyParam = req.query.key;
-  const shareKey = Array.isArray(shareKeyParam) ? shareKeyParam[0] : shareKeyParam;
+  const shareKey = getShareKey(req);
   let hasValidShareLink = false;
   
   info(`[Video] Access check: album=${album}, shareKey=${shareKey ? String(shareKey).substring(0, 16) + '...' : 'none'}, isAuth=${isAuthenticated}`);
   
-  if (shareKey && typeof shareKey === 'string' && /^[a-f0-9]{64}$/i.test(shareKey)) {
+  if (shareKey) {
     const shareLink = getShareLinkBySecret(shareKey);
     info(`[Video] Share link lookup: found=${!!shareLink}, match=${shareLink?.album === album}, expired=${shareLink ? isShareLinkExpired(shareLink) : 'N/A'}`);
     if (shareLink && shareLink.album === album && !isShareLinkExpired(shareLink)) {
@@ -143,7 +169,13 @@ const serveMasterPlaylist = async (req: Request, res: Response, album: string, f
       res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
 
-    // Send the master playlist file
+    const shareKey = getShareKey(req);
+    if (shareKey) {
+      const playlist = fs.readFileSync(masterPlaylistPath, 'utf8');
+      res.send(appendShareKeyToPlaylist(playlist, shareKey));
+      return;
+    }
+
     res.sendFile(masterPlaylistPath);
   } catch (err) {
     error('[Video] Failed to serve master playlist:', err);
@@ -237,7 +269,13 @@ router.get("/:album/:filename/:resolution/playlist.m3u8", async (req: Request, r
       res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
 
-    // Send the playlist file
+    const shareKey = getShareKey(req);
+    if (shareKey) {
+      const playlist = fs.readFileSync(playlistPath, 'utf8');
+      res.send(appendShareKeyToPlaylist(playlist, shareKey));
+      return;
+    }
+
     res.sendFile(playlistPath);
   } catch (err) {
     error('[Video] Failed to serve playlist:', err);
