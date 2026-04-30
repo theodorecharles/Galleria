@@ -82,6 +82,7 @@ interface UncategorizedSectionProps {
   onAlbumMoveUp?: (albumName: string) => void;
   onAlbumMoveDown?: (albumName: string) => void;
   onAlbumMoveToFolder?: (albumName: string) => void;
+  onShareAlbum?: (albumName: string) => void;
   hasFolders: boolean;
   canEdit: boolean;
 }
@@ -109,6 +110,7 @@ const UncategorizedSection: React.FC<UncategorizedSectionProps> = ({
   onAlbumMoveUp,
   onAlbumMoveDown,
   onAlbumMoveToFolder,
+  onShareAlbum,
   hasFolders,
   canEdit,
 }) => {
@@ -157,6 +159,7 @@ const UncategorizedSection: React.FC<UncategorizedSectionProps> = ({
                   onMoveUp={onAlbumMoveUp}
                   onMoveDown={onAlbumMoveDown}
                   onMoveToFolder={onAlbumMoveToFolder}
+                  onShareAlbum={onShareAlbum}
                   isFirst={index === 0}
                   isLast={index === uncategorizedAlbums.length - 1}
                   hasFolders={hasFolders}

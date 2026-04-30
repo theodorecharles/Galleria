@@ -476,6 +476,36 @@
   color: #fbbf24;
 }
 
+.album-card-share-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  background: rgba(251, 191, 36, 0.1);
+  color: #fde68a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.album-card-share-btn:hover {
+  background: rgba(251, 191, 36, 0.16);
+  border-color: rgba(251, 191, 36, 0.42);
+  transform: translateY(-1px);
+}
+
+.album-card-share-btn svg {
+  display: block;
+  stroke: currentColor;
+}
+
 .album-rename-btn {
   position: absolute;
   top: 0.5rem;

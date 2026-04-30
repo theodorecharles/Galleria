@@ -36,6 +36,7 @@ interface FoldersSectionProps {
   onAlbumMoveUp?: (albumName: string) => void;
   onAlbumMoveDown?: (albumName: string) => void;
   onAlbumMoveToFolder?: (albumName: string) => void;
+  onShareAlbum?: (albumName: string) => void;
   hasFolders: boolean;
   canEdit: boolean;
 }
@@ -68,6 +69,7 @@ const FoldersSection: React.FC<FoldersSectionProps> = ({
   onAlbumMoveUp,
   onAlbumMoveDown,
   onAlbumMoveToFolder,
+  onShareAlbum,
   hasFolders,
   canEdit,
 }) => {
@@ -107,6 +109,7 @@ const FoldersSection: React.FC<FoldersSectionProps> = ({
               onAlbumMoveUp={onAlbumMoveUp}
               onAlbumMoveDown={onAlbumMoveDown}
               onAlbumMoveToFolder={onAlbumMoveToFolder}
+              onShareAlbum={onShareAlbum}
               isFirst={index === 0}
               isLast={index === localFolders.length - 1}
               hasFolders={hasFolders}
@@ -120,4 +123,3 @@ const FoldersSection: React.FC<FoldersSectionProps> = ({
 };
 
 export default FoldersSection;
-

@@ -95,6 +95,7 @@ interface SortableFolderCardProps {
   onAlbumMoveUp?: (albumName: string) => void;
   onAlbumMoveDown?: (albumName: string) => void;
   onAlbumMoveToFolder?: (albumName: string) => void;
+  onShareAlbum?: (albumName: string) => void;
   isFirst?: boolean;
   isLast?: boolean;
   hasFolders: boolean;
@@ -129,6 +130,7 @@ const SortableFolderCard: React.FC<SortableFolderCardProps> = ({
   onAlbumMoveUp,
   onAlbumMoveDown,
   onAlbumMoveToFolder,
+  onShareAlbum,
   isFirst,
   isLast,
   hasFolders,
@@ -308,6 +310,7 @@ const SortableFolderCard: React.FC<SortableFolderCardProps> = ({
               onMoveUp={onAlbumMoveUp}
               onMoveDown={onAlbumMoveDown}
               onMoveToFolder={onAlbumMoveToFolder}
+              onShareAlbum={onShareAlbum}
               isFirst={index === 0}
               isLast={index === albums.length - 1}
               hasFolders={hasFolders}
