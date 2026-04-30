@@ -251,6 +251,20 @@
   flex-shrink: 0;
 }
 
+.album-visibility-summary-header {
+  width: 100%;
+  margin-top: 0.15rem;
+}
+
+.album-visibility-summary-header .album-visibility-chip {
+  font-size: 0.72rem;
+  min-height: 1.45rem;
+}
+
+.album-visibility-summary-header .album-visibility-text {
+  font-size: 0.82rem;
+}
+
 /* Album Title Editing */
 .album-title-edit-container {
   display: flex;

@@ -443,6 +443,10 @@ const AlbumsManager: React.FC<AlbumsManagerProps> = ({
   const [activeFolderId, setActiveFolderId] = useState<number | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareAlbumName, setShareAlbumName] = useState<string | null>(null);
+  const handleShareAlbum = (albumName: string) => {
+    setShareAlbumName(albumName);
+    setShowShareModal(true);
+  };
   
   // Move to Folder modal state
   const [showMoveToFolderModal, setShowMoveToFolderModal] = useState(false);
@@ -759,6 +763,7 @@ const AlbumsManager: React.FC<AlbumsManagerProps> = ({
             onAlbumMoveUp={mobileReorderHandlers.handleAlbumMoveUp}
             onAlbumMoveDown={mobileReorderHandlers.handleAlbumMoveDown}
             onAlbumMoveToFolder={handleOpenMoveToFolderModal}
+            onShareAlbum={handleShareAlbum}
             hasFolders={localFolders.length > 0}
             canEdit={canEdit}
           />
@@ -786,6 +791,7 @@ const AlbumsManager: React.FC<AlbumsManagerProps> = ({
             onAlbumMoveUp={mobileReorderHandlers.handleAlbumMoveUp}
             onAlbumMoveDown={mobileReorderHandlers.handleAlbumMoveDown}
             onAlbumMoveToFolder={handleOpenMoveToFolderModal}
+            onShareAlbum={handleShareAlbum}
             hasFolders={localFolders.length > 0}
             canEdit={canEdit}
           />
@@ -854,10 +860,7 @@ const AlbumsManager: React.FC<AlbumsManagerProps> = ({
               onDeleteAlbum={albumHandlers.handleDeleteAlbum}
               onRenameAlbum={albumHandlers.handleInlineRenameAlbum}
               onUpdateDescription={albumHandlers.handleUpdateAlbumDescription}
-              onShareAlbum={(albumName) => {
-                setShareAlbumName(albumName);
-                setShowShareModal(true);
-              }}
+              onShareAlbum={handleShareAlbum}
               onTogglePublished={albumHandlers.handleTogglePublished}
               onToggleHomepage={albumHandlers.handleToggleHomepage}
               onPreviewAlbum={(albumName) => {
@@ -953,4 +956,3 @@ const AlbumsManager: React.FC<AlbumsManagerProps> = ({
 };
 
 export default AlbumsManager;
-
