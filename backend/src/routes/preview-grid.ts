@@ -98,6 +98,56 @@ interface PhotoGridOptions {
   photos: Array<{ filename: string }>;
 }
 
+type AlbumAccess =
+  | { allowed: true; reason: "published" | "authenticated" | "share-link" }
+  | { allowed: false; status: 404 | 403; message: string };
+
+/**
+ * Check album access using the same policy as album/video/optimized media:
+ * published albums are public, authenticated users can access private albums,
+ * and valid unexpired share links grant access only to their target album.
+ */
+function checkAlbumAccess(req: Request, albumName: string): AlbumAccess {
+  const albumState = getAlbumState(albumName);
+
+  if (!albumState) {
+    return { allowed: false, status: 404, message: "Album not found" };
+  }
+
+  if (albumState.published) {
+    return { allowed: true, reason: "published" };
+  }
+
+  const isAuthenticated = (req.isAuthenticated && req.isAuthenticated()) || !!(req.session as any)?.userId;
+  if (isAuthenticated) {
+    return { allowed: true, reason: "authenticated" };
+  }
+
+  const shareKeyParam = req.query.key;
+  const shareKey = Array.isArray(shareKeyParam) ? shareKeyParam[0] : shareKeyParam;
+
+  if (shareKey && typeof shareKey === "string" && /^[a-f0-9]{64}$/i.test(shareKey)) {
+    const shareLink = getShareLinkBySecret(shareKey);
+    if (shareLink && shareLink.album === albumName && !isShareLinkExpired(shareLink)) {
+      return { allowed: true, reason: "share-link" };
+    }
+  }
+
+  return { allowed: false, status: 403, message: "Access denied" };
+}
+
+function setAlbumGridCacheHeaders(res: Response, albumName: string, fileCount: number, accessReason: AlbumAccess & { allowed: true }): void {
+  const cacheControl = accessReason.reason === "authenticated"
+    ? "private, no-store"
+    : "public, max-age=3600";
+
+  res.set({
+    'Content-Type': 'image/jpeg',
+    'Cache-Control': cacheControl,
+    'ETag': `"grid-${albumName}-${fileCount}"`,
+  });
+}
+
 /**
  * Load and resize a single photo for grid cell
  */
@@ -254,11 +304,9 @@ router.get("/album/:albumName", async (req: Request, res: Response): Promise<voi
       return;
     }
 
-    // Only expose previews for albums that are actually published. Unpublished
-    // albums must not be scrape-able by guessing directory names.
-    const albumState = getAlbumState(sanitizedAlbum);
-    if (!albumState || !albumState.published) {
-      res.status(404).json({ error: "Album not found" });
+    const access = checkAlbumAccess(req, sanitizedAlbum);
+    if (!access.allowed) {
+      res.status(access.status).json({ error: access.message });
       return;
     }
 
@@ -287,12 +335,7 @@ router.get("/album/:albumName", async (req: Request, res: Response): Promise<voi
       photos: files
     });
 
-    // Set cache headers (cache for 1 hour)
-    res.set({
-      'Content-Type': 'image/jpeg',
-      'Cache-Control': 'public, max-age=3600',
-      'ETag': `"grid-${sanitizedAlbum}-${files.length}"`,
-    });
+    setAlbumGridCacheHeaders(res, sanitizedAlbum, files.length, access);
 
     res.send(gridBuffer);
   } catch (err) {
