@@ -145,6 +145,7 @@ const UncategorizedSection: React.FC<UncategorizedSectionProps> = ({
                 <SortableAlbumCard
                   key={album.name}
                   album={album}
+                  folders={[]}
                   isSelected={selectedAlbum === album.name}
                   isAnimating={animatingAlbum === album.name}
                   isDragOver={dragOverAlbum === album.name}
@@ -186,4 +187,3 @@ const UncategorizedSection: React.FC<UncategorizedSectionProps> = ({
 };
 
 export default UncategorizedSection;
-

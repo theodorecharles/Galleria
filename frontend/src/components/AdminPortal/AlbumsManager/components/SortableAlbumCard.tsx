@@ -7,11 +7,13 @@ import { useRef, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Album } from '../types';
+import { Album, AlbumFolder } from '../types';
 import { FolderMinusIcon, UploadIcon, ChevronUpIcon, ChevronDownIcon, FolderArrowIcon } from '../../../icons';
+import AlbumVisibilitySummary from './AlbumVisibilitySummary';
 
 interface SortableAlbumCardProps {
   album: Album;
+  folders: AlbumFolder[];
   isSelected: boolean;
   isAnimating: boolean;
   isDragOver: boolean;
@@ -32,6 +34,7 @@ interface SortableAlbumCardProps {
 
 const SortableAlbumCard: React.FC<SortableAlbumCardProps> = ({
   album,
+  folders,
   isSelected,
   isAnimating,
   isDragOver,
@@ -228,6 +231,12 @@ const SortableAlbumCard: React.FC<SortableAlbumCardProps> = ({
           </span>
         </h4>
       </div>
+      <AlbumVisibilitySummary
+        album={album}
+        folders={folders}
+        canManageShareLinks={canEdit}
+        variant="card"
+      />
       {uploadProgress && uploadProgress.total > 0 ? (
         <div className="album-upload-progress">
           <div className="upload-progress-text">

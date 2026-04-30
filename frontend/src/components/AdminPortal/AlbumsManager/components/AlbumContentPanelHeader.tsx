@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { UploadIcon, TrashIcon, LinkIcon, CloseIcon, EyeIcon, GridViewIcon, ListViewIcon, CheckmarkIcon } from '../../../icons';
 import { showToast } from '../../../../utils/toast';
 import { SITE_URL } from '../../../../config';
+import AlbumVisibilitySummary from './AlbumVisibilitySummary';
 
 type ViewMode = 'grid' | 'list';
 
@@ -46,7 +47,7 @@ const DESCRIPTION_MAX_LENGTH = 2000;
 const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
   selectedAlbum,
   localAlbums,
-  localFolders: _localFolders,
+  localFolders,
   albumPhotos,
   uploadingImages,
   viewMode,
@@ -320,6 +321,16 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
             </>
           )}
 
+          {/* Visibility summary — compact explanation of publish/homepage/folder/share state. */}
+          {!isEditingTitle && currentAlbum && (
+            <AlbumVisibilitySummary
+              album={currentAlbum}
+              folders={localFolders}
+              canManageShareLinks={canEdit}
+              variant="header"
+            />
+          )}
+
           {/* Album description (ticket #621) — editable inline below the title */}
           {!isEditingTitle && (
             isEditingDescription ? (
@@ -578,4 +589,3 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
 };
 
 export default AlbumContentPanelHeader;
-

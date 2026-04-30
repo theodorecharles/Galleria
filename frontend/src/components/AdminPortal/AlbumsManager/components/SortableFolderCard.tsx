@@ -296,6 +296,7 @@ const SortableFolderCard: React.FC<SortableFolderCardProps> = ({
             <SortableAlbumCard
               key={album.name}
               album={album}
+              folders={[folder]}
               isSelected={selectedAlbum === album.name}
               isAnimating={animatingAlbum === album.name}
               isDragOver={dragOverAlbum === album.name}
@@ -334,4 +335,3 @@ const SortableFolderCard: React.FC<SortableFolderCardProps> = ({
 };
 
 export default SortableFolderCard;
-
