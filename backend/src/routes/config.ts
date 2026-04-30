@@ -67,6 +67,7 @@ const SECRET_PLACEHOLDER = "__SECRET_UNCHANGED__";
 const SENSITIVE_CONFIG_PATHS: readonly string[] = [
   "environment.auth.sessionSecret",
   "environment.auth.google.clientSecret",
+  "analytics.openobserve.username",
   "analytics.openobserve.password",
   "analytics.openobserve.serviceToken",
   "openai.apiKey",
