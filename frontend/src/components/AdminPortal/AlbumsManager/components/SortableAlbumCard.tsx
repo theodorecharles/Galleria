@@ -7,11 +7,13 @@ import { useRef, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Album } from '../types';
-import { FolderMinusIcon, UploadIcon, ChevronUpIcon, ChevronDownIcon, FolderArrowIcon } from '../../../icons';
+import { Album, AlbumFolder } from '../types';
+import { FolderMinusIcon, UploadIcon, ChevronUpIcon, ChevronDownIcon, FolderArrowIcon, LinkIcon } from '../../../icons';
+import AlbumVisibilitySummary from './AlbumVisibilitySummary';
 
 interface SortableAlbumCardProps {
   album: Album;
+  folders: AlbumFolder[];
   isSelected: boolean;
   isAnimating: boolean;
   isDragOver: boolean;
@@ -24,6 +26,7 @@ interface SortableAlbumCardProps {
   onMoveUp?: (albumName: string) => void;
   onMoveDown?: (albumName: string) => void;
   onMoveToFolder?: (albumName: string) => void;
+  onShareAlbum?: (albumName: string) => void;
   isFirst?: boolean;
   isLast?: boolean;
   hasFolders?: boolean;
@@ -32,6 +35,7 @@ interface SortableAlbumCardProps {
 
 const SortableAlbumCard: React.FC<SortableAlbumCardProps> = ({
   album,
+  folders,
   isSelected,
   isAnimating,
   isDragOver,
@@ -44,6 +48,7 @@ const SortableAlbumCard: React.FC<SortableAlbumCardProps> = ({
   onMoveUp,
   onMoveDown,
   onMoveToFolder,
+  onShareAlbum,
   isFirst,
   isLast,
   hasFolders = false,
@@ -228,6 +233,30 @@ const SortableAlbumCard: React.FC<SortableAlbumCardProps> = ({
           </span>
         </h4>
       </div>
+      <AlbumVisibilitySummary
+        album={album}
+        folders={folders}
+        canManageShareLinks={canEdit}
+        variant="card"
+      />
+      {canEdit && album.published === false && onShareAlbum && (
+        <button
+          className="album-card-share-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onShareAlbum(album.name);
+          }}
+          onTouchEnd={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onShareAlbum(album.name);
+          }}
+          title={t('albumsManager.generateShareableLink')}
+        >
+          <LinkIcon width="14" height="14" />
+          <span>{t('photo.share')}</span>
+        </button>
+      )}
       {uploadProgress && uploadProgress.total > 0 ? (
         <div className="album-upload-progress">
           <div className="upload-progress-text">
