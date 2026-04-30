@@ -68,6 +68,7 @@ const SENSITIVE_CONFIG_PATHS: readonly string[] = [
   "environment.auth.sessionSecret",
   "environment.auth.google.clientSecret",
   "analytics.openobserve.password",
+  "analytics.openobserve.serviceToken",
   "openai.apiKey",
   "pushNotifications.vapidPrivateKey",
   "email.smtp.auth.user",
