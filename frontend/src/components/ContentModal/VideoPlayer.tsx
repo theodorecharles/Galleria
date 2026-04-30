@@ -50,8 +50,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     if (onLoadStartRef.current) onLoadStartRef.current();
 
+    const appendSecretKey = (url: string): string => {
+      if (!secretKey) return url;
+      if (url.includes('key=')) return url;
+
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}key=${encodeURIComponent(secretKey)}`;
+    };
+
     // Construct master playlist URL
-    const masterPlaylistUrl = `${API_URL}/api/video/${encodeURIComponent(album)}/${encodeURIComponent(filename)}/master.m3u8`;
+    const masterPlaylistUrl = appendSecretKey(`${API_URL}/api/video/${encodeURIComponent(album)}/${encodeURIComponent(filename)}/master.m3u8`);
     console.log('[VideoPlayer] Master playlist URL:', masterPlaylistUrl);
 
     if (Hls.isSupported()) {
@@ -65,8 +73,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           this.load = function(context: any, config: any, callbacks: any) {
             // Add secretKey to all video API requests
             if (secretKey && context.url && context.url.includes('/api/video/')) {
-              const separator = context.url.includes('?') ? '&' : '?';
-              context.url = `${context.url}${separator}key=${secretKey}`;
+              context.url = appendSecretKey(context.url);
             }
             return load(context, config, callbacks);
           };
