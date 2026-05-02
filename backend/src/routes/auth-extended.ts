@@ -101,8 +101,9 @@ const challenges = new Map<string, { challenge: string; userId?: number; user?: 
 /**
  * Verify a sensitive-action re-authentication proof.
  *
- * Accepts either a valid password (when the user has a `password_hash`) or a
- * fresh passkey assertion bound to the user's own credential. This closes a
+ * Accepts either a valid password (when the user has a `password_hash`), a
+ * current TOTP token, or a fresh passkey assertion bound to the user's own
+ * credential. This closes a
  * bypass where users without a password (Google OAuth / passkey-only) could
  * pass through `if (user.password_hash && !verifyPassword(...))` because the
  * `&&` short-circuits to `false` when `password_hash` is empty, allowing MFA
@@ -112,7 +113,15 @@ async function verifyReauth(
   user: User,
   body: any
 ): Promise<{ ok: true } | { ok: false; status: number; reason: string }> {
-  const { password, passkeyCredential, passkeySessionId } = body || {};
+  const {
+    password,
+    passkeyCredential,
+    passkeySessionId,
+    totpToken,
+    mfaToken,
+    token,
+  } = body || {};
+  const submittedTOTP = totpToken || mfaToken || token;
 
   // Path 1: passkey assertion (preferred when supplied — works for every user
   // with at least one registered passkey, including OAuth-only accounts).
@@ -165,7 +174,15 @@ async function verifyReauth(
     }
   }
 
-  // Path 2: password (only valid when the account actually has one).
+  // Path 2: TOTP proof for MFA-enabled accounts, including OAuth-only users
+  // that cannot satisfy the password branch.
+  if (submittedTOTP && user.totp_secret) {
+    if (verifyTOTP(user.totp_secret, submittedTOTP)) {
+      return { ok: true };
+    }
+  }
+
+  // Path 3: password (only valid when the account actually has one).
   if (user.password_hash) {
     if (!password || !verifyPassword(user, password)) {
       return { ok: false, status: 401, reason: 'Invalid password' };
@@ -177,7 +194,7 @@ async function verifyReauth(
   return {
     ok: false,
     status: 401,
-    reason: 'Re-authentication required. Provide a passkey assertion to continue.',
+    reason: 'Re-authentication required. Provide a verification code or passkey assertion to continue.',
   };
 }
 
