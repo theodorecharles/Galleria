@@ -562,8 +562,8 @@ export function recordMFAAttempt(userId: number, ipAddress: string, success: boo
   const db = getDatabase();
   
   const stmt = db.prepare(`
-    INSERT INTO mfa_attempts (user_id, ip_address, success)
-    VALUES (?, ?, ?)
+    INSERT INTO mfa_attempts (user_id, ip_address, success, attempted_at)
+    VALUES (?, ?, ?, datetime('now'))
   `);
   
   stmt.run(userId, ipAddress, success ? 1 : 0);
@@ -574,16 +574,17 @@ export function recordMFAAttempt(userId: number, ipAddress: string, success: boo
  */
 export function getRecentMFAAttempts(userId: number, minutes: number = 15): number {
   const db = getDatabase();
+  const lookbackModifier = `-${Math.max(0, Math.floor(minutes))} minutes`;
   
   const stmt = db.prepare(`
     SELECT COUNT(*) as count
     FROM mfa_attempts
     WHERE user_id = ? 
       AND success = 0
-      AND created_at > datetime('now', '-${minutes} minutes')
+      AND attempted_at > datetime('now', ?)
   `);
   
-  const result = stmt.get(userId) as { count: number };
+  const result = stmt.get(userId, lookbackModifier) as { count: number };
   return result.count;
 }
 

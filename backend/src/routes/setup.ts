@@ -636,6 +636,21 @@ router.post(
         CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users(password_reset_token)
       `);
 
+        // Create MFA attempts table for MFA rate limiting
+        db.exec(`
+        CREATE TABLE IF NOT EXISTS mfa_attempts (
+          user_id INTEGER,
+          attempted_at TEXT NOT NULL DEFAULT (datetime('now')),
+          success INTEGER,
+          ip_address TEXT
+        )
+      `);
+
+        db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_mfa_attempts_user_attempted_at
+        ON mfa_attempts(user_id, attempted_at)
+      `);
+
         info("  Users table created");
       } catch (err) {
         error("Failed to initialize database:", err);
