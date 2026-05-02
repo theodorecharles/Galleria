@@ -505,9 +505,58 @@ router.get("/:album/:filename/original.mp4", requireAuth, async (req: Request, r
 
     if (range) {
       // Handle range request (for seeking)
-      const parts = range.replace(/bytes=/, "").split("-");
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const rangeMatch = /^bytes=(\d*)-(\d*)$/.exec(range);
+      let start: number;
+      let end: number;
+
+      if (!rangeMatch) {
+        res.writeHead(416, {
+          'Content-Range': `bytes */${fileSize}`,
+          ...corsHeaders,
+        });
+        res.end();
+        return;
+      }
+
+      const [, startPart, endPart] = rangeMatch;
+
+      if (startPart === "" && endPart === "") {
+        res.writeHead(416, {
+          'Content-Range': `bytes */${fileSize}`,
+          ...corsHeaders,
+        });
+        res.end();
+        return;
+      }
+
+      if (startPart === "") {
+        const suffixLength = parseInt(endPart, 10);
+
+        if (suffixLength <= 0) {
+          res.writeHead(416, {
+            'Content-Range': `bytes */${fileSize}`,
+            ...corsHeaders,
+          });
+          res.end();
+          return;
+        }
+
+        start = Math.max(fileSize - suffixLength, 0);
+        end = fileSize - 1;
+      } else {
+        start = parseInt(startPart, 10);
+        end = endPart ? parseInt(endPart, 10) : fileSize - 1;
+      }
+
+      if (start >= fileSize || end >= fileSize || start > end) {
+        res.writeHead(416, {
+          'Content-Range': `bytes */${fileSize}`,
+          ...corsHeaders,
+        });
+        res.end();
+        return;
+      }
+
       const chunksize = (end - start) + 1;
       const file = fs.createReadStream(rotatedVideoPath, { start, end });
 
