@@ -217,6 +217,21 @@ export function initializeDatabase(): any {
     CREATE INDEX IF NOT EXISTS idx_share_links_album 
     ON share_links(album)
   `);
+
+  // Create MFA attempts table for MFA rate limiting
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS mfa_attempts (
+      user_id INTEGER,
+      attempted_at TEXT NOT NULL DEFAULT (datetime('now')),
+      success INTEGER,
+      ip_address TEXT
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_mfa_attempts_user_attempted_at
+    ON mfa_attempts(user_id, attempted_at)
+  `);
   
   info('[Database] SQLite database initialized at:', DB_PATH);
   info('[Database] WAL mode enabled for better performance');
@@ -1249,4 +1264,3 @@ export function closeDatabase(): void {
     info('[Database] Database connection closed');
   }
 }
-
