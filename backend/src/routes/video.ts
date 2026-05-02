@@ -503,6 +503,30 @@ router.get("/:album/:filename/original.mp4", requireAuth, async (req: Request, r
           }
         : {};
 
+    const pipeVideoFile = (file: fs.ReadStream): void => {
+      function cleanup() {
+        req.off('close', closeFile);
+      }
+
+      function closeFile() {
+        cleanup();
+        file.destroy();
+      }
+
+      function handleError(err: Error) {
+        error(`[Video] Failed while streaming rotated video: ${rotatedVideoPath}`, err);
+        cleanup();
+        res.destroy(err);
+      }
+
+      file.once('error', handleError);
+      file.once('end', cleanup);
+      file.once('close', cleanup);
+      req.once('close', closeFile);
+
+      file.pipe(res);
+    };
+
     if (range) {
       // Handle range request (for seeking)
       const rangeMatch = /^bytes=(\d*)-(\d*)$/.exec(range);
@@ -568,7 +592,7 @@ router.get("/:album/:filename/original.mp4", requireAuth, async (req: Request, r
         ...corsHeaders,
       });
 
-      file.pipe(res);
+      pipeVideoFile(file);
     } else {
       // Send entire file
       res.writeHead(200, {
@@ -578,7 +602,7 @@ router.get("/:album/:filename/original.mp4", requireAuth, async (req: Request, r
         ...corsHeaders,
       });
 
-      fs.createReadStream(rotatedVideoPath).pipe(res);
+      pipeVideoFile(fs.createReadStream(rotatedVideoPath));
     }
   } catch (err) {
     error('[Video] Failed to serve rotated video:', err);
