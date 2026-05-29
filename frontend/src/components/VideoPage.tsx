@@ -82,7 +82,13 @@ const VideoPage: React.FC = () => {
     };
 
     fetchVideo();
-  }, [album, filename, t, isAuthenticated, navigate]);
+  }, [album, filename, t, isAuthenticated]);
+
+  useEffect(() => {
+    if (!loading && (error || !video)) {
+      navigate('/404', { replace: true });
+    }
+  }, [loading, error, video, navigate]);
 
   const handleBackToAlbum = () => {
     if (album) {
@@ -102,8 +108,6 @@ const VideoPage: React.FC = () => {
   }
 
   if (error || !video) {
-    // Redirect to 404 for any error
-    navigate('/404', { replace: true });
     return null;
   }
 
@@ -136,4 +140,3 @@ const VideoPage: React.FC = () => {
 };
 
 export default VideoPage;
-

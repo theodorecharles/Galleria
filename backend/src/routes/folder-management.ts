@@ -174,6 +174,7 @@ router.delete("/:folder", requireManager, async (req: Request, res: Response): P
       
       const photosDir = req.app.get('photosDir');
       const optimizedDir = req.app.get('optimizedDir');
+      const videoDir = req.app.get('videoDir');
       
       for (const album of albumsInFolder) {
         try {
@@ -191,6 +192,14 @@ router.delete("/:folder", requireManager, async (req: Request, res: Response): P
               fs.rmSync(optimizedPath, { recursive: true, force: true });
             }
           });
+
+          // Delete from video directory (if exists)
+          if (videoDir) {
+            const videoPath = path.join(videoDir, album.name);
+            if (fs.existsSync(videoPath)) {
+              fs.rmSync(videoPath, { recursive: true, force: true });
+            }
+          }
           
           // Cancel share link expiry timers before deleting
           try {
@@ -458,4 +467,3 @@ router.put('/sort-order', requireManager, async (req: Request, res: Response): P
 });
 
 export default router;
-

@@ -194,6 +194,8 @@ export default function SharedAlbum() {
     }
 
     const shownWarnings = new Set<string>();
+    let prevSecondsLeft = Infinity;
+    let expireTimeout: ReturnType<typeof setTimeout> | undefined;
 
     const checkExpiration = () => {
       const now = Date.now();
@@ -224,39 +226,48 @@ export default function SharedAlbum() {
       if (timeLeft <= 0 && !shownWarnings.has('expired')) {
         shownWarnings.add('expired');
         addMessage({ type: 'error', text: 'EXPIRED!!!' });
-        setTimeout(() => {
+        expireTimeout = setTimeout(() => {
           setExpired(true);
         }, 2000);
         return;
       }
 
-      // Show warnings at specific times (only once per warning)
-      if (secondsLeft === 5 && !shownWarnings.has('5s')) {
+      // Show warnings when crossing a threshold (only once per warning).
+      // Use range crossing rather than exact equality so throttled/dropped
+      // setInterval ticks (background tabs, load) can't skip a warning.
+      if (prevSecondsLeft > 5 && secondsLeft <= 5 && !shownWarnings.has('5s')) {
         shownWarnings.add('5s');
         addMessage({ type: 'error', text: '5 seconds left!' });
-      } else if (secondsLeft === 10 && !shownWarnings.has('10s')) {
+      } else if (prevSecondsLeft > 10 && secondsLeft <= 10 && !shownWarnings.has('10s')) {
         shownWarnings.add('10s');
         addMessage({ type: 'error', text: '10 seconds left!' });
-      } else if (secondsLeft === 30 && !shownWarnings.has('30s')) {
+      } else if (prevSecondsLeft > 30 && secondsLeft <= 30 && !shownWarnings.has('30s')) {
         shownWarnings.add('30s');
         addMessage({ type: 'error', text: '30 seconds left to look at this album!' });
-      } else if (minutesLeft === 1 && secondsLeft >= 58 && secondsLeft <= 60 && !shownWarnings.has('1m')) {
+      } else if (prevSecondsLeft > 60 && secondsLeft <= 60 && !shownWarnings.has('1m')) {
         shownWarnings.add('1m');
         addMessage({ type: 'error', text: '1 minute left!' });
-      } else if (minutesLeft === 2 && secondsLeft >= 118 && secondsLeft <= 120 && !shownWarnings.has('2m')) {
+      } else if (prevSecondsLeft > 120 && secondsLeft <= 120 && !shownWarnings.has('2m')) {
         shownWarnings.add('2m');
         addMessage({ type: 'error', text: '2 minutes left to look at this album!' });
-      } else if (minutesLeft === 5 && secondsLeft >= 298 && secondsLeft <= 300 && !shownWarnings.has('5m')) {
+      } else if (prevSecondsLeft > 300 && secondsLeft <= 300 && !shownWarnings.has('5m')) {
         shownWarnings.add('5m');
         addMessage({ type: 'error', text: '5 minutes left to look at this album!' });
       }
+
+      prevSecondsLeft = secondsLeft;
     };
 
     // Check immediately and then every second
     checkExpiration();
     const interval = setInterval(checkExpiration, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (expireTimeout !== undefined) {
+        clearTimeout(expireTimeout);
+      }
+    };
   }, [expiresAt]);
 
   if (loading) {

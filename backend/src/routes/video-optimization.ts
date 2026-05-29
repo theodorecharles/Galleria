@@ -197,11 +197,12 @@ router.post('/regenerate', requireManager, (req, res) => {
       if (req.user && 'id' in req.user) {
         const userId = (req.user as any).id;
         const titleKey = code === 0 ? 'notifications.backend.videoProcessingComplete' : 'notifications.backend.videoProcessingFailed';
-        const bodyKey = code === 0 ? 'notifications.backend.videoProcessingCompleteBody' : 'notifications.backend.videoProcessingFailedBody';
-        
-        const variables = code === 0 
-          ? { videoName: (runningVideoOptimizationJob as any).filename || 'Unknown', albumName: (runningVideoOptimizationJob as any).album || 'Unknown' }
-          : { videoName: (runningVideoOptimizationJob as any).filename || 'Unknown', error: (runningVideoOptimizationJob as any).error || `Exit code ${code}` };
+        const bodyKey = code === 0 ? 'notifications.backend.videoPlaylistRegenerationCompleteBody' : 'notifications.backend.videoPlaylistRegenerationFailedBody';
+
+        const batchCounts = runningVideoOptimizationJob.videoCount ?? { generated: 0, skipped: 0, errors: 0 };
+        const variables = code === 0
+          ? { duration: timeStr, generated: batchCounts.generated, skipped: batchCounts.skipped, errors: batchCounts.errors }
+          : { error: `Exit code ${code}` };
         
         const title = await translateNotification(titleKey, variables);
         const body = await translateNotification(bodyKey, variables);
@@ -379,11 +380,11 @@ router.post('/reprocess', requireManager, (req, res) => {
       if (req.user && 'id' in req.user) {
         const userId = (req.user as any).id;
         const titleKey = code === 0 ? 'notifications.backend.videoReprocessingComplete' : 'notifications.backend.videoReprocessingFailed';
-        const bodyKey = code === 0 ? 'notifications.backend.videoReprocessingCompleteBody' : 'notifications.backend.videoReprocessingFailedBody';
-        
-        const variables = code === 0 
-          ? { videoName: (runningVideoOptimizationJob as any).filename || 'Unknown', albumName: (runningVideoOptimizationJob as any).album || 'Unknown' }
-          : { videoName: (runningVideoOptimizationJob as any).filename || 'Unknown', error: (runningVideoOptimizationJob as any).error || `Exit code ${code}` };
+        const bodyKey = code === 0 ? 'notifications.backend.videoReprocessingBatchCompleteBody' : 'notifications.backend.videoReprocessingBatchFailedBody';
+
+        const variables = code === 0
+          ? { duration: timeStr }
+          : { error: `Exit code ${code}` };
         
         const title = await translateNotification(titleKey, variables);
         const body = await translateNotification(bodyKey, variables);

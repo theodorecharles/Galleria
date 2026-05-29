@@ -6,7 +6,7 @@
 import express from 'express';
 import { createRequire } from 'module';
 import { csrfProtection } from '../security.js';
-import { requireManager } from '../auth/middleware.js';
+import { requireAuth, requireManager } from '../auth/middleware.js';
 import { generateStaticJSONFiles } from './static-json.js';
 import { invalidateAlbumCache } from './albums.js';
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
@@ -31,7 +31,7 @@ router.use(csrfProtection);
  * GET /api/image-metadata/:album/:filename
  * Get metadata for a specific image
  */
-router.get('/:album/:filename', async (req, res) => {
+router.get('/:album/:filename', requireAuth, async (req, res) => {
   try {
     const { album, filename } = req.params;
     const db = await getDbFunctions();
@@ -53,7 +53,7 @@ router.get('/:album/:filename', async (req, res) => {
  * GET /api/image-metadata/album/:album
  * Get all metadata for an album
  */
-router.get('/album/:album', async (req, res) => {
+router.get('/album/:album', requireAuth, async (req, res) => {
   try {
     const { album } = req.params;
     const db = await getDbFunctions();
@@ -69,7 +69,7 @@ router.get('/album/:album', async (req, res) => {
  * GET /api/image-metadata/all
  * Get all image metadata
  */
-router.get('/all', async (req, res) => {
+router.get('/all', requireManager, async (req, res) => {
   try {
     const db = await getDbFunctions();
     const metadata = db.getAllMetadata();

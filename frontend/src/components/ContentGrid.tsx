@@ -52,6 +52,7 @@ const ContentGrid: React.FC<ContentGridProps> = ({ album, onAlbumNotFound, initi
   >({});
   const [loadingImages, setLoadingImages] = useState<Set<string>>(new Set());
   const loadedImagesRef = useRef<Set<string>>(new Set()); // Track which images have loaded
+  const preloadLinksRef = useRef<HTMLLinkElement[]>([]);
   const renderIndexRef = useRef<number>(100);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isRenderingRef = useRef<boolean>(false);
@@ -137,16 +138,29 @@ const ContentGrid: React.FC<ContentGridProps> = ({ album, onAlbumNotFound, initi
 
   // Preload first 6 thumbnail images for faster initial render
   useEffect(() => {
+    preloadLinksRef.current.forEach((link) => link.remove());
+    preloadLinksRef.current = [];
+
     if (photos.length > 0) {
       const preloadCount = Math.min(6, photos.length);
       photos.slice(0, preloadCount).forEach((photo) => {
+        if (loadedImagesRef.current.has(photo.id)) {
+          return;
+        }
+
         const link = document.createElement('link');
         link.rel = 'preload';
         link.as = 'image';
         link.href = photo.thumbnail;
         document.head.appendChild(link);
+        preloadLinksRef.current.push(link);
       });
     }
+
+    return () => {
+      preloadLinksRef.current.forEach((link) => link.remove());
+      preloadLinksRef.current = [];
+    };
   }, [photos]);
 
   // Auto-open photo from URL query parameter
@@ -155,8 +169,18 @@ const ContentGrid: React.FC<ContentGridProps> = ({ album, onAlbumNotFound, initi
       const urlParams = new URLSearchParams(location.search);
       const photoParam = urlParams.get('photo');
       if (photoParam) {
-        // Find photo by filename
-        const photo = allPhotos.find(p => p.id.endsWith(photoParam));
+        // Find photo by id. Ids are structured `<album>/<filename>`, so we must
+        // compare the album too — otherwise a filename shared across albums opens
+        // whichever photo happens to be first in array order (ticket #1048).
+        // On album pages the route's `album` matches the photo's source album, so an
+        // exact id comparison is correct. The homepage feed is sourced from multiple
+        // albums and the share link carries only the filename, so there we fall back
+        // to an exact filename match (still avoids endsWith partial-suffix collisions).
+        const photo = allPhotos.find(p =>
+          isHomepage
+            ? p.id.split('/').pop() === photoParam
+            : p.id === `${album}/${photoParam}`
+        );
         if (photo) {
           handlePhotoClick(photo);
         }

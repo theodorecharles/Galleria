@@ -4,6 +4,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { requireAuth, requireAdmin } from '../auth/middleware.js';
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 import {
@@ -50,6 +51,14 @@ import { sendNotificationToUser } from '../push-notifications.js';
 import { translateNotification } from '../i18n-backend.js';
 
 const router = Router();
+
+const passkeyAuthOptionsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many passkey authentication attempts from this IP, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 /**
  * Helper to send push notification to all admin users
@@ -1323,34 +1332,9 @@ router.post('/passkey/register-verify', requireAuth, async (req: Request, res: R
 /**
  * Get authentication options for passkey login
  */
-router.post('/passkey/auth-options', async (req: Request, res: Response) => {
+router.post('/passkey/auth-options', passkeyAuthOptionsLimiter, async (req: Request, res: Response) => {
   try {
-    const { email } = req.body;
-    
-    // If email provided, get user's passkeys
-    let passkeys: any[] = [];
-    if (email) {
-      const user = getUserByEmail(email);
-      if (user && user.passkeys) {
-        passkeys = user.passkeys;
-        info('[Passkey Auth] Found user with passkeys:', {
-          email,
-          passkeyCount: passkeys.length,
-          passkeys: passkeys.map(pk => ({
-            id: pk.id,
-            name: pk.name,
-            credentialIDLength: pk.credentialID?.length,
-            transports: pk.transports
-          }))
-        });
-      } else {
-        info('[Passkey Auth] User not found or has no passkeys:', email);
-      }
-    } else {
-      info('[Passkey Auth] No email provided, returning empty allowCredentials');
-    }
-
-    const options = await generatePasskeyAuthenticationOptions(passkeys);
+    const options = await generatePasskeyAuthenticationOptions();
 
     // Store challenge
     const sessionId = crypto.randomUUID();
