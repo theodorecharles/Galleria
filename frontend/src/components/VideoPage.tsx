@@ -84,13 +84,11 @@ const VideoPage: React.FC = () => {
     fetchVideo();
   }, [album, filename, t, isAuthenticated]);
 
-  const shouldRedirectTo404 = !loading && (Boolean(error) || !video);
-
   useEffect(() => {
-    if (shouldRedirectTo404) {
+    if (!loading && (error || !video)) {
       navigate('/404', { replace: true });
     }
-  }, [shouldRedirectTo404, navigate]);
+  }, [loading, error, video, navigate]);
 
   const handleBackToAlbum = () => {
     if (album) {
@@ -109,7 +107,7 @@ const VideoPage: React.FC = () => {
     );
   }
 
-  if (shouldRedirectTo404) {
+  if (error || !video) {
     return null;
   }
 
