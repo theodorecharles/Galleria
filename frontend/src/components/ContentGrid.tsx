@@ -52,6 +52,7 @@ const ContentGrid: React.FC<ContentGridProps> = ({ album, onAlbumNotFound, initi
   >({});
   const [loadingImages, setLoadingImages] = useState<Set<string>>(new Set());
   const loadedImagesRef = useRef<Set<string>>(new Set()); // Track which images have loaded
+  const preloadLinksRef = useRef<HTMLLinkElement[]>([]);
   const renderIndexRef = useRef<number>(100);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isRenderingRef = useRef<boolean>(false);
@@ -137,16 +138,29 @@ const ContentGrid: React.FC<ContentGridProps> = ({ album, onAlbumNotFound, initi
 
   // Preload first 6 thumbnail images for faster initial render
   useEffect(() => {
+    preloadLinksRef.current.forEach((link) => link.remove());
+    preloadLinksRef.current = [];
+
     if (photos.length > 0) {
       const preloadCount = Math.min(6, photos.length);
       photos.slice(0, preloadCount).forEach((photo) => {
+        if (loadedImagesRef.current.has(photo.id)) {
+          return;
+        }
+
         const link = document.createElement('link');
         link.rel = 'preload';
         link.as = 'image';
         link.href = photo.thumbnail;
         document.head.appendChild(link);
+        preloadLinksRef.current.push(link);
       });
     }
+
+    return () => {
+      preloadLinksRef.current.forEach((link) => link.remove());
+      preloadLinksRef.current = [];
+    };
   }, [photos]);
 
   // Auto-open photo from URL query parameter
