@@ -21,7 +21,7 @@ import {
   sendNotificationToUser,
   type PushSubscription
 } from '../push-notifications.js';
-import { reloadConfig } from '../config.js';
+import { DATA_DIR, reloadConfig } from '../config.js';
 import { getDatabase } from '../database.js';
 import { info, error, warn } from '../utils/logger.js';
 import { translateNotification } from '../i18n-backend.js';
@@ -179,8 +179,8 @@ router.post('/generate-keys', csrfProtection, requireManager, (req, res) => {
     const adminEmail = adminUser?.email || 'admin@example.com';
     info(`[PushNotifications] VAPID keys generated, using admin email: ${adminEmail}`);
     
-    // Auto-save keys to config.json (at project root, not backend folder)
-    const configPath = join(process.cwd(), '..', 'data', 'config.json');
+    // Auto-save keys to the configured data directory
+    const configPath = join(DATA_DIR, 'config.json');
     const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     
     if (!configData.pushNotifications) {
@@ -266,4 +266,3 @@ router.post('/test', csrfProtection, requireManager, async (req, res) => {
 });
 
 export default router;
-
