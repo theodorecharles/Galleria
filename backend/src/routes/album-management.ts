@@ -792,9 +792,10 @@ router.delete("/:album/photos/:photo", requireManager, async (req: Request, res:
 
     const photosDir = req.app.get("photosDir");
     const optimizedDir = req.app.get("optimizedDir");
-    
+    const videoDir = req.app.get("videoDir");
+
     const photoPath = path.join(photosDir, sanitizedAlbum, sanitizedPhoto);
-    
+
     if (!fs.existsSync(photoPath)) {
       res.status(404).json({ error: 'Photo not found' });
       return;
@@ -803,13 +804,31 @@ router.delete("/:album/photos/:photo", requireManager, async (req: Request, res:
     // Delete from photos directory
     fs.unlinkSync(photoPath);
 
-    // Delete from optimized directories
-    ['thumbnail', 'modal', 'download'].forEach(dir => {
-      const optimizedPath = path.join(optimizedDir, dir, sanitizedAlbum, sanitizedPhoto);
-      if (fs.existsSync(optimizedPath)) {
-        fs.unlinkSync(optimizedPath);
+    if (isVideoFile(sanitizedPhoto)) {
+      // Videos store their optimized posters as .jpg (not the original .mp4 name)
+      const posterName = sanitizedPhoto.replace(/\.[^.]+$/, '.jpg');
+      ['thumbnail', 'modal', 'download'].forEach(dir => {
+        const posterPath = path.join(optimizedDir, dir, sanitizedAlbum, posterName);
+        if (fs.existsSync(posterPath)) {
+          fs.unlinkSync(posterPath);
+        }
+      });
+
+      // Remove the per-video HLS output (master.m3u8, per-resolution playlists, .ts segments).
+      // The HLS folder is named with the full filename, matching processVideo / the video route.
+      if (videoDir) {
+        const hlsPath = path.join(videoDir, sanitizedAlbum, sanitizedPhoto);
+        fs.rmSync(hlsPath, { recursive: true, force: true });
       }
-    });
+    } else {
+      // Delete from optimized directories
+      ['thumbnail', 'modal', 'download'].forEach(dir => {
+        const optimizedPath = path.join(optimizedDir, dir, sanitizedAlbum, sanitizedPhoto);
+        if (fs.existsSync(optimizedPath)) {
+          fs.unlinkSync(optimizedPath);
+        }
+      });
+    }
 
     // Delete metadata from database
     const deleted = deleteImageMetadata(sanitizedAlbum, sanitizedPhoto);
