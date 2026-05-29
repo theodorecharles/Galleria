@@ -197,9 +197,17 @@ router.post('/generate-single', requireManager, async (req: any, res: any) => {
     const isVideo = filename.toLowerCase().match(/\.(mp4|mov|avi|mkv|webm)$/);
     const thumbnailFilename = isVideo ? filename.replace(/\.[^.]+$/, '.jpg') : filename;
     
-    // Try thumbnail first, fall back to original if not found
+    // Try thumbnail first; photos can fall back to original, but videos must
+    // have an extracted image thumbnail for Vision API analysis.
     let imagePath = path.join(optimizedDir, 'thumbnail', album, thumbnailFilename);
     if (!fs.existsSync(imagePath)) {
+      if (isVideo) {
+        warn('[AITitles] Video thumbnail not found:', imagePath);
+        return res.status(422).json({
+          error: 'Video thumbnail not found. Regenerate the video thumbnail before generating an AI title.'
+        });
+      }
+
       info('[AITitles] Thumbnail not found, falling back to original');
       const photosDir = path.join(dataDir, 'photos');
       imagePath = path.join(photosDir, album, filename);
@@ -221,7 +229,7 @@ router.post('/generate-single', requireManager, async (req: any, res: any) => {
     // Read the image and convert to base64
     const imageBuffer = fs.readFileSync(imagePath);
     const base64Image = imageBuffer.toString('base64');
-    const extension = path.extname(filename).toLowerCase().substring(1);
+    const extension = path.extname(imagePath).toLowerCase().substring(1);
     const mimeType = extension === 'jpg' || extension === 'jpeg' ? 'image/jpeg' : `image/${extension}`;
     
     info(`[AITitles] Using image: ${imagePath} (${(imageBuffer.length / 1024).toFixed(1)} KB)`);
@@ -553,4 +561,3 @@ router.post('/generate', requireManager, (req, res) => {
 });
 
 export default router;
-
