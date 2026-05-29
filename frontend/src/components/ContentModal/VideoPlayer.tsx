@@ -48,6 +48,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     initializingRef.current = true;
     console.log('[VideoPlayer] Initializing for', filename);
 
+    // Track the native-HLS listener so cleanup can remove it
+    let onLoadedMetadata: (() => void) | null = null;
+
     if (onLoadStartRef.current) onLoadStartRef.current();
 
     const appendSecretKey = (url: string): string => {
@@ -162,9 +165,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       console.log('[VideoPlayer] Using native HLS (Safari)');
       video.src = masterPlaylistUrl;
-      video.addEventListener('loadedmetadata', () => {
+      onLoadedMetadata = () => {
         if (onLoadedRef.current) onLoadedRef.current();
-      });
+      };
+      video.addEventListener('loadedmetadata', onLoadedMetadata);
     } else {
       console.error('[VideoPlayer] HLS not supported');
     }
@@ -175,6 +179,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
+      // Native-HLS (Safari) path: remove the listener and release the media element
+      if (onLoadedMetadata) {
+        video.removeEventListener('loadedmetadata', onLoadedMetadata);
+        onLoadedMetadata = null;
+      }
+      video.removeAttribute('src');
+      video.load();
     };
   }, [album, filename, videoTitle, secretKey]);
 
