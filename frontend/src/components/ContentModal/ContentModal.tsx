@@ -324,7 +324,7 @@ const ContentModal: React.FC<ContentModalProps> = ({
     try {
       const filename = photo.id.split('/').pop();
       const res = await fetchWithRateLimitCheck(
-        `${API_URL}/api/photos/${photo.album}/${filename}/exif${queryString ? '?' + queryString : ''}`
+        `${API_URL}/api/photos/${photo.album}/${filename}/exif${queryString}`
       );
       
       if (res.ok) {
