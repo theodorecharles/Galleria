@@ -155,8 +155,18 @@ const ContentGrid: React.FC<ContentGridProps> = ({ album, onAlbumNotFound, initi
       const urlParams = new URLSearchParams(location.search);
       const photoParam = urlParams.get('photo');
       if (photoParam) {
-        // Find photo by filename
-        const photo = allPhotos.find(p => p.id.endsWith(photoParam));
+        // Find photo by id. Ids are structured `<album>/<filename>`, so we must
+        // compare the album too — otherwise a filename shared across albums opens
+        // whichever photo happens to be first in array order (ticket #1048).
+        // On album pages the route's `album` matches the photo's source album, so an
+        // exact id comparison is correct. The homepage feed is sourced from multiple
+        // albums and the share link carries only the filename, so there we fall back
+        // to an exact filename match (still avoids endsWith partial-suffix collisions).
+        const photo = allPhotos.find(p =>
+          isHomepage
+            ? p.id.split('/').pop() === photoParam
+            : p.id === `${album}/${photoParam}`
+        );
         if (photo) {
           handlePhotoClick(photo);
         }
