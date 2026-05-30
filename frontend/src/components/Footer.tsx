@@ -66,30 +66,14 @@ function Footer({ albums: _albums = [], externalLinks: _externalLinks = [], curr
     e.preventDefault();
     e.stopPropagation();
     const path = '/license';
-    console.log('[Footer] Navigating to:', path);
     navigate(path, { replace: false });
-    // Force navigation fallback if needed
-    setTimeout(() => {
-      if (window.location.pathname !== path) {
-        console.log('[Footer] Fallback: Forcing navigation via location.href');
-        window.location.href = path;
-      }
-    }, 50);
   };
 
   const handleAdminClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const path = '/admin';
-    console.log('[Footer] Navigating to:', path);
     navigate(path, { replace: false });
-    // Force navigation fallback if needed
-    setTimeout(() => {
-      if (window.location.pathname !== path) {
-        console.log('[Footer] Fallback: Forcing navigation via location.href');
-        window.location.href = path;
-      }
-    }, 50);
   };
 
   return (

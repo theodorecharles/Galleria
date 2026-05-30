@@ -7,7 +7,7 @@
  * - Current album title display
  */
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./Header.css";
@@ -78,15 +78,9 @@ function Navigation({
   const [openFolderId, setOpenFolderId] = useState<number | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const navigationAttemptRef = useRef<string | null>(null);
   
   // Close dropdown when location changes (after navigation completes)
   useEffect(() => {
-    // Check if we were trying to navigate somewhere
-    if (navigationAttemptRef.current && location.pathname === navigationAttemptRef.current) {
-      console.log('[Header] Navigation completed successfully to:', location.pathname);
-      navigationAttemptRef.current = null;
-    }
     setIsDropdownOpen(false);
     setOpenFolderId(null);
   }, [location.pathname]);
@@ -409,38 +403,15 @@ function Navigation({
                           // Use onMouseDown to fire before click-outside handler
                           e.preventDefault();
                           e.stopPropagation();
-                          console.log('[Header] Button mousedown:', albumName);
                         }}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          console.log('[Header] Button clicked:', albumName);
                           const path = `/album/${encodeURIComponent(albumName)}`;
                           trackAlbumNavigation(albumName, 'header');
                           trackDropdownClose('albums', 'navigation');
-                          // Close dropdown first, then navigate
                           setIsDropdownOpen(false);
-                          // Force navigation with multiple strategies
-                          console.log('[Header] Navigating to:', path);
-                          console.log('[Header] Current location.pathname:', location.pathname);
                           navigate(path, { replace: false });
-                          console.log('[Header] navigate() called');
-                          // Double-check: if URL didn't update after 50ms, force it via history API
-                          setTimeout(() => {
-                            const currentUrl = window.location.pathname;
-                            console.log('[Header] After 50ms, URL is:', currentUrl);
-                            console.log('[Header] React Router location.pathname:', location.pathname);
-                            if (currentUrl !== path) {
-                              console.log('[Header] URL mismatch - forcing via history API');
-                              // Update URL directly and dispatch popstate to trigger React Router
-                              window.history.pushState({}, '', path);
-                              window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
-                            } else if (currentUrl === path && location.pathname !== path) {
-                              console.log('[Header] URL updated but React Router location didn\'t - forcing sync');
-                              // URL updated but React Router didn't - force it
-                              window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
-                            }
-                          }, 50);
                         }}
                       >
                         {!isPublished && (
@@ -636,4 +607,3 @@ export default function Header({
     </header>
   );
 }
-

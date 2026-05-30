@@ -3,7 +3,7 @@
  * This component handles the routing and layout of the entire application.
  */
 
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./contexts/AuthContext";
 import i18n from "./i18n/config";
@@ -88,42 +88,9 @@ function AlbumRoute({
 }) {
   const { t } = useTranslation();
   const { album } = useParams();
-  const [urlPath, setUrlPath] = useState(window.location.pathname);
-  
-  // Watch for URL changes and force re-render
-  // This handles the case where React Router's state doesn't update but the URL does
-  useEffect(() => {
-    const checkUrl = () => {
-      const currentPath = window.location.pathname;
-      if (currentPath !== urlPath) {
-        setUrlPath(currentPath);
-      }
-    };
-    
-    // Check immediately
-    checkUrl();
-    
-    // Check every 100ms for URL changes
-    const interval = setInterval(checkUrl, 100);
-    
-    // Also listen for popstate
-    window.addEventListener('popstate', checkUrl);
-    
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('popstate', checkUrl);
-    };
-  }, [urlPath]);
   
   // Decode URI-encoded album name from params
-  const decodedAlbum = album ? decodeURIComponent(album) : "";
-  
-  // Extract album from URL directly (handles React Router not updating)
-  const urlAlbumMatch = urlPath.match(/^\/album\/(.+)$/);
-  const actualAlbum = urlAlbumMatch ? decodeURIComponent(urlAlbumMatch[1].split('?')[0]) : decodedAlbum;
-  
-  // Use actual album from URL if it differs from params (React Router didn't update)
-  const effectiveAlbum = actualAlbum || decodedAlbum;
+  const effectiveAlbum = album ? decodeURIComponent(album) : "";
 
   return (
     <>
@@ -137,7 +104,7 @@ function AlbumRoute({
         image={`${SITE_URL}/photos/avatar.png`}
       />
       <ContentGrid
-        key={`${urlPath}-${effectiveAlbum}`} // Force remount when URL path or album changes
+        key={effectiveAlbum}
         album={effectiveAlbum}
         onAlbumNotFound={onAlbumNotFound}
         onLoadComplete={onLoadComplete}
@@ -997,7 +964,6 @@ function App() {
 function AppWrapper() {
   return (
     <Router>
-      <NavigationSync />
       <AuthProvider>
         <SSEToasterProvider>
           <ScrollToTop />
@@ -1006,87 +972,6 @@ function AppWrapper() {
       </AuthProvider>
     </Router>
   );
-}
-
-/**
- * NavigationSync component ensures React Router detects URL changes
- * even when navigation happens programmatically. This fixes the issue where
- * navigating from video-only album pages doesn't trigger React Router updates.
- */
-function NavigationSync() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const lastPathnameRef = useRef(location.pathname);
-  const lastSyncAttemptRef = useRef<string | null>(null);
-  const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  useEffect(() => {
-    // Continuously check for URL/location mismatches
-    const checkUrlSync = () => {
-      const currentPath = window.location.pathname;
-      const routerPath = location.pathname;
-      
-      // If URL changed but React Router location didn't, force sync
-      if (currentPath !== routerPath) {
-        // Only attempt sync if we haven't tried this path recently (prevent infinite loops)
-        if (lastSyncAttemptRef.current !== currentPath) {
-          lastSyncAttemptRef.current = currentPath;
-          
-          // Clear any pending sync
-          if (syncTimeoutRef.current) {
-            clearTimeout(syncTimeoutRef.current);
-          }
-          
-          // Try to force React Router to update by using window.history directly
-          // and then triggering a popstate event
-          syncTimeoutRef.current = setTimeout(() => {
-            // If navigate() didn't work, try forcing via history API
-            if (window.location.pathname !== routerPath) {
-              // Replace current history entry to match URL
-              window.history.replaceState({}, '', currentPath);
-              // Force React Router to update by dispatching popstate
-              window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
-            }
-          }, 50);
-        }
-      } else {
-        // They match - reset sync attempt tracking
-        lastPathnameRef.current = routerPath;
-        lastSyncAttemptRef.current = null;
-      }
-    };
-    
-    // Check immediately
-    checkUrlSync();
-    
-    // Check every 200ms (less frequent to avoid spam)
-    checkIntervalRef.current = setInterval(checkUrlSync, 200);
-    
-    return () => {
-      if (checkIntervalRef.current) {
-        clearInterval(checkIntervalRef.current);
-      }
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
-      }
-    };
-  }, [location.pathname, navigate]);
-  
-  // Also listen for popstate events (browser back/forward)
-  useEffect(() => {
-    const handlePopState = () => {
-      const currentPath = window.location.pathname;
-      if (currentPath !== location.pathname) {
-        navigate(currentPath, { replace: true });
-      }
-    };
-    
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [location.pathname, navigate]);
-  
-  return null;
 }
 
 export default AppWrapper;
