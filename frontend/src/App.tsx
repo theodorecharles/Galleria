@@ -113,13 +113,18 @@ function AlbumRoute({
   );
 }
 
-// PrimesRedirect component forces a full page load to the primes static page
+// PrimesRedirect component normalizes the primes route through React Router
 function PrimesRedirect() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
+
   useEffect(() => {
-    // Force a full page reload to the primes page
-    window.location.replace("/primes/");
-  }, []);
+    if (location.pathname !== "/primes/") {
+      navigate("/primes/", { replace: true });
+    }
+  }, [navigate, location.pathname]);
+
   return <div className="loading">{t("common.loading")}</div>;
 }
 
