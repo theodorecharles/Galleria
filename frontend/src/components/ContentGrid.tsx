@@ -16,7 +16,7 @@ import ContentModal from "./ContentModal";
 import NotFound from "./Misc/NotFound";
 import { reconstructPhoto, getNumColumns, distributePhotos } from "../utils/photoHelpers";
 import { info } from '../utils/logger';
-import { VideoIcon } from './icons';
+import { VideoIcon, DownloadIcon } from './icons';
 
 // Lazy load VideoListView (includes VideoPlayer and hls.js)
 const VideoListView = lazy(() => import("./VideoListView"));
@@ -86,9 +86,36 @@ const ContentGrid: React.FC<ContentGridProps> = ({ album, onAlbumNotFound, initi
   const imageQueryString = secretKey ? `?key=${secretKey}` : ``;
 
   const [clickedVideoId, setClickedVideoId] = useState<string | null>(null);
+  const [downloadingAll, setDownloadingAll] = useState(false);
 
   // Check if we're on the homepage
   const isHomepage = album === 'homepage';
+
+  // Number of photos (non-video) that can be bulk-downloaded as a ZIP.
+  const downloadablePhotoCount = useMemo(
+    () => allPhotos.filter(p => p.media_type !== 'video').length,
+    [allPhotos]
+  );
+
+  // Trigger a streamed ZIP download of all download-size renditions in the album.
+  // Works on both the public album page and a share-link view (?key=).
+  const handleDownloadAll = useCallback(() => {
+    if (downloadingAll) return;
+    setDownloadingAll(true);
+    try {
+      const keyQuery = secretKey ? `?key=${encodeURIComponent(secretKey)}` : '';
+      const url = `${API_URL}/api/albums/${encodeURIComponent(album)}/download-all${keyQuery}`;
+      const link = document.createElement('a');
+      link.href = url;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      // The browser handles the streamed download from here; re-enable shortly.
+      setTimeout(() => setDownloadingAll(false), 2000);
+    }
+  }, [album, secretKey, downloadingAll]);
 
   const handlePhotoClick = (photo: Photo, shouldAutoplay: boolean = false) => {
     setSelectedPhoto(photo);
@@ -646,6 +673,20 @@ const ContentGrid: React.FC<ContentGridProps> = ({ album, onAlbumNotFound, initi
     <>
       {albumDescription && album !== 'homepage' && (
         <div className="album-description-public">{albumDescription}</div>
+      )}
+      {!isHomepage && downloadablePhotoCount > 0 && (
+        <div className="album-actions">
+          <button
+            type="button"
+            className="download-all-button"
+            onClick={handleDownloadAll}
+            disabled={downloadingAll}
+            title={t('photo.downloadAll')}
+          >
+            <DownloadIcon width="16" height="16" />
+            <span>{downloadingAll ? t('photo.preparingDownload') : t('photo.downloadAll')}</span>
+          </button>
+        </div>
       )}
       <div className="photo-grid" style={{ gridTemplateColumns: `repeat(${numColumns}, 1fr)` }}>
         {distributedColumns.map((column, columnIndex) => (

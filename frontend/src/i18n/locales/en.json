@@ -112,6 +112,8 @@
     "copyLink": "Copy link",
     "copied": "Copied!",
     "downloadPhoto": "Download photo",
+    "downloadAll": "Download all",
+    "preparingDownload": "Preparing…",
     "exitFullscreen": "Exit fullscreen",
     "file": "File",
     "titleLabel": "Title",

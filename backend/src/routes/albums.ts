@@ -8,6 +8,7 @@ import { Router, Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import exifr from "exifr";
+import archiver from "archiver";
 import { 
   getAlbumState, 
   getPublishedAlbums, 
@@ -568,6 +569,108 @@ router.get("/api/shared/:secretKey", async (req: Request, res): Promise<void> =>
     photos,
     expiresAt: shareLink.expires_at
   });
+});
+
+// Download all photos in an album as a ZIP of their download-size renditions.
+// Gating mirrors the per-photo download (the /optimized static route):
+// published OR authenticated OR a valid share-link key for this album.
+router.get("/api/albums/:album/download-all", async (req: Request, res: Response): Promise<void> => {
+  const album = sanitizePath(req.params.album || "");
+  if (!album) {
+    res.status(400).json({ error: "Invalid album name" });
+    return;
+  }
+
+  // Authenticated session?
+  const isAuthenticated = (req.isAuthenticated && req.isAuthenticated()) || !!(req.session as any)?.userId;
+
+  // Valid share link for this album?
+  const shareKeyParam = req.query.key;
+  const shareKey = Array.isArray(shareKeyParam) ? shareKeyParam[0] : shareKeyParam;
+  let hasValidShareLink = false;
+  if (shareKey && typeof shareKey === "string" && /^[a-f0-9]{64}$/i.test(shareKey)) {
+    const shareLink = getShareLinkBySecret(shareKey);
+    if (shareLink && shareLink.album === album && !isShareLinkExpired(shareLink)) {
+      hasValidShareLink = true;
+    }
+  }
+
+  const albumState = getAlbumState(album);
+  if (!albumState) {
+    res.status(404).json({ error: "Album not found" });
+    return;
+  }
+  if (!albumState.published && !isAuthenticated && !hasValidShareLink) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
+  const optimizedDir = req.app.get("optimizedDir");
+  const downloadBaseDir = path.join(optimizedDir, "download", album);
+
+  // Collect the album's downloadable photos (videos have no download rendition).
+  const images = getImagesInAlbum(album).filter(
+    (img: any) => (img.media_type || "photo") !== "video"
+  );
+
+  const entries: { filePath: string; name: string }[] = [];
+  const usedNames = new Set<string>();
+  for (const img of images) {
+    const filePath = path.join(downloadBaseDir, img.filename);
+    if (!fs.existsSync(filePath)) continue;
+
+    // Guard against duplicate entry names within the archive.
+    let name = img.filename;
+    if (usedNames.has(name)) {
+      const ext = path.extname(name);
+      const base = name.slice(0, name.length - ext.length);
+      let counter = 1;
+      do {
+        name = `${base} (${counter})${ext}`;
+        counter++;
+      } while (usedNames.has(name));
+    }
+    usedNames.add(name);
+    entries.push({ filePath, name });
+  }
+
+  if (entries.length === 0) {
+    res.status(404).json({ error: "No downloadable photos in this album" });
+    return;
+  }
+
+  const zipName = `${album}.zip`;
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="${zipName.replace(/"/g, "")}"; filename*=UTF-8''${encodeURIComponent(zipName)}`
+  );
+
+  // Store (no compression): download renditions are already JPEG-compressed,
+  // so re-compressing wastes CPU for negligible size gain.
+  const archive = archiver("zip", { zlib: { level: 0 } });
+
+  archive.on("error", (err: Error) => {
+    error(`[Albums] Failed to build ZIP for album "${album}":`, err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Failed to create archive" });
+    } else {
+      res.destroy();
+    }
+  });
+
+  // Abort the archive if the client disconnects mid-stream.
+  res.on("close", () => {
+    if (!res.writableEnded) {
+      archive.abort();
+    }
+  });
+
+  archive.pipe(res);
+  for (const entry of entries) {
+    archive.file(entry.filePath, { name: entry.name });
+  }
+  await archive.finalize();
 });
 
 // Shared handler for EXIF data
