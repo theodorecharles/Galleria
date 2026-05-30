@@ -77,6 +77,14 @@ export function queueOptimizationJob(
   onComplete: () => void,
   onError: (error: string) => void
 ) {
+  // Set initial state as queued before enqueueing because enqueueing may start immediately.
+  broadcastOptimizationUpdate(jobId, {
+    album,
+    filename,
+    progress: 0,
+    state: 'queued'
+  });
+
   optimizationRunner.enqueue({
     jobId,
     scriptPath,
@@ -113,14 +121,6 @@ export function queueOptimizationJob(
       }
       onError(jobError);
     }
-  });
-
-  // Set initial state as queued
-  broadcastOptimizationUpdate(jobId, {
-    album,
-    filename,
-    progress: 0,
-    state: 'queued'
   });
   // info(`[OptimizationStream] Added ${jobId} to queue`);
 }
