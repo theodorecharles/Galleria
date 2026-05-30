@@ -11,6 +11,7 @@ import { error, warn, info } from '../utils/logger.js';
 import { requireManager } from '../auth/middleware.js';
 import { sendNotificationToUser } from '../push-notifications.js';
 import { translateNotification } from '../i18n-backend.js';
+import { createOptimizationJob, getLatestOptimizationJob, updateOptimizationJob } from '../database.js';
 
 const router = express.Router();
 
@@ -22,6 +23,7 @@ const __dirname = path.dirname(__filename);
 
 // Track running optimization job
 interface RunningJob {
+  id: string;
   process: any;
   output: string[];
   clients: Set<any>;
@@ -45,12 +47,23 @@ function broadcastToClients(job: RunningJob | null, message: string) {
   });
 }
 
+router.get('/status', requireManager, (req, res) => {
+  res.json({
+    running: Boolean(runningVideoOptimizationJob && !runningVideoOptimizationJob.isComplete),
+    output: runningVideoOptimizationJob?.output ?? [],
+    isComplete: runningVideoOptimizationJob?.isComplete ?? true,
+    latestPlaylistJob: getLatestOptimizationJob('video-playlist'),
+    latestReprocessJob: getLatestOptimizationJob('video-reprocess')
+  });
+});
+
 /**
  * POST /api/video-optimization/regenerate
  * Regenerate video master playlists with current configuration
  * Streams progress via SSE
  */
 router.post('/regenerate', requireManager, (req, res) => {
+  const jobId = `video-playlist:${Date.now()}`;
   // Set up SSE headers FIRST
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -85,6 +98,7 @@ router.post('/regenerate', requireManager, (req, res) => {
 
   // Create new job tracking object IMMEDIATELY
   runningVideoOptimizationJob = {
+    id: jobId,
     process: null,
     output: [],
     clients: new Set([res]),
@@ -92,6 +106,12 @@ router.post('/regenerate', requireManager, (req, res) => {
     isComplete: false,
     videoCount: { generated: 0, skipped: 0, errors: 0 }
   };
+  createOptimizationJob({
+    id: jobId,
+    type: 'video-playlist',
+    status: 'running',
+    progress: 0
+  });
 
   info('[VideoOptimization] Starting video playlist regeneration');
 
@@ -104,6 +124,11 @@ router.post('/regenerate', requireManager, (req, res) => {
   });
   
   runningVideoOptimizationJob.process = child;
+  updateOptimizationJob(jobId, {
+    pid: child.pid ?? null,
+    status: 'running',
+    progress: 0
+  });
   
   // Remove client when they disconnect
   req.on('close', () => {
@@ -184,6 +209,11 @@ router.post('/regenerate', requireManager, (req, res) => {
     info(`[VideoOptimization] ${message}`);
     
     if (runningVideoOptimizationJob) {
+      updateOptimizationJob(runningVideoOptimizationJob.id, {
+        status: code === 0 ? 'complete' : 'failed',
+        progress: code === 0 ? 100 : undefined,
+        error: code === 0 ? null : `Exit code ${code}`
+      });
       const completeOutput = JSON.stringify({
         type: 'complete',
         exitCode: code,
@@ -232,6 +262,10 @@ router.post('/regenerate', requireManager, (req, res) => {
     const message = `✗ Failed to start video playlist regeneration: ${err.message}`;
     
     if (runningVideoOptimizationJob) {
+      updateOptimizationJob(runningVideoOptimizationJob.id, {
+        status: 'failed',
+        error: err.message
+      });
       const errorOutput = JSON.stringify({
         type: 'error',
         message
@@ -249,6 +283,7 @@ router.post('/regenerate', requireManager, (req, res) => {
  * Streams progress via SSE
  */
 router.post('/reprocess', requireManager, (req, res) => {
+  const jobId = `video-reprocess:${Date.now()}`;
   // Set up SSE headers FIRST
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -283,12 +318,19 @@ router.post('/reprocess', requireManager, (req, res) => {
 
   // Create new job tracking object IMMEDIATELY
   runningVideoOptimizationJob = {
+    id: jobId,
     process: null,
     output: [],
     clients: new Set([res]),
     startTime: Date.now(),
     isComplete: false
   };
+  createOptimizationJob({
+    id: jobId,
+    type: 'video-reprocess',
+    status: 'running',
+    progress: 0
+  });
 
   info('[VideoReprocessing] Starting video reprocessing with current settings');
 
@@ -303,6 +345,11 @@ router.post('/reprocess', requireManager, (req, res) => {
   });
   
   runningVideoOptimizationJob.process = child;
+  updateOptimizationJob(jobId, {
+    pid: child.pid ?? null,
+    status: 'running',
+    progress: 0
+  });
   
   // Remove client when they disconnect
   req.on('close', () => {
@@ -367,6 +414,11 @@ router.post('/reprocess', requireManager, (req, res) => {
     info(`[VideoReprocessing] ${message}`);
     
     if (runningVideoOptimizationJob) {
+      updateOptimizationJob(runningVideoOptimizationJob.id, {
+        status: code === 0 ? 'complete' : 'failed',
+        progress: code === 0 ? 100 : undefined,
+        error: code === 0 ? null : `Exit code ${code}`
+      });
       const completeOutput = JSON.stringify({
         type: 'complete',
         exitCode: code,
@@ -415,6 +467,10 @@ router.post('/reprocess', requireManager, (req, res) => {
     const message = `✗ Failed to start video reprocessing: ${errorMessage}`;
     
     if (runningVideoOptimizationJob) {
+      updateOptimizationJob(runningVideoOptimizationJob.id, {
+        status: 'failed',
+        error: errorMessage
+      });
       const errorOutput = JSON.stringify({
         type: 'error',
         message
@@ -438,6 +494,10 @@ router.post('/stop', requireManager, (req, res) => {
 
   try {
     runningVideoOptimizationJob.process.kill('SIGTERM');
+    updateOptimizationJob(runningVideoOptimizationJob.id, {
+      status: 'stopped',
+      error: 'Job stopped by user'
+    });
     
     const message = '⏹ Video reprocessing stopped by user';
     runningVideoOptimizationJob.output.push(message);
@@ -540,4 +600,3 @@ router.post('/test-gpu', requireManager, (req, res) => {
 });
 
 export default router;
-

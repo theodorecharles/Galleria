@@ -17,6 +17,7 @@ router.use(csrfProtection);
 
 // Track running optimization job
 interface RunningJob {
+  id: string;
   process: any;
   output: string[];
   clients: Set<any>;
@@ -46,6 +47,8 @@ import { DATA_DIR, reloadConfig } from '../config.js';
 import { requireAuth, requireAdmin, requireManager } from '../auth/middleware.js';
 import { sendNotificationToUser } from '../push-notifications.js';
 import { translateNotification } from '../i18n-backend.js';
+import { createOptimizationJob, getLatestOptimizationJob, updateOptimizationJob } from '../database.js';
+import { acquireOptimizationLock, getOptimizationLockConflict, releaseOptimizationLock } from './optimization-stream.js';
 
 // Path to config.json
 const configPath = path.join(DATA_DIR, 'config.json');
@@ -133,14 +136,16 @@ router.put('/settings', requireAdmin, (req, res) => {
 
 // GET /api/image-optimization/status - Check if optimization is running
 router.get('/status', requireAuth, (req, res) => {
+  const latestJob = getLatestOptimizationJob('image-bulk');
   if (runningOptimizationJob) {
     res.json({ 
       running: true, 
       output: runningOptimizationJob.output,
-      isComplete: runningOptimizationJob.isComplete
+      isComplete: runningOptimizationJob.isComplete,
+      job: latestJob
     });
   } else {
-    res.json({ running: false });
+    res.json({ running: false, job: latestJob });
   }
 });
 
@@ -156,6 +161,11 @@ router.post('/stop', requireManager, (req: any, res: any) => {
       runningOptimizationJob.process.kill('SIGTERM');
       info('[Optimization] Job stopped by user');
     }
+    updateOptimizationJob(runningOptimizationJob.id, {
+      status: 'stopped',
+      error: 'Job stopped by user'
+    });
+    releaseOptimizationLock('*', runningOptimizationJob.id);
     
     // Mark as complete and broadcast to all clients
     const stopMsg = JSON.stringify({ type: 'error', message: 'Job stopped by user' });
@@ -212,15 +222,34 @@ router.post('/optimize', requireManager, (req, res) => {
     
     return;
   }
+
+  const jobId = `image-bulk:${Date.now()}`;
+  const lockConflict = getOptimizationLockConflict('*');
+  if (lockConflict || !acquireOptimizationLock('*', jobId)) {
+    res.status(409).json({
+      error: 'Another optimization job is already running',
+      jobId: lockConflict
+    });
+    return;
+  }
   
   // Create job tracking IMMEDIATELY to prevent race condition
   runningOptimizationJob = {
+    id: jobId,
     process: null,
     output: [],
     clients: new Set([res]),
     startTime: Date.now(),
     isComplete: false
   };
+  createOptimizationJob({
+    id: jobId,
+    type: 'image-bulk',
+    album: null,
+    filename: null,
+    status: 'running',
+    progress: 0
+  });
   
   // Set up SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
@@ -241,6 +270,12 @@ router.post('/optimize', requireManager, (req, res) => {
   
   // Check if script exists
   if (!fs.existsSync(scriptPath)) {
+    updateOptimizationJob(jobId, {
+      status: 'failed',
+      error: 'Optimization script not found'
+    });
+    releaseOptimizationLock('*', jobId);
+    runningOptimizationJob.isComplete = true;
     res.write(`data: {"type":"error","message":"Optimization script not found"}\n\n`);
     res.end();
     return;
@@ -253,6 +288,11 @@ router.post('/optimize', requireManager, (req, res) => {
   });
   
   runningOptimizationJob.process = child;
+  updateOptimizationJob(jobId, {
+    pid: child.pid ?? null,
+    status: 'running',
+    progress: 0
+  });
   
   // Remove client when they disconnect
   req.on('close', () => {
@@ -278,6 +318,10 @@ router.post('/optimize', requireManager, (req, res) => {
             total: parseInt(total),
             percent: parseInt(percent),
             message: line 
+          });
+          updateOptimizationJob(jobId, {
+            status: 'running',
+            progress: parseInt(percent)
           });
           // Log progress to file (verbose level)
           verbose(`[Optimization] ${line}`);
@@ -326,6 +370,12 @@ router.post('/optimize', requireManager, (req, res) => {
     });
     
     if (runningOptimizationJob) {
+      releaseOptimizationLock('*', runningOptimizationJob.id);
+      updateOptimizationJob(runningOptimizationJob.id, {
+        status: code === 0 ? 'complete' : 'failed',
+        progress: code === 0 ? 100 : undefined,
+        error: code === 0 ? null : `Exit code ${code}`
+      });
       runningOptimizationJob.output.push(completeMsg);
       runningOptimizationJob.isComplete = true;
       
@@ -391,6 +441,11 @@ router.post('/optimize', requireManager, (req, res) => {
     });
     
     if (runningOptimizationJob) {
+      releaseOptimizationLock('*', runningOptimizationJob.id);
+      updateOptimizationJob(runningOptimizationJob.id, {
+        status: 'failed',
+        error: err.message
+      });
       runningOptimizationJob.output.push(errorMsg);
       runningOptimizationJob.isComplete = true;
       
@@ -409,4 +464,3 @@ router.post('/optimize', requireManager, (req, res) => {
 });
 
 export default router;
-

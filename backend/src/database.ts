@@ -12,6 +12,22 @@ const Database = require('better-sqlite3');
 
 let db: any = null;
 
+export type OptimizationJobStatus = 'queued' | 'running' | 'complete' | 'failed' | 'stopped';
+
+export interface OptimizationJobRecord {
+  id: string;
+  type: string;
+  album: string | null;
+  filename: string | null;
+  pid: number | null;
+  started_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  status: OptimizationJobStatus;
+  progress: number | null;
+  error: string | null;
+}
+
 /**
  * Initialize the database and create tables if they don't exist
  */
@@ -232,6 +248,40 @@ export function initializeDatabase(): any {
     CREATE INDEX IF NOT EXISTS idx_mfa_attempts_user_attempted_at
     ON mfa_attempts(user_id, attempted_at)
   `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS jobs (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      album TEXT,
+      filename TEXT,
+      pid INTEGER,
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      completed_at TEXT,
+      status TEXT NOT NULL,
+      progress INTEGER,
+      error TEXT
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_jobs_status_type_updated
+    ON jobs(status, type, updated_at)
+  `);
+
+  const interrupted = db.prepare(`
+    UPDATE jobs
+    SET status = 'failed',
+        completed_at = datetime('now'),
+        updated_at = datetime('now'),
+        error = COALESCE(error, 'Interrupted by server restart')
+    WHERE status IN ('queued', 'running')
+  `).run();
+
+  if (interrupted.changes > 0) {
+    warn(`[Database] Marked ${interrupted.changes} optimization job(s) interrupted by restart`);
+  }
   
   info('[Database] SQLite database initialized at:', DB_PATH);
   info('[Database] WAL mode enabled for better performance');
@@ -248,6 +298,114 @@ export function getDatabase(): any {
     return initializeDatabase();
   }
   return db;
+}
+
+export function createOptimizationJob(job: {
+  id: string;
+  type: string;
+  album?: string | null;
+  filename?: string | null;
+  pid?: number | null;
+  status?: OptimizationJobStatus;
+  progress?: number | null;
+}): void {
+  const db = getDatabase();
+  db.prepare(`
+    INSERT INTO jobs (id, type, album, filename, pid, status, progress, error, started_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'), datetime('now'))
+    ON CONFLICT(id) DO UPDATE SET
+      type = excluded.type,
+      album = excluded.album,
+      filename = excluded.filename,
+      pid = excluded.pid,
+      status = excluded.status,
+      progress = excluded.progress,
+      error = NULL,
+      started_at = datetime('now'),
+      updated_at = datetime('now'),
+      completed_at = NULL
+  `).run(
+    job.id,
+    job.type,
+    job.album ?? null,
+    job.filename ?? null,
+    job.pid ?? null,
+    job.status ?? 'queued',
+    job.progress ?? null
+  );
+}
+
+export function updateOptimizationJob(
+  id: string,
+  update: {
+    pid?: number | null;
+    status?: OptimizationJobStatus;
+    progress?: number | null;
+    error?: string | null;
+  }
+): void {
+  const db = getDatabase();
+  const current = db.prepare('SELECT id FROM jobs WHERE id = ?').get(id);
+  if (!current) return;
+
+  const status = update.status;
+  const completedAtSql = status === 'complete' || status === 'failed' || status === 'stopped'
+    ? ', completed_at = COALESCE(completed_at, datetime(\'now\'))'
+    : '';
+
+  db.prepare(`
+    UPDATE jobs
+    SET pid = COALESCE(?, pid),
+        status = COALESCE(?, status),
+        progress = COALESCE(?, progress),
+        error = COALESCE(?, error),
+        updated_at = datetime('now')
+        ${completedAtSql}
+    WHERE id = ?
+  `).run(
+    update.pid ?? null,
+    update.status ?? null,
+    update.progress ?? null,
+    update.error ?? null,
+    id
+  );
+}
+
+export function getLatestOptimizationJob(type?: string): OptimizationJobRecord | undefined {
+  const db = getDatabase();
+  const stmt = type
+    ? db.prepare('SELECT * FROM jobs WHERE type = ? ORDER BY started_at DESC LIMIT 1')
+    : db.prepare('SELECT * FROM jobs ORDER BY started_at DESC LIMIT 1');
+  return (type ? stmt.get(type) : stmt.get()) as OptimizationJobRecord | undefined;
+}
+
+export function getRunningOptimizationJob(album?: string | null): OptimizationJobRecord | undefined {
+  const db = getDatabase();
+  if (album) {
+    return db.prepare(`
+      SELECT * FROM jobs
+      WHERE status IN ('queued', 'running')
+        AND (album = ? OR album IS NULL)
+      ORDER BY started_at DESC
+      LIMIT 1
+    `).get(album) as OptimizationJobRecord | undefined;
+  }
+
+  return db.prepare(`
+    SELECT * FROM jobs
+    WHERE status IN ('queued', 'running')
+    ORDER BY started_at DESC
+    LIMIT 1
+  `).get() as OptimizationJobRecord | undefined;
+}
+
+export function getRecentOptimizationJobs(limit: number = 20): OptimizationJobRecord[] {
+  const db = getDatabase();
+  return db.prepare(`
+    SELECT * FROM jobs
+    ORDER BY started_at DESC
+    LIMIT ?
+  `).all(Math.max(1, Math.min(limit, 100))) as OptimizationJobRecord[];
 }
 
 /**

@@ -30,6 +30,8 @@ import {
   updateAlbumSortOrder,
   getAlbumState,
   getDatabase,
+  createOptimizationJob,
+  updateOptimizationJob,
   setAlbumFolder,
   getAlbumsInFolder,
   setFolderPublished,
@@ -39,7 +41,13 @@ import { processVideo, VideoProcessingProgress } from "../utils/video-processor.
 import { invalidateAlbumCache } from "./albums.js";
 import { generateStaticJSONFiles } from "./static-json.js";
 import { generateHomepageHTML } from "./homepage-html.js";
-import { broadcastOptimizationUpdate, queueOptimizationJob } from "./optimization-stream.js";
+import {
+  acquireOptimizationLock,
+  broadcastOptimizationUpdate,
+  getOptimizationLockConflict,
+  queueOptimizationJob,
+  releaseOptimizationLock
+} from "./optimization-stream.js";
 import OpenAI from "openai";
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 
@@ -1603,17 +1611,51 @@ router.post("/:album/optimize", requireAdmin, async (req: Request, res: Response
     // Don't wait for it to complete
     const photosDir = req.app.get("photosDir");
     const albumPath = path.join(photosDir, sanitizedAlbum);
+    const jobId = `image-bulk-album:${sanitizedAlbum}:${Date.now()}`;
+    const lockScope = '*';
+    const lockConflict = getOptimizationLockConflict(lockScope);
+
+    if (lockConflict || !acquireOptimizationLock(lockScope, jobId)) {
+      res.status(409).json({
+        error: 'Another optimization job is already running',
+        jobId: lockConflict
+      });
+      return;
+    }
+
+    createOptimizationJob({
+      id: jobId,
+      type: 'image-bulk-album',
+      album: sanitizedAlbum,
+      status: 'running',
+      progress: 0
+    });
     
-    execFile('node', [scriptPath, albumPath], (err, stdout, stderr) => {
+    const child = execFile('node', [scriptPath, albumPath], (err, stdout, stderr) => {
+      releaseOptimizationLock(lockScope, jobId);
       if (err) {
+        updateOptimizationJob(jobId, {
+          status: 'failed',
+          error: err.message
+        });
         error('[AlbumManagement] Optimization error:', err);
       } else {
+        updateOptimizationJob(jobId, {
+          status: 'complete',
+          progress: 100
+        });
         info('[AlbumManagement] Optimization complete for album:', sanitizedAlbum);
       }
+    });
+    updateOptimizationJob(jobId, {
+      pid: child.pid ?? null,
+      status: 'running',
+      progress: 0
     });
 
     res.json({ 
       success: true, 
+      jobId,
       message: 'Optimization started in background' 
     });
   } catch (err) {
