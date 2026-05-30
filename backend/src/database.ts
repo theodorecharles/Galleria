@@ -270,19 +270,6 @@ export function initializeDatabase(): any {
     ON jobs(status, type, updated_at)
   `);
 
-  const interrupted = db.prepare(`
-    UPDATE jobs
-    SET status = 'failed',
-        completed_at = datetime('now'),
-        updated_at = datetime('now'),
-        error = COALESCE(error, 'Interrupted by server restart')
-    WHERE status IN ('queued', 'running')
-  `).run();
-
-  if (interrupted.changes > 0) {
-    warn(`[Database] Marked ${interrupted.changes} optimization job(s) interrupted by restart`);
-  }
-  
   info('[Database] SQLite database initialized at:', DB_PATH);
   info('[Database] WAL mode enabled for better performance');
   info('[Database] All tables and migrations applied');
@@ -369,6 +356,38 @@ export function updateOptimizationJob(
     update.error ?? null,
     id
   );
+}
+
+export function reconcileInterruptedOptimizationJobs(): OptimizationJobRecord[] {
+  const db = getDatabase();
+  const interruptedJobs = db.prepare(`
+    SELECT * FROM jobs
+    WHERE status IN ('queued', 'running')
+    ORDER BY started_at DESC
+  `).all() as OptimizationJobRecord[];
+
+  if (interruptedJobs.length === 0) {
+    return [];
+  }
+
+  db.prepare(`
+    UPDATE jobs
+    SET status = 'failed',
+        completed_at = datetime('now'),
+        updated_at = datetime('now'),
+        error = COALESCE(error, 'Interrupted by server restart')
+    WHERE status IN ('queued', 'running')
+  `).run();
+
+  warn(`[Database] Marked ${interruptedJobs.length} optimization job(s) interrupted by restart`);
+
+  return interruptedJobs.map(job => ({
+    ...job,
+    status: 'failed',
+    completed_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    error: job.error ?? 'Interrupted by server restart'
+  }));
 }
 
 export function getLatestOptimizationJob(type?: string): OptimizationJobRecord | undefined {

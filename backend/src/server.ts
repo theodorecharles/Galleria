@@ -33,9 +33,10 @@ import config, {
   isEnvSet,
 } from "./config.ts";
 import { validateProductionSecurity } from "./security.ts";
-import { initializeDatabase } from "./database.ts";
+import { initializeDatabase, reconcileInterruptedOptimizationJobs } from "./database.ts";
 import { initPromise as i18nInitPromise } from './i18n.js';
-import { initializePushNotifications } from './push-notifications.js';
+import { initializePushNotifications, sendNotificationToAll } from './push-notifications.js';
+import { translateNotification } from './i18n-backend.js';
 import {
   initLogger,
   info,
@@ -378,6 +379,56 @@ const SqliteStore = SqliteStoreFactory(session);
 
 // Initialize push notifications after database is ready
 initializePushNotifications();
+
+async function notifyInterruptedOptimizationJobs() {
+  const interruptedJobs = reconcileInterruptedOptimizationJobs();
+  if (interruptedJobs.length === 0) {
+    return;
+  }
+
+  const errorMessage = 'Interrupted by server restart';
+  const notifications = [
+    {
+      applies: interruptedJobs.some(job => job.type === 'image-bulk' || job.type === 'image-bulk-album'),
+      titleKey: 'notifications.backend.imageOptimizationFailed',
+      bodyKey: 'notifications.backend.imageOptimizationFailedBody',
+      tag: 'image-optimization'
+    },
+    {
+      applies: interruptedJobs.some(job => job.type === 'video-playlist'),
+      titleKey: 'notifications.backend.videoProcessingFailed',
+      bodyKey: 'notifications.backend.videoPlaylistRegenerationFailedBody',
+      tag: 'video-optimization'
+    },
+    {
+      applies: interruptedJobs.some(job => job.type === 'video-reprocess'),
+      titleKey: 'notifications.backend.videoReprocessingFailed',
+      bodyKey: 'notifications.backend.videoReprocessingBatchFailedBody',
+      tag: 'video-reprocessing'
+    }
+  ];
+
+  for (const notification of notifications) {
+    if (!notification.applies) continue;
+
+    const variables = { error: errorMessage };
+    const title = await translateNotification(notification.titleKey, variables);
+    const body = await translateNotification(notification.bodyKey, variables);
+
+    await sendNotificationToAll({
+      title,
+      body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: notification.tag,
+      requireInteraction: false
+    });
+  }
+}
+
+notifyInterruptedOptimizationJobs().catch(err => {
+  warn('[Startup] Failed to notify interrupted optimization jobs:', err);
+});
 
 // Middleware to set dynamic cookie options BEFORE session middleware runs
 // This allows both IP access (http://4.20.69.80) and domain access (https://api.example.com)

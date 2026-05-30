@@ -47,11 +47,71 @@ import { DATA_DIR, reloadConfig } from '../config.js';
 import { requireAuth, requireAdmin, requireManager } from '../auth/middleware.js';
 import { sendNotificationToUser } from '../push-notifications.js';
 import { translateNotification } from '../i18n-backend.js';
-import { createOptimizationJob, getLatestOptimizationJob, updateOptimizationJob } from '../database.js';
+import { createOptimizationJob, getLatestOptimizationJob, updateOptimizationJob, type OptimizationJobRecord } from '../database.js';
 import { acquireOptimizationLock, getOptimizationLockConflict, releaseOptimizationLock } from './optimization-stream.js';
 
 // Path to config.json
 const configPath = path.join(DATA_DIR, 'config.json');
+const restartInterruptedError = 'Interrupted by server restart';
+const reconnectReplayWindowMs = 10 * 60 * 1000;
+
+function isRecentRestartInterruption(job: OptimizationJobRecord): boolean {
+  if (job.status !== 'failed' || job.error !== restartInterruptedError) {
+    return false;
+  }
+
+  const updatedAt = new Date(job.updated_at).getTime();
+  return Number.isFinite(updatedAt) && Date.now() - updatedAt < reconnectReplayWindowMs;
+}
+
+function sendPersistedOptimizationJob(res: any, job: OptimizationJobRecord) {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setTimeout(0);
+  res.flushHeaders();
+
+  const statusMessage = JSON.stringify({
+    type: 'job-status',
+    jobId: job.id,
+    status: job.status,
+    progress: job.progress ?? 0,
+    message: job.error ?? `Optimization job ${job.status}`
+  });
+  res.write(`data: ${statusMessage}\n\n`);
+
+  if (job.status === 'failed' || job.status === 'stopped') {
+    const errorMessage = JSON.stringify({
+      type: 'error',
+      jobId: job.id,
+      message: job.error ?? `Optimization job ${job.status}`
+    });
+    res.write(`data: ${errorMessage}\n\n`);
+    res.end();
+    return;
+  }
+
+  if (job.status === 'complete') {
+    const completeMessage = JSON.stringify({
+      type: 'complete',
+      jobId: job.id,
+      message: 'Optimization job already completed',
+      exitCode: 0
+    });
+    res.write(`data: ${completeMessage}\n\n`);
+    res.end();
+    return;
+  }
+
+  const interruptedMessage = JSON.stringify({
+    type: 'error',
+    jobId: job.id,
+    message: 'Optimization job was interrupted by a server restart'
+  });
+  res.write(`data: ${interruptedMessage}\n\n`);
+  res.end();
+}
 
 // GET /api/image-optimization/settings - Get current optimization settings
 router.get('/settings', requireAuth, (req, res) => {
@@ -220,6 +280,17 @@ router.post('/optimize', requireManager, (req, res) => {
       }
     });
     
+    return;
+  }
+
+  const latestJob = getLatestOptimizationJob('image-bulk');
+  if (latestJob && (
+    latestJob.status === 'queued' ||
+    latestJob.status === 'running' ||
+    isRecentRestartInterruption(latestJob)
+  )) {
+    info(`[Optimization] Replaying persisted ${latestJob.status} job ${latestJob.id}`);
+    sendPersistedOptimizationJob(res, latestJob);
     return;
   }
 
