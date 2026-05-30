@@ -9,35 +9,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { csrfProtection } from "../security.js";
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
+import { JobManager } from "../services/job-runner.js";
 
 const router = express.Router();
 
 // Apply CSRF protection to all routes in this router
 router.use(csrfProtection);
 
-// Track running optimization job
-interface RunningJob {
-  process: any;
-  output: string[];
-  clients: Set<any>;
-  startTime: number;
-  isComplete: boolean;
-}
-
-let runningOptimizationJob: RunningJob | null = null;
-
-// Broadcast message to all connected clients
-function broadcastToClients(job: RunningJob | null, message: string) {
-  if (!job) return;
-  
-  job.clients.forEach(client => {
-    try {
-      client.write(`data: ${message}\n\n`);
-    } catch (err) {
-      // Client disconnected, will be cleaned up
-    }
-  });
-}
+const optimizationJobs = new JobManager();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -133,45 +112,21 @@ router.put('/settings', requireAdmin, (req, res) => {
 
 // GET /api/image-optimization/status - Check if optimization is running
 router.get('/status', requireAuth, (req, res) => {
-  if (runningOptimizationJob) {
-    res.json({ 
-      running: true, 
-      output: runningOptimizationJob.output,
-      isComplete: runningOptimizationJob.isComplete
-    });
-  } else {
-    res.json({ running: false });
-  }
+  res.json(optimizationJobs.getStatus());
 });
 
 // POST /api/image-optimization/stop - Stop running optimization job
 router.post('/stop', requireManager, (req: any, res: any) => {
-  if (!runningOptimizationJob || runningOptimizationJob.isComplete) {
+  const runningJob = optimizationJobs.current;
+
+  if (!runningJob || runningJob.isComplete) {
     return res.json({ success: false, message: 'No running job to stop' });
   }
   
   try {
-    // Kill the process
-    if (runningOptimizationJob.process) {
-      runningOptimizationJob.process.kill('SIGTERM');
-      info('[Optimization] Job stopped by user');
-    }
-    
-    // Mark as complete and broadcast to all clients
     const stopMsg = JSON.stringify({ type: 'error', message: 'Job stopped by user' });
-    runningOptimizationJob.output.push(stopMsg);
-    runningOptimizationJob.isComplete = true;
-    broadcastToClients(runningOptimizationJob, stopMsg);
-    
-    // Close all client connections
-    runningOptimizationJob.clients.forEach(client => {
-      try {
-        client.end();
-      } catch (err) {
-        // Ignore errors
-      }
-    });
-    runningOptimizationJob.clients.clear();
+    optimizationJobs.stop(stopMsg);
+    info('[Optimization] Job stopped by user');
     
     res.json({ success: true, message: 'Job stopped successfully' });
   } catch (err: any) {
@@ -183,57 +138,16 @@ router.post('/stop', requireManager, (req: any, res: any) => {
 // POST /api/image-optimization/optimize - Run optimization script with SSE
 router.post('/optimize', requireManager, (req, res) => {
   const { force } = req.body;
+  const { job, reconnected } = optimizationJobs.connectOrStart(req, res, {});
   
-  // If already running, reconnect to existing job
-  if (runningOptimizationJob && !runningOptimizationJob.isComplete) {
+  if (reconnected) {
     info('[Optimization] Reconnecting to existing job');
-    
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no'); // Disable proxy buffering
-    res.setTimeout(0); // Disable timeout for this response
-    res.flushHeaders();
-    
-    // Send all previous output
-    runningOptimizationJob.output.forEach(line => {
-      res.write(`data: ${line}\n\n`);
-    });
-    
-    // Add this client to the broadcast list
-    runningOptimizationJob.clients.add(res);
-    
-    // Remove client when they disconnect
-    req.on('close', () => {
-      if (runningOptimizationJob) {
-        runningOptimizationJob.clients.delete(res);
-      }
-    });
-    
     return;
   }
   
-  // Create job tracking IMMEDIATELY to prevent race condition
-  runningOptimizationJob = {
-    process: null,
-    output: [],
-    clients: new Set([res]),
-    startTime: Date.now(),
-    isComplete: false
-  };
-  
-  // Set up SSE headers
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no'); // Disable proxy buffering
-  res.setTimeout(0); // Disable timeout for this response
-  res.flushHeaders();
-  
   // Send initial connection message
   const connectMsg = '{"type":"connected","message":"Connected to optimization stream"}';
-  res.write(`data: ${connectMsg}\n\n`);
-  runningOptimizationJob.output.push(connectMsg);
+  optimizationJobs.append(job, connectMsg);
   
   // Build command
   const scriptPath = path.resolve(__dirname, '../../../scripts/optimize_all_images.js');
@@ -241,8 +155,11 @@ router.post('/optimize', requireManager, (req, res) => {
   
   // Check if script exists
   if (!fs.existsSync(scriptPath)) {
-    res.write(`data: {"type":"error","message":"Optimization script not found"}\n\n`);
-    res.end();
+    optimizationJobs.complete(
+      job,
+      '{"type":"error","message":"Optimization script not found"}',
+      { closeClients: true }
+    );
     return;
   }
   
@@ -251,15 +168,7 @@ router.post('/optimize', requireManager, (req, res) => {
     cwd: path.resolve(__dirname, '../../../'),
     env: { ...process.env, TERM: 'dumb' } // Disable terminal colors/animations
   });
-  
-  runningOptimizationJob.process = child;
-  
-  // Remove client when they disconnect
-  req.on('close', () => {
-    if (runningOptimizationJob) {
-      runningOptimizationJob.clients.delete(res);
-    }
-  });
+  optimizationJobs.setProcess(job, child);
   
   // Stream stdout
   child.stdout.on('data', (data) => {
@@ -288,10 +197,7 @@ router.post('/optimize', requireManager, (req, res) => {
         }
         
         // Store output and broadcast to all clients
-        if (runningOptimizationJob) {
-          runningOptimizationJob.output.push(output);
-          broadcastToClients(runningOptimizationJob, output);
-        }
+        optimizationJobs.append(job, output);
       }
     });
   });
@@ -307,10 +213,7 @@ router.post('/optimize', requireManager, (req, res) => {
         warn(`[Optimization] ${line}`);
         
         // Store output and broadcast to all clients
-        if (runningOptimizationJob) {
-          runningOptimizationJob.output.push(errorOutput);
-          broadcastToClients(runningOptimizationJob, errorOutput);
-        }
+        optimizationJobs.append(job, errorOutput);
       }
     });
   });
@@ -325,33 +228,20 @@ router.post('/optimize', requireManager, (req, res) => {
       exitCode: code 
     });
     
-    if (runningOptimizationJob) {
-      runningOptimizationJob.output.push(completeMsg);
-      runningOptimizationJob.isComplete = true;
-      
-      // Broadcast to all clients and close connections
-      broadcastToClients(runningOptimizationJob, completeMsg);
-      runningOptimizationJob.clients.forEach(client => {
-        try {
-          client.end();
-        } catch (err) {
-          // Ignore errors
-        }
-      });
-      runningOptimizationJob.clients.clear();
+    if (optimizationJobs.complete(job, completeMsg, { closeClients: true, cleanup: false })) {
       
       // Send push notification to user
       if (req.user && 'id' in req.user) {
         const userId = (req.user as any).id;
-        const duration = Date.now() - runningOptimizationJob.startTime;
+        const duration = Date.now() - job.startTime;
         const durationMin = (duration / 1000 / 60).toFixed(1);
         
         const titleKey = code === 0 ? 'notifications.backend.imageOptimizationComplete' : 'notifications.backend.imageOptimizationFailed';
         const bodyKey = code === 0 ? 'notifications.backend.imageOptimizationCompleteBody' : 'notifications.backend.imageOptimizationFailedBody';
         
         const variables = code === 0 
-          ? { imagesOptimized: (runningOptimizationJob as any).totalImages || 0 }
-          : { error: (runningOptimizationJob as any).error || `Exit code ${code}` };
+          ? { imagesOptimized: (job as any).totalImages || 0 }
+          : { error: (job as any).error || `Exit code ${code}` };
         
         const title = await translateNotification(titleKey, variables);
         const body = await translateNotification(bodyKey, variables);
@@ -368,16 +258,7 @@ router.post('/optimize', requireManager, (req, res) => {
         });
       }
       
-      // Clean up after 5 minutes — only null the global if it's still THIS job.
-      // A new job may have replaced runningOptimizationJob in the interim
-      // (the reconnect guard above only blocks while !isComplete), and we
-      // must not stomp on the new job's tracking object.
-      const jobRef = runningOptimizationJob;
-      setTimeout(() => {
-        if (runningOptimizationJob === jobRef) {
-          runningOptimizationJob = null;
-        }
-      }, 5 * 60 * 1000);
+      optimizationJobs.complete(job);
     }
   });
   
@@ -390,23 +271,8 @@ router.post('/optimize', requireManager, (req, res) => {
       message: `Failed to start process: ${err.message}` 
     });
     
-    if (runningOptimizationJob) {
-      runningOptimizationJob.output.push(errorMsg);
-      runningOptimizationJob.isComplete = true;
-      
-      // Broadcast to all clients and close connections
-      broadcastToClients(runningOptimizationJob, errorMsg);
-      runningOptimizationJob.clients.forEach(client => {
-        try {
-          client.end();
-        } catch (err) {
-          // Ignore errors
-        }
-      });
-      runningOptimizationJob.clients.clear();
-    }
+    optimizationJobs.complete(job, errorMsg, { closeClients: true });
   });
 });
 
 export default router;
-

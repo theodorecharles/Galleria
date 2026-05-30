@@ -4,10 +4,10 @@
  */
 
 import express from 'express';
-import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import { requireAuth } from '../auth/middleware.js';
-import { error, warn, info, debug, verbose } from '../utils/logger.js';
+import { error } from '../utils/logger.js';
+import { QueuedJobRunner, SseBroadcaster } from '../services/job-runner.js';
 
 const router = express.Router();
 
@@ -26,24 +26,14 @@ interface OptimizationJob {
 // Map of jobId -> OptimizationJob
 const optimizationJobs = new Map<string, OptimizationJob>();
 
-// Set of all connected SSE clients
-const clients = new Set<express.Response>();
-
-// Job queue for sequential optimization
-interface QueuedJob {
-  jobId: string;
-  album: string;
-  filename: string;
-  scriptPath: string;
-  projectRoot: string;
-  onProgress: (progress: number) => void;
-  onComplete: () => void;
-  onError: (error: string) => void;
-}
-
-const optimizationQueue: QueuedJob[] = [];
-const activeJobs: Set<ChildProcess> = new Set();
 const MAX_CONCURRENT_JOBS = 4; // Reduced from 8 to prevent memory exhaustion
+const optimizationEvents = new SseBroadcaster({
+  keepAliveSession: true,
+  heartbeatMs: 30000
+});
+const optimizationRunner = new QueuedJobRunner({
+  maxConcurrentJobs: MAX_CONCURRENT_JOBS
+});
 
 /**
  * Broadcast update to all connected clients
@@ -71,112 +61,7 @@ export function broadcastOptimizationUpdate(jobId: string, update: Partial<Optim
     ...optimizationJobs.get(jobId)
   });
   
-  clients.forEach(client => {
-    try {
-      client.write(`data: ${message}\n\n`);
-    } catch (err) {
-      // Client disconnected, will be cleaned up
-    }
-  });
-}
-
-/**
- * Process the optimization queue (up to MAX_CONCURRENT_JOBS at a time)
- */
-async function processQueue() {
-  // Process jobs while we have space and jobs in queue
-  while (activeJobs.size < MAX_CONCURRENT_JOBS && optimizationQueue.length > 0) {
-    const job = optimizationQueue.shift()!;
-
-    // info(`[OptimizationStream] Starting ${job.jobId} (${activeJobs.size + 1}/${MAX_CONCURRENT_JOBS} active, ${optimizationQueue.length} queued)`);
-
-    // Update job state to optimizing
-    broadcastOptimizationUpdate(job.jobId, {
-      album: job.album,
-      filename: job.filename,
-      progress: 0,
-      state: 'optimizing'
-    });
-
-    // Spawn optimization process with DATA_DIR environment variable
-    const childProcess = spawn('node', [job.scriptPath, job.album, job.filename], {
-      cwd: job.projectRoot,
-      env: {
-        ...process.env,
-        DATA_DIR: process.env.DATA_DIR || path.join(job.projectRoot, 'data')
-      }
-    });
-
-    activeJobs.add(childProcess);
-
-    // Track whether this job has already settled (completed, errored, or
-    // timed out) so timeout/close/error each only run side-effects once.
-    // Without this, a timeout SIGTERM later triggers `close` with a
-    // non-zero code, double-firing onError and double-decrementing the
-    // active-job slot. See ticket #627.
-    let settled = false;
-
-    // Add timeout to prevent hung processes (5 minutes)
-    const timeout = setTimeout(() => {
-      error(`[OptimizationStream] Job ${job.jobId} timed out after 5 minutes, killing process`);
-      childProcess.kill('SIGTERM');
-      if (settled) return;
-      settled = true;
-      activeJobs.delete(childProcess);
-      job.onError('Optimization timed out');
-      processQueue();
-    }, 5 * 60 * 1000);
-
-    // Handle stdout for progress updates
-    childProcess.stdout?.on('data', (data) => {
-      const lines = data.toString().split('\n');
-      lines.forEach((line: string) => {
-        if (line.trim() && line.startsWith('PROGRESS:')) {
-          const parts = line.substring(9).split(':');
-          const progress = parseInt(parts[0]);
-          job.onProgress(progress);
-        }
-      });
-    });
-
-    // Handle stderr
-    childProcess.stderr?.on('data', (data) => {
-      const errorOutput = data.toString().trim();
-      if (errorOutput) {
-        error(`[${job.album}/${job.filename}] Optimization stderr:`, errorOutput);
-      }
-    });
-
-    // Handle completion
-    childProcess.on('close', (code) => {
-      clearTimeout(timeout);
-      if (settled) return;
-      settled = true;
-      activeJobs.delete(childProcess);
-
-      if (code === 0) {
-        job.onComplete();
-        // info(`[OptimizationStream] Completed ${job.jobId} (${activeJobs.size}/${MAX_CONCURRENT_JOBS} active, ${optimizationQueue.length} queued)`);
-      } else {
-        job.onError(`Optimization failed with code ${code}`);
-        error(`[OptimizationStream] Failed ${job.jobId} with code ${code} (${activeJobs.size}/${MAX_CONCURRENT_JOBS} active, ${optimizationQueue.length} queued)`);
-      }
-
-      // Process next job in queue
-      processQueue();
-    });
-
-    // Handle errors
-    childProcess.on('error', (err) => {
-      clearTimeout(timeout);
-      if (settled) return;
-      settled = true;
-      activeJobs.delete(childProcess);
-      error(`[OptimizationStream] Error in job ${job.jobId}:`, err);
-      job.onError(err.message);
-      processQueue();
-    });
-  }
+  optimizationEvents.broadcast(message);
 }
 
 /**
@@ -192,16 +77,42 @@ export function queueOptimizationJob(
   onComplete: () => void,
   onError: (error: string) => void
 ) {
-  // Add to queue
-  optimizationQueue.push({
+  optimizationRunner.enqueue({
     jobId,
-    album,
-    filename,
     scriptPath,
-    projectRoot,
-    onProgress,
+    args: [album, filename],
+    cwd: projectRoot,
+    env: {
+      ...process.env,
+      DATA_DIR: process.env.DATA_DIR || path.join(projectRoot, 'data')
+    },
+    onStart: () => {
+      broadcastOptimizationUpdate(jobId, {
+        album,
+        filename,
+        progress: 0,
+        state: 'optimizing'
+      });
+    },
+    onStdout: (line: string) => {
+      if (line.startsWith('PROGRESS:')) {
+        const parts = line.substring(9).split(':');
+        const progress = parseInt(parts[0]);
+        onProgress(progress);
+      }
+    },
+    onStderr: (errorOutput: string) => {
+      error(`[${album}/${filename}] Optimization stderr:`, errorOutput);
+    },
     onComplete,
-    onError
+    onError: (jobError: string) => {
+      if (jobError === 'Optimization timed out') {
+        error(`[OptimizationStream] Job ${jobId} timed out after 5 minutes, killing process`);
+      } else {
+        error(`[OptimizationStream] Failed ${jobId}: ${jobError}`);
+      }
+      onError(jobError);
+    }
   });
 
   // Set initial state as queued
@@ -211,11 +122,7 @@ export function queueOptimizationJob(
     progress: 0,
     state: 'queued'
   });
-
-  // info(`[OptimizationStream] Added ${jobId} to queue (position: ${optimizationQueue.length})`);
-
-  // Start processing if not already running
-  processQueue();
+  // info(`[OptimizationStream] Added ${jobId} to queue`);
 }
 
 /**
@@ -239,51 +146,20 @@ setInterval(cleanupOldJobs, 60 * 1000);
  * SSE endpoint for optimization updates
  */
 router.get('/', requireAuth, (req, res) => {
-  // Set up SSE headers
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.setTimeout(0);
-  res.flushHeaders();
-
-  // Add client to set
-  clients.add(res);
-  // info(`[Optimization Stream] Client connected (${clients.size} total)`);
-
-  // Send current state of all active jobs
-  const activeJobs = Array.from(optimizationJobs.entries()).map(([jobId, job]) => ({
-    jobId,
-    ...job
-  }));
-  
-  if (activeJobs.length > 0) {
-    res.write(`data: ${JSON.stringify({ 
-      type: 'initial-state',
-      jobs: activeJobs
-    })}\n\n`);
-  }
-
-  // Touch session to keep it alive
-  if (req.session) {
-    req.session.touch();
-  }
-
-  // Keep connection alive with heartbeat
-  const heartbeat = setInterval(() => {
-    res.write(': heartbeat\n\n');
-    if (req.session) {
-      req.session.touch();
+  optimizationEvents.attach(req, res, () => {
+    // Send current state of all active jobs
+    const activeJobs = Array.from(optimizationJobs.entries()).map(([jobId, job]) => ({
+      jobId,
+      ...job
+    }));
+    
+    if (activeJobs.length > 0) {
+      res.write(`data: ${JSON.stringify({ 
+        type: 'initial-state',
+        jobs: activeJobs
+      })}\n\n`);
     }
-  }, 30000); // Every 30 seconds
-
-  // Clean up on disconnect
-  req.on('close', () => {
-    clearInterval(heartbeat);
-    clients.delete(res);
-    // info(`[Optimization Stream] Client disconnected (${clients.size} remaining)`);
   });
 });
 
 export default router;
-

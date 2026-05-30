@@ -11,6 +11,7 @@ import { error, warn, info } from '../utils/logger.js';
 import { requireManager } from '../auth/middleware.js';
 import { sendNotificationToUser } from '../push-notifications.js';
 import { translateNotification } from '../i18n-backend.js';
+import { JobManager } from "../services/job-runner.js";
 
 const router = express.Router();
 
@@ -20,30 +21,13 @@ router.use(csrfProtection);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Track running optimization job
-interface RunningJob {
-  process: any;
-  output: string[];
-  clients: Set<any>;
-  startTime: number;
-  isComplete: boolean;
+interface VideoOptimizationJobState {
   videoCount?: { generated: number; skipped: number; errors: number };
 }
 
-let runningVideoOptimizationJob: RunningJob | null = null;
-
-// Broadcast message to all connected clients
-function broadcastToClients(job: RunningJob | null, message: string) {
-  if (!job) return;
-  
-  job.clients.forEach(client => {
-    try {
-      client.write(`data: ${message}\n\n`);
-    } catch (err) {
-      // Client disconnected, will be cleaned up
-    }
-  });
-}
+const videoOptimizationJobs = new JobManager<VideoOptimizationJobState>({
+  cacheControl: 'no-cache, no-transform'
+});
 
 /**
  * POST /api/video-optimization/regenerate
@@ -51,47 +35,14 @@ function broadcastToClients(job: RunningJob | null, message: string) {
  * Streams progress via SSE
  */
 router.post('/regenerate', requireManager, (req, res) => {
-  // Set up SSE headers FIRST
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache, no-transform',
-    'Connection': 'keep-alive',
-    'X-Accel-Buffering': 'no' // Disable nginx buffering
+  const { job, reconnected } = videoOptimizationJobs.connectOrStart(req, res, {
+    videoCount: { generated: 0, skipped: 0, errors: 0 }
   });
-  res.setTimeout(0); // Disable timeout for long-running operation
 
-  // Check if a job is already running
-  if (runningVideoOptimizationJob && !runningVideoOptimizationJob.isComplete) {
+  if (reconnected) {
     info('[VideoOptimization] Client connecting to existing job');
-    
-    // Send existing output history to new client
-    runningVideoOptimizationJob.output.forEach(line => {
-      res.write(`data: ${line}\n\n`);
-    });
-    
-    // Add this client to the set
-    runningVideoOptimizationJob.clients.add(res);
-    
-    // Remove client when they disconnect
-    req.on('close', () => {
-      if (runningVideoOptimizationJob) {
-        runningVideoOptimizationJob.clients.delete(res);
-        info(`[VideoOptimization] Client disconnected, ${runningVideoOptimizationJob.clients.size} remaining`);
-      }
-    });
-    
     return;
   }
-
-  // Create new job tracking object IMMEDIATELY
-  runningVideoOptimizationJob = {
-    process: null,
-    output: [],
-    clients: new Set([res]),
-    startTime: Date.now(),
-    isComplete: false,
-    videoCount: { generated: 0, skipped: 0, errors: 0 }
-  };
 
   info('[VideoOptimization] Starting video playlist regeneration');
 
@@ -102,16 +53,7 @@ router.post('/regenerate', requireManager, (req, res) => {
     cwd: path.resolve(__dirname, '../../../'),
     env: { ...process.env, TERM: 'dumb' } // Disable terminal colors/animations
   });
-  
-  runningVideoOptimizationJob.process = child;
-  
-  // Remove client when they disconnect
-  req.on('close', () => {
-    if (runningVideoOptimizationJob) {
-      runningVideoOptimizationJob.clients.delete(res);
-      info(`[VideoOptimization] Client disconnected, ${runningVideoOptimizationJob.clients.size} remaining`);
-    }
-  });
+  videoOptimizationJobs.setProcess(job, child);
 
   // Capture stdout
   child.stdout.on('data', (data: Buffer) => {
@@ -122,21 +64,18 @@ router.post('/regenerate', requireManager, (req, res) => {
         info(`[VideoOptimization] ${line}`);
         
         // Parse video counts from script output
-        if (runningVideoOptimizationJob?.videoCount) {
+        if (job.state.videoCount) {
           const generatedMatch = line.match(/✅ Generated: (\d+)/);
           const skippedMatch = line.match(/⏭️  Skipped: (\d+)/);
           const errorsMatch = line.match(/❌ Errors: (\d+)/);
           
-          if (generatedMatch) runningVideoOptimizationJob.videoCount.generated = parseInt(generatedMatch[1], 10);
-          if (skippedMatch) runningVideoOptimizationJob.videoCount.skipped = parseInt(skippedMatch[1], 10);
-          if (errorsMatch) runningVideoOptimizationJob.videoCount.errors = parseInt(errorsMatch[1], 10);
+          if (generatedMatch) job.state.videoCount.generated = parseInt(generatedMatch[1], 10);
+          if (skippedMatch) job.state.videoCount.skipped = parseInt(skippedMatch[1], 10);
+          if (errorsMatch) job.state.videoCount.errors = parseInt(errorsMatch[1], 10);
         }
         
         // Store output and broadcast to all clients
-        if (runningVideoOptimizationJob) {
-          runningVideoOptimizationJob.output.push(output);
-          broadcastToClients(runningVideoOptimizationJob, output);
-        }
+        videoOptimizationJobs.append(job, output);
       }
     });
   });
@@ -150,17 +89,14 @@ router.post('/regenerate', requireManager, (req, res) => {
         warn(`[VideoOptimization] ${line}`);
         
         // Store output and broadcast to all clients
-        if (runningVideoOptimizationJob) {
-          runningVideoOptimizationJob.output.push(errorOutput);
-          broadcastToClients(runningVideoOptimizationJob, errorOutput);
-        }
+        videoOptimizationJobs.append(job, errorOutput);
       }
     });
   });
 
   // Handle process completion
   child.on('close', async (code: number) => {
-    const duration = Date.now() - (runningVideoOptimizationJob?.startTime || Date.now());
+    const duration = Date.now() - job.startTime;
     const totalSeconds = Math.floor(duration / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
@@ -168,7 +104,7 @@ router.post('/regenerate', requireManager, (req, res) => {
       ? `${minutes} minute${minutes !== 1 ? 's' : ''} ${seconds} second${seconds !== 1 ? 's' : ''}`
       : `${seconds} second${seconds !== 1 ? 's' : ''}`;
     
-    const counts = runningVideoOptimizationJob?.videoCount;
+    const counts = job.state.videoCount;
     const videoCountStr = counts 
       ? ` • ${counts.generated} processed${counts.skipped > 0 ? `, ${counts.skipped} skipped` : ''}${counts.errors > 0 ? `, ${counts.errors} failed` : ''}`
       : '';
@@ -183,15 +119,13 @@ router.post('/regenerate', requireManager, (req, res) => {
     
     info(`[VideoOptimization] ${message}`);
     
-    if (runningVideoOptimizationJob) {
-      const completeOutput = JSON.stringify({
-        type: 'complete',
-        exitCode: code,
-        message
-      });
-      runningVideoOptimizationJob.output.push(completeOutput);
-      broadcastToClients(runningVideoOptimizationJob, completeOutput);
-      runningVideoOptimizationJob.isComplete = true;
+    const completeOutput = JSON.stringify({
+      type: 'complete',
+      exitCode: code,
+      message
+    });
+
+    if (videoOptimizationJobs.complete(job, completeOutput, { cleanup: false })) {
       
       // Send push notification to user
       if (req.user && 'id' in req.user) {
@@ -199,7 +133,7 @@ router.post('/regenerate', requireManager, (req, res) => {
         const titleKey = code === 0 ? 'notifications.backend.videoProcessingComplete' : 'notifications.backend.videoProcessingFailed';
         const bodyKey = code === 0 ? 'notifications.backend.videoPlaylistRegenerationCompleteBody' : 'notifications.backend.videoPlaylistRegenerationFailedBody';
 
-        const batchCounts = runningVideoOptimizationJob.videoCount ?? { generated: 0, skipped: 0, errors: 0 };
+        const batchCounts = job.state.videoCount ?? { generated: 0, skipped: 0, errors: 0 };
         const variables = code === 0
           ? { duration: timeStr, generated: batchCounts.generated, skipped: batchCounts.skipped, errors: batchCounts.errors }
           : { error: `Exit code ${code}` };
@@ -219,11 +153,7 @@ router.post('/regenerate', requireManager, (req, res) => {
         });
       }
       
-      // Clean up after 5 minutes
-      setTimeout(() => {
-        info('[VideoOptimization] Cleaning up completed job');
-        runningVideoOptimizationJob = null;
-      }, 5 * 60 * 1000);
+      videoOptimizationJobs.complete(job);
     }
   });
 
@@ -231,15 +161,11 @@ router.post('/regenerate', requireManager, (req, res) => {
     error('[VideoOptimization] Failed to start script:', err);
     const message = `✗ Failed to start video playlist regeneration: ${err.message}`;
     
-    if (runningVideoOptimizationJob) {
-      const errorOutput = JSON.stringify({
-        type: 'error',
-        message
-      });
-      runningVideoOptimizationJob.output.push(errorOutput);
-      broadcastToClients(runningVideoOptimizationJob, errorOutput);
-      runningVideoOptimizationJob.isComplete = true;
-    }
+    const errorOutput = JSON.stringify({
+      type: 'error',
+      message
+    });
+    videoOptimizationJobs.complete(job, errorOutput);
   });
 });
 
@@ -249,46 +175,12 @@ router.post('/regenerate', requireManager, (req, res) => {
  * Streams progress via SSE
  */
 router.post('/reprocess', requireManager, (req, res) => {
-  // Set up SSE headers FIRST
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache, no-transform',
-    'Connection': 'keep-alive',
-    'X-Accel-Buffering': 'no' // Disable nginx buffering
-  });
-  res.setTimeout(0); // Disable timeout for long-running operation
+  const { job, reconnected } = videoOptimizationJobs.connectOrStart(req, res, {});
 
-  // Check if a job is already running
-  if (runningVideoOptimizationJob && !runningVideoOptimizationJob.isComplete) {
+  if (reconnected) {
     info('[VideoReprocessing] Client connecting to existing job');
-    
-    // Send existing output history to new client
-    runningVideoOptimizationJob.output.forEach(line => {
-      res.write(`data: ${line}\n\n`);
-    });
-    
-    // Add this client to the set
-    runningVideoOptimizationJob.clients.add(res);
-    
-    // Remove client when they disconnect
-    req.on('close', () => {
-      if (runningVideoOptimizationJob) {
-        runningVideoOptimizationJob.clients.delete(res);
-        info(`[VideoReprocessing] Client disconnected, ${runningVideoOptimizationJob.clients.size} remaining`);
-      }
-    });
-    
     return;
   }
-
-  // Create new job tracking object IMMEDIATELY
-  runningVideoOptimizationJob = {
-    process: null,
-    output: [],
-    clients: new Set([res]),
-    startTime: Date.now(),
-    isComplete: false
-  };
 
   info('[VideoReprocessing] Starting video reprocessing with current settings');
 
@@ -301,16 +193,7 @@ router.post('/reprocess', requireManager, (req, res) => {
     cwd: projectRoot,
     env: { ...process.env, TERM: 'dumb', TS_NODE_PROJECT: path.join(projectRoot, 'backend/tsconfig.json') }
   });
-  
-  runningVideoOptimizationJob.process = child;
-  
-  // Remove client when they disconnect
-  req.on('close', () => {
-    if (runningVideoOptimizationJob) {
-      runningVideoOptimizationJob.clients.delete(res);
-      info(`[VideoReprocessing] Client disconnected, ${runningVideoOptimizationJob.clients.size} remaining`);
-    }
-  });
+  videoOptimizationJobs.setProcess(job, child);
 
   // Capture stdout
   child.stdout.on('data', (data: Buffer) => {
@@ -321,10 +204,7 @@ router.post('/reprocess', requireManager, (req, res) => {
         info(`[VideoReprocessing] ${line}`);
         
         // Store output and broadcast to all clients
-        if (runningVideoOptimizationJob) {
-          runningVideoOptimizationJob.output.push(output);
-          broadcastToClients(runningVideoOptimizationJob, output);
-        }
+        videoOptimizationJobs.append(job, output);
       }
     });
   });
@@ -338,17 +218,14 @@ router.post('/reprocess', requireManager, (req, res) => {
         warn(`[VideoReprocessing] ${line}`);
         
         // Store output and broadcast to all clients
-        if (runningVideoOptimizationJob) {
-          runningVideoOptimizationJob.output.push(errorOutput);
-          broadcastToClients(runningVideoOptimizationJob, errorOutput);
-        }
+        videoOptimizationJobs.append(job, errorOutput);
       }
     });
   });
 
   // Handle process completion
   child.on('close', async (code: number) => {
-    const duration = Date.now() - (runningVideoOptimizationJob?.startTime || Date.now());
+    const duration = Date.now() - job.startTime;
     const totalSeconds = Math.floor(duration / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
@@ -366,15 +243,13 @@ router.post('/reprocess', requireManager, (req, res) => {
     
     info(`[VideoReprocessing] ${message}`);
     
-    if (runningVideoOptimizationJob) {
-      const completeOutput = JSON.stringify({
-        type: 'complete',
-        exitCode: code,
-        message
-      });
-      runningVideoOptimizationJob.output.push(completeOutput);
-      broadcastToClients(runningVideoOptimizationJob, completeOutput);
-      runningVideoOptimizationJob.isComplete = true;
+    const completeOutput = JSON.stringify({
+      type: 'complete',
+      exitCode: code,
+      message
+    });
+
+    if (videoOptimizationJobs.complete(job, completeOutput, { cleanup: false })) {
       
       // Send push notification to user
       if (req.user && 'id' in req.user) {
@@ -401,11 +276,7 @@ router.post('/reprocess', requireManager, (req, res) => {
         });
       }
       
-      // Clean up after 5 minutes
-      setTimeout(() => {
-        info('[VideoReprocessing] Cleaning up completed job');
-        runningVideoOptimizationJob = null;
-      }, 5 * 60 * 1000);
+      videoOptimizationJobs.complete(job);
     }
   });
 
@@ -414,15 +285,11 @@ router.post('/reprocess', requireManager, (req, res) => {
     const errorMessage = err?.message || err?.toString() || 'Unknown error';
     const message = `✗ Failed to start video reprocessing: ${errorMessage}`;
     
-    if (runningVideoOptimizationJob) {
-      const errorOutput = JSON.stringify({
-        type: 'error',
-        message
-      });
-      runningVideoOptimizationJob.output.push(errorOutput);
-      broadcastToClients(runningVideoOptimizationJob, errorOutput);
-      runningVideoOptimizationJob.isComplete = true;
-    }
+    const errorOutput = JSON.stringify({
+      type: 'error',
+      message
+    });
+    videoOptimizationJobs.complete(job, errorOutput);
   });
 });
 
@@ -431,18 +298,16 @@ router.post('/reprocess', requireManager, (req, res) => {
  * Stop the running video optimization job
  */
 router.post('/stop', requireManager, (req, res) => {
-  if (!runningVideoOptimizationJob || runningVideoOptimizationJob.isComplete) {
+  const runningJob = videoOptimizationJobs.current;
+
+  if (!runningJob || runningJob.isComplete) {
     res.json({ success: false, message: 'No video optimization job running' });
     return;
   }
 
   try {
-    runningVideoOptimizationJob.process.kill('SIGTERM');
-    
     const message = '⏹ Video reprocessing stopped by user';
-    runningVideoOptimizationJob.output.push(message);
-    broadcastToClients(runningVideoOptimizationJob, message);
-    runningVideoOptimizationJob.isComplete = true;
+    videoOptimizationJobs.stop(message, 'SIGTERM', false);
     
     info('[VideoOptimization] Job stopped by user');
     res.json({ success: true, message: 'Video optimization stopped' });
@@ -540,4 +405,3 @@ router.post('/test-gpu', requireManager, (req, res) => {
 });
 
 export default router;
-
