@@ -607,52 +607,58 @@ router.put("/:album/rename", requireManager, async (req: Request, res: Response)
       return;
     }
     
-    // Rename photos directory
-    fs.renameSync(oldAlbumPath, newAlbumPath);
-    info(`[AlbumManagement] Renamed photos directory: ${sanitizedOldName} → ${sanitizedNewName}`);
-    
-    // Rename optimized directories
-    ['thumbnail', 'modal', 'download'].forEach(dir => {
-      const oldOptimizedPath = path.join(optimizedDir, dir, sanitizedOldName);
-      const newOptimizedPath = path.join(optimizedDir, dir, sanitizedNewName);
-      if (fs.existsSync(oldOptimizedPath)) {
-        fs.renameSync(oldOptimizedPath, newOptimizedPath);
+    const renamedPaths: Array<{ from: string; to: string }> = [];
+    const rollbackFsRenames = () => {
+      for (const { from, to } of [...renamedPaths].reverse()) {
+        try {
+          if (fs.existsSync(to)) {
+            fs.renameSync(to, from);
+          }
+        } catch (rollbackErr) {
+          error('[AlbumManagement] Failed to rollback filesystem rename', { from, to, err: rollbackErr });
+        }
       }
-    });
-    
-    // Rename video directory if it exists
+    };
+
     const videoDir = req.app.get("videoDir");
-    let videoRenamed = false;
-    if (videoDir) {
-      const oldVideoPath = path.join(videoDir, sanitizedOldName);
-      const newVideoPath = path.join(videoDir, sanitizedNewName);
-      if (fs.existsSync(oldVideoPath)) {
-        fs.renameSync(oldVideoPath, newVideoPath);
-        videoRenamed = true;
-        info(`[AlbumManagement] Renamed video directory: ${sanitizedOldName} → ${sanitizedNewName}`);
+
+    try {
+      // Rename photos directory
+      fs.renameSync(oldAlbumPath, newAlbumPath);
+      renamedPaths.push({ from: oldAlbumPath, to: newAlbumPath });
+      info(`[AlbumManagement] Renamed photos directory: ${sanitizedOldName} → ${sanitizedNewName}`);
+      
+      // Rename optimized directories
+      for (const dir of ['thumbnail', 'modal', 'download']) {
+        const oldOptimizedPath = path.join(optimizedDir, dir, sanitizedOldName);
+        const newOptimizedPath = path.join(optimizedDir, dir, sanitizedNewName);
+        if (fs.existsSync(oldOptimizedPath)) {
+          fs.renameSync(oldOptimizedPath, newOptimizedPath);
+          renamedPaths.push({ from: oldOptimizedPath, to: newOptimizedPath });
+        }
       }
+      
+      // Rename video directory if it exists
+      if (videoDir) {
+        const oldVideoPath = path.join(videoDir, sanitizedOldName);
+        const newVideoPath = path.join(videoDir, sanitizedNewName);
+        if (fs.existsSync(oldVideoPath)) {
+          fs.renameSync(oldVideoPath, newVideoPath);
+          renamedPaths.push({ from: oldVideoPath, to: newVideoPath });
+          info(`[AlbumManagement] Renamed video directory: ${sanitizedOldName} → ${sanitizedNewName}`);
+        }
+      }
+    } catch (fsErr) {
+      error('[AlbumManagement] Filesystem rename failed, rolling back partial renames', fsErr);
+      rollbackFsRenames();
+      res.status(500).json({ errorCode: 'RENAME_FAILED', error: 'Failed to rename album' });
+      return;
     }
     
     // Update database
     const success = renameAlbum(sanitizedOldName, sanitizedNewName);
     if (!success) {
-      // Rollback filesystem changes
-      fs.renameSync(newAlbumPath, oldAlbumPath);
-      ['thumbnail', 'modal', 'download'].forEach(dir => {
-        const oldOptimizedPath = path.join(optimizedDir, dir, sanitizedOldName);
-        const newOptimizedPath = path.join(optimizedDir, dir, sanitizedNewName);
-        if (fs.existsSync(newOptimizedPath)) {
-          fs.renameSync(newOptimizedPath, oldOptimizedPath);
-        }
-      });
-      // Rollback video directory if it was renamed
-      if (videoRenamed && videoDir) {
-        const oldVideoPath = path.join(videoDir, sanitizedOldName);
-        const newVideoPath = path.join(videoDir, sanitizedNewName);
-        if (fs.existsSync(newVideoPath)) {
-          fs.renameSync(newVideoPath, oldVideoPath);
-        }
-      }
+      rollbackFsRenames();
       res.status(500).json({ errorCode: 'DATABASE_UPDATE_FAILED', error: 'Failed to update database' });
       return;
     }
