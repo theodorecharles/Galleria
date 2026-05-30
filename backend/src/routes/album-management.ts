@@ -375,8 +375,12 @@ const upload = multer({
       cb(null, os.tmpdir());
     },
     filename: (req, file, cb) => {
-      // Keep original filename
-      cb(null, file.originalname);
+      // Use a unique temp filename to avoid collisions between concurrent
+      // uploads that share the same original name (e.g. IMG_0001.jpg). The
+      // original name is preserved on file.originalname for deriving the
+      // final saved name downstream.
+      const ext = path.extname(file.originalname);
+      cb(null, `${crypto.randomUUID()}${ext}`);
     }
   }),
   limits: {
