@@ -22,7 +22,7 @@ import {
   deleteAlbumMetadata,
   deleteAlbumState
 } from "../database.js";
-import { generateStaticJSONFiles } from "./static-json.js";
+import { scheduleStaticJSONRegeneration } from "./static-json.js";
 import fs from "fs";
 import path from "path";
 import { requireAuth, requireAdmin, requireManager } from '../auth/middleware.js';
@@ -132,7 +132,7 @@ router.post("/", requireManager, async (req: Request, res: Response): Promise<vo
 
     // Regenerate static JSON files
     const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
+    scheduleStaticJSONRegeneration(appRoot);
 
     res.json(newFolder);
   } catch (err) {
@@ -272,7 +272,7 @@ router.delete("/:folder", requireManager, async (req: Request, res: Response): P
 
     // Regenerate static JSON files
     const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
+    scheduleStaticJSONRegeneration(appRoot);
 
     res.json({ success: true });
   } catch (err) {
@@ -359,7 +359,7 @@ router.patch("/:folder/publish", requireManager, async (req: Request, res: Respo
 
     // Regenerate static JSON files
     const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
+    scheduleStaticJSONRegeneration(appRoot);
 
     res.json({ 
       success: true, 
@@ -418,7 +418,7 @@ router.patch("/:folder/albums/:album", requireManager, async (req: Request, res:
 
     // Regenerate static JSON files
     const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
+    scheduleStaticJSONRegeneration(appRoot);
 
     res.json({ success: true });
   } catch (err) {
@@ -454,7 +454,7 @@ router.put('/sort-order', requireManager, async (req: Request, res: Response): P
       
       // Regenerate static JSON files
       const appRoot = req.app.get('appRoot');
-      generateStaticJSONFiles(appRoot);
+      scheduleStaticJSONRegeneration(appRoot);
       
       res.json({ success: true });
     } else {

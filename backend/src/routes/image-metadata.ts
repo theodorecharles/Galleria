@@ -7,7 +7,7 @@ import express from 'express';
 import { createRequire } from 'module';
 import { csrfProtection } from '../security.js';
 import { requireAuth, requireManager } from '../auth/middleware.js';
-import { generateStaticJSONFiles } from './static-json.js';
+import { scheduleStaticJSONRegeneration } from './static-json.js';
 import { invalidateAlbumCache } from './albums.js';
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 
@@ -98,7 +98,7 @@ router.post('/', requireManager, express.json(), async (req, res) => {
     
     // Regenerate static JSON files (titles are included in JSON)
     const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
+    scheduleStaticJSONRegeneration(appRoot);
     
     res.json({ 
       success: true, 
@@ -137,7 +137,7 @@ router.put('/:album/:filename', requireManager, express.json(), async (req, res)
     
     // Regenerate static JSON files (titles are included in JSON)
     const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
+    scheduleStaticJSONRegeneration(appRoot);
     
     res.json({ 
       success: true, 
@@ -167,7 +167,7 @@ router.delete('/:album/:filename', requireManager, async (req, res) => {
     
     // Regenerate static JSON files (titles are included in JSON)
     const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
+    scheduleStaticJSONRegeneration(appRoot);
     
     res.json({ 
       success: true, 

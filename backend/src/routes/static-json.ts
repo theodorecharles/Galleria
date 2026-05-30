@@ -161,6 +161,71 @@ export async function generateStaticJSONFiles(appRoot: string): Promise<{ succes
   }
 }
 
+// --- Debounced / coalesced regeneration ----------------------------------
+// generateStaticJSONFiles() rewrites every album's JSON plus homepage/list/
+// metadata on each call. It used to be invoked fire-and-forget from ~15 sites,
+// including once per uploaded photo/video, so a batch of N media triggered N
+// full rebuilds of every album and concurrent unawaited runs could race
+// writing the same files under frontend/dist.
+//
+// scheduleStaticJSONRegeneration() coalesces a burst of mutations into a
+// single trailing rebuild: it (re)arms a debounce timer and guarantees only
+// one generation runs at a time. Mutations that arrive while a run is in
+// flight schedule exactly one follow-up run so the final state is always
+// reflected. Use this for fire-and-forget call sites; call
+// generateStaticJSONFiles() directly only when the caller needs the result
+// synchronously (e.g. to report an album count in an HTTP response).
+
+const REGEN_DEBOUNCE_MS = 750;
+let regenTimer: NodeJS.Timeout | null = null;
+let regenInFlight = false;
+let regenPending = false;
+let pendingAppRoot: string | null = null;
+
+async function runRegeneration(appRoot: string): Promise<void> {
+  regenInFlight = true;
+  try {
+    const result = await generateStaticJSONFiles(appRoot);
+    if (result.success) {
+      info(`[StaticJSON] Debounced regeneration complete (${result.albumCount} albums)`);
+    } else {
+      error('[StaticJSON] Debounced regeneration failed:', result.error);
+    }
+    // Invalidate album caches so fresh data is served after regeneration
+    invalidateAlbumCache();
+  } catch (err) {
+    error('[StaticJSON] Debounced regeneration threw:', err);
+  } finally {
+    regenInFlight = false;
+    if (regenPending) {
+      regenPending = false;
+      void runRegeneration(pendingAppRoot ?? appRoot);
+    }
+  }
+}
+
+/**
+ * Schedule a debounced, coalesced static JSON regeneration.
+ * Safe to call repeatedly during a burst of mutations: a single rebuild runs
+ * ~750ms after the last call, and runs never overlap.
+ */
+export function scheduleStaticJSONRegeneration(appRoot: string): void {
+  pendingAppRoot = appRoot;
+  if (regenTimer) {
+    clearTimeout(regenTimer);
+  }
+  regenTimer = setTimeout(() => {
+    regenTimer = null;
+    if (regenInFlight) {
+      // A run is already happening; flag one follow-up so the latest
+      // mutations are captured without overlapping writes.
+      regenPending = true;
+      return;
+    }
+    void runRegeneration(pendingAppRoot ?? appRoot);
+  }, REGEN_DEBOUNCE_MS);
+}
+
 /**
  * POST /api/static-json/generate
  * Trigger static JSON generation (admin only)

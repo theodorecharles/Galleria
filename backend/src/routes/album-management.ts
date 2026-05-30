@@ -37,7 +37,7 @@ import {
 } from "../database.js";
 import { processVideo, VideoProcessingProgress } from "../utils/video-processor.js";
 import { invalidateAlbumCache } from "./albums.js";
-import { generateStaticJSONFiles } from "./static-json.js";
+import { generateStaticJSONFiles, scheduleStaticJSONRegeneration } from "./static-json.js";
 import { generateHomepageHTML } from "./homepage-html.js";
 import { broadcastOptimizationUpdate, queueOptimizationJob } from "./optimization-stream.js";
 import OpenAI from "openai";
@@ -550,7 +550,7 @@ router.post("/", requireManager, async (req: Request, res: Response): Promise<vo
 
     // Regenerate static JSON files
     const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
+    scheduleStaticJSONRegeneration(appRoot);
 
     res.json({ success: true, album: sanitizedName });
   } catch (err) {
@@ -665,7 +665,7 @@ router.put("/:album/rename", requireManager, async (req: Request, res: Response)
     
     // Regenerate static JSON files
     const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
+    scheduleStaticJSONRegeneration(appRoot);
     
     res.json({ success: true, newName: sanitizedNewName });
   } catch (err) {
@@ -762,7 +762,7 @@ router.delete("/:album", requireManager, async (req: Request, res: Response): Pr
 
     // Regenerate static JSON files
     const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
+    scheduleStaticJSONRegeneration(appRoot);
     
     // Regenerate homepage HTML (in case deleted album was on homepage)
     generateHomepageHTML(appRoot);
@@ -841,7 +841,7 @@ router.delete("/:album/photos/:photo", requireManager, async (req: Request, res:
 
     // Regenerate static JSON files
     const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
+    scheduleStaticJSONRegeneration(appRoot);
     
     // Check if this album is on homepage and regenerate homepage HTML if needed
     const albumState = getAlbumState(sanitizedAlbum);
@@ -1021,7 +1021,7 @@ router.post("/:album/upload", requireManager, (req: Request, res: Response, next
           try {
             info(`[AlbumManagement] Video uploaded to album "${sanitizedAlbum}" - regenerating static JSON`);
             const appRoot = req.app.get('appRoot');
-            generateStaticJSONFiles(appRoot);
+            scheduleStaticJSONRegeneration(appRoot);
             invalidateAlbumCache();
             
             // Check if this album is on homepage and regenerate homepage HTML if needed
@@ -1108,7 +1108,7 @@ router.post("/:album/upload", requireManager, (req: Request, res: Response, next
             try {
               info(`[AlbumManagement] Photo uploaded to album "${sanitizedAlbum}" - regenerating static JSON`);
               const appRoot = req.app.get('appRoot');
-              generateStaticJSONFiles(appRoot);
+              scheduleStaticJSONRegeneration(appRoot);
               invalidateAlbumCache();
               
               // Check if this album is on homepage and regenerate homepage HTML if needed
@@ -1309,7 +1309,7 @@ router.patch("/:album/rename", requireManager, async (req: Request, res: Respons
 
     // Regenerate static JSON files
     const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
+    scheduleStaticJSONRegeneration(appRoot);
 
     res.json({ 
       success: true, 
@@ -1670,7 +1670,7 @@ router.post("/:album/photo-order", requireManager, async (req: Request, res: Res
     
     // Regenerate static JSON files
     const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
+    scheduleStaticJSONRegeneration(appRoot);
     
     info(`[AlbumManagement] Updated photo order for album: ${sanitizedAlbum} (${imageOrders.length} photos)`);
 
@@ -1708,7 +1708,7 @@ router.put('/sort-order', requireManager, async (req: Request, res: Response): P
       
       // Regenerate static JSON files
       const appRoot = req.app.get('appRoot');
-      generateStaticJSONFiles(appRoot);
+      scheduleStaticJSONRegeneration(appRoot);
       
       res.json({ success: true });
     } else {
@@ -1795,7 +1795,7 @@ router.put('/:albumName/move', requireManager, async (req: Request, res: Respons
     
     // Regenerate static JSON files
     const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
+    scheduleStaticJSONRegeneration(appRoot);
     
     res.json({ success: true });
   } catch (err) {
@@ -1877,7 +1877,7 @@ router.post('/:albumName/video/:filename/upload-thumbnail', requireManager, uplo
     // Regenerate static JSON to reflect thumbnail update
     try {
       info(`[VideoThumbnail] Regenerating static JSON after thumbnail upload`);
-      generateStaticJSONFiles(appRoot);
+      scheduleStaticJSONRegeneration(appRoot);
       invalidateAlbumCache(sanitizedAlbumName);
     } catch (err) {
       error('[VideoThumbnail] Failed to regenerate static JSON:', err);
@@ -2058,7 +2058,7 @@ router.post('/:albumName/video/:filename/update-thumbnail', requireManager, asyn
     // Regenerate static JSON to reflect thumbnail update
     try {
       info(`[VideoThumbnail] Regenerating static JSON after thumbnail update`);
-      generateStaticJSONFiles(appRoot);
+      scheduleStaticJSONRegeneration(appRoot);
       invalidateAlbumCache(sanitizedAlbumName);
     } catch (err) {
       error('[VideoThumbnail] Failed to regenerate static JSON:', err);
