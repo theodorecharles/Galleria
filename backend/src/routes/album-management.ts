@@ -1265,7 +1265,7 @@ router.patch("/:album/rename", requireManager, async (req: Request, res: Respons
     // share_links.album has ON UPDATE CASCADE (see database.ts), so renaming
     // the album row cascades automatically. The explicit share_links UPDATE
     // below is kept as a safety net for older databases that pre-date the
-    // migrate-share-links-cascade.js migration.
+    // share_links_on_update_cascade schema migration (see migrations.ts).
     const transaction = db.transaction(() => {
       // Update albums table
       const result = db.prepare(`

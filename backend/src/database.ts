@@ -5,7 +5,8 @@
 
 import { createRequire } from 'module';
 import { DB_PATH } from './config.js';
-import { info, warn, error } from './utils/logger.js';
+import { info, error } from './utils/logger.js';
+import { runMigrations } from './migrations.js';
 
 const require = createRequire(import.meta.url);
 const Database = require('better-sqlite3');
@@ -78,99 +79,9 @@ export function initializeDatabase(): any {
     ON image_metadata(album, filename)
   `);
   
-  // Add sort_order column if it doesn't exist (migration)
-  try {
-    const tableInfo = db.pragma('table_info(image_metadata)');
-    const hasSortOrder = tableInfo.some((col: any) => col.name === 'sort_order');
-    if (!hasSortOrder) {
-      info('[Database] Adding sort_order column to image_metadata...');
-      db.exec('ALTER TABLE image_metadata ADD COLUMN sort_order INTEGER');
-    }
-  } catch (err) {
-    warn('[Database] Could not check/add sort_order column:', err);
-  }
+  // Schema evolution (column additions, table recreations, new tables) is handled
+  // by the versioned migration runner below, after all base tables exist.
 
-  // Add media_type column if it doesn't exist (migration)
-  try {
-    const tableInfo = db.pragma('table_info(image_metadata)');
-    const hasMediaType = tableInfo.some((col: any) => col.name === 'media_type');
-    if (!hasMediaType) {
-      info('[Database] Adding media_type column to image_metadata...');
-      db.exec("ALTER TABLE image_metadata ADD COLUMN media_type TEXT NOT NULL DEFAULT 'photo'");
-      
-      // Fix existing video records (detect by file extension)
-      const videoExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv', '.m4v', '.flv', '.wmv'];
-      const allRecords = db.prepare('SELECT id, filename FROM image_metadata').all() as Array<{ id: number, filename: string }>;
-      
-      let videoCount = 0;
-      const updateStmt = db.prepare('UPDATE image_metadata SET media_type = ? WHERE id = ?');
-      
-      for (const record of allRecords) {
-        const ext = record.filename.substring(record.filename.lastIndexOf('.')).toLowerCase();
-        if (videoExtensions.includes(ext)) {
-          updateStmt.run('video', record.id);
-          videoCount++;
-        }
-      }
-      
-      if (videoCount > 0) {
-        info(`[Database] Updated ${videoCount} existing video records to media_type='video'`);
-      }
-      
-      info('[Database] Successfully added media_type column');
-    }
-  } catch (err) {
-    warn('[Database] Could not check/add media_type column:', err);
-  }
-  
-  // Add sort_order column to albums if it doesn't exist (migration)
-  try {
-    const tableInfo = db.pragma('table_info(albums)');
-    const hasSortOrder = tableInfo.some((col: any) => col.name === 'sort_order');
-    if (!hasSortOrder) {
-      info('[Database] Adding sort_order column to albums...');
-      db.exec('ALTER TABLE albums ADD COLUMN sort_order INTEGER');
-    }
-  } catch (err) {
-    warn('[Database] Could not check/add sort_order column to albums:', err);
-  }
-  
-  // Add sort_order column to album_folders if it doesn't exist (migration)
-  try {
-    const tableInfo = db.pragma('table_info(album_folders)');
-    const hasSortOrder = tableInfo.some((col: any) => col.name === 'sort_order');
-    if (!hasSortOrder) {
-      info('[Database] Adding sort_order column to album_folders...');
-      db.exec('ALTER TABLE album_folders ADD COLUMN sort_order INTEGER');
-    }
-  } catch (err) {
-    warn('[Database] Could not check/add sort_order column to album_folders:', err);
-  }
-  
-  // Add folder_id column to albums if it doesn't exist (migration)
-  try {
-    const tableInfo = db.pragma('table_info(albums)');
-    const hasFolderId = tableInfo.some((col: any) => col.name === 'folder_id');
-    if (!hasFolderId) {
-      info('[Database] Adding folder_id column to albums...');
-      db.exec('ALTER TABLE albums ADD COLUMN folder_id INTEGER REFERENCES album_folders(id) ON DELETE SET NULL');
-    }
-  } catch (err) {
-    warn('[Database] Could not check/add folder_id column to albums:', err);
-  }
-
-  // Add description column to albums if it doesn't exist (migration)
-  try {
-    const tableInfo = db.pragma('table_info(albums)');
-    const hasDescription = tableInfo.some((col: any) => col.name === 'description');
-    if (!hasDescription) {
-      info('[Database] Adding description column to albums...');
-      db.exec('ALTER TABLE albums ADD COLUMN description TEXT');
-    }
-  } catch (err) {
-    warn('[Database] Could not check/add description column to albums:', err);
-  }
-  
   // Create share_links table if it doesn't exist
   db.exec(`
     CREATE TABLE IF NOT EXISTS share_links (
@@ -183,18 +94,6 @@ export function initializeDatabase(): any {
       FOREIGN KEY (album) REFERENCES albums(name) ON DELETE CASCADE ON UPDATE CASCADE
     )
   `);
-  
-  // Add notified column to share_links if it doesn't exist (migration)
-  try {
-    const shareLinksTableInfo = db.pragma('table_info(share_links)');
-    const hasNotifiedColumn = shareLinksTableInfo.some((col: any) => col.name === 'notified');
-    if (!hasNotifiedColumn) {
-      info('[Database] Adding notified column to share_links...');
-      db.exec('ALTER TABLE share_links ADD COLUMN notified INTEGER DEFAULT 0');
-    }
-  } catch (err) {
-    warn('[Database] Could not check/add notified column to share_links:', err);
-  }
   
   // Create album_view_counts table for milestone tracking
   db.exec(`
@@ -232,11 +131,15 @@ export function initializeDatabase(): any {
     CREATE INDEX IF NOT EXISTS idx_mfa_attempts_user_attempted_at
     ON mfa_attempts(user_id, attempted_at)
   `);
-  
+
+  // Apply versioned schema migrations once, in order, inside transactions.
+  // Fails fast (throws) on any error rather than degrading to a warning.
+  runMigrations(db);
+
   info('[Database] SQLite database initialized at:', DB_PATH);
   info('[Database] WAL mode enabled for better performance');
   info('[Database] All tables and migrations applied');
-  
+
   return db;
 }
 
