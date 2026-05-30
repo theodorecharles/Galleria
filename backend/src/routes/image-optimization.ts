@@ -3,7 +3,6 @@
  */
 
 import express from "express";
-import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -163,73 +162,52 @@ router.post('/optimize', requireManager, (req, res) => {
     return;
   }
   
-  // Spawn the optimization script
-  const child = spawn('node', [scriptPath, ...args], {
-    cwd: path.resolve(__dirname, '../../../'),
-    env: { ...process.env, TERM: 'dumb' } // Disable terminal colors/animations
-  });
-  optimizationJobs.setProcess(job, child);
-  
-  // Stream stdout
-  child.stdout.on('data', (data) => {
-    const lines = data.toString().split('\n');
-    lines.forEach((line: string) => {
-      if (line.trim()) {
-        let output = '';
-        
-        // Parse progress from lines like: [150/3000] (5%) Album/image.jpg [type]
-        const progressMatch = line.match(/^\[(\d+)\/(\d+)\]\s*\((\d+)%\)/);
-        if (progressMatch) {
-          const [, current, total, percent] = progressMatch;
-          output = JSON.stringify({ 
-            type: 'progress', 
-            current: parseInt(current),
-            total: parseInt(total),
-            percent: parseInt(percent),
-            message: line 
-          });
-          // Log progress to file (verbose level)
-          verbose(`[Optimization] ${line}`);
-        } else {
-          output = JSON.stringify({ type: 'stdout', message: line });
-          // Log stdout to file (info level)
-          info(`[Optimization] ${line}`);
-        }
-        
-        // Store output and broadcast to all clients
-        optimizationJobs.append(job, output);
+  optimizationJobs.startProcess(job, {
+    command: 'node',
+    args: [scriptPath, ...args],
+    spawnOptions: {
+      cwd: path.resolve(__dirname, '../../../'),
+      env: { ...process.env, TERM: 'dumb' } // Disable terminal colors/animations
+    },
+    onStdoutLine: (line) => {
+      let output = '';
+
+      // Parse progress from lines like: [150/3000] (5%) Album/image.jpg [type]
+      const progressMatch = line.match(/^\[(\d+)\/(\d+)\]\s*\((\d+)%\)/);
+      if (progressMatch) {
+        const [, current, total, percent] = progressMatch;
+        output = JSON.stringify({
+          type: 'progress',
+          current: parseInt(current),
+          total: parseInt(total),
+          percent: parseInt(percent),
+          message: line
+        });
+        // Log progress to file (verbose level)
+        verbose(`[Optimization] ${line}`);
+      } else {
+        output = JSON.stringify({ type: 'stdout', message: line });
+        // Log stdout to file (info level)
+        info(`[Optimization] ${line}`);
       }
-    });
-  });
-  
-  // Stream stderr
-  child.stderr.on('data', (data) => {
-    const lines = data.toString().split('\n');
-    lines.forEach((line: string) => {
-      if (line.trim()) {
-        const errorOutput = JSON.stringify({ type: 'stderr', message: line });
-        
-        // Log stderr to file (warn level)
-        warn(`[Optimization] ${line}`);
-        
-        // Store output and broadcast to all clients
-        optimizationJobs.append(job, errorOutput);
-      }
-    });
-  });
-  
-  // Handle process completion
-  child.on('close', async (code) => {
-    info(`[Optimization] Process completed with exit code ${code}`);
-    
-    const completeMsg = JSON.stringify({ 
-      type: 'complete', 
-      message: `Process exited with code ${code}`,
-      exitCode: code 
-    });
-    
-    if (optimizationJobs.complete(job, completeMsg, { closeClients: true, cleanup: false })) {
-      
+
+      return output;
+    },
+    onStderrLine: (line) => {
+      // Log stderr to file (warn level)
+      warn(`[Optimization] ${line}`);
+      return JSON.stringify({ type: 'stderr', message: line });
+    },
+    onClose: (code) => {
+      info(`[Optimization] Process completed with exit code ${code}`);
+
+      return JSON.stringify({
+        type: 'complete',
+        message: `Process exited with code ${code}`,
+        exitCode: code
+      });
+    },
+    onComplete: async (code) => {
       // Send push notification to user
       if (req.user && 'id' in req.user) {
         const userId = (req.user as any).id;
@@ -257,21 +235,17 @@ router.post('/optimize', requireManager, (req, res) => {
           warn('[Optimization] Failed to send push notification:', err);
         });
       }
-      
-      optimizationJobs.complete(job);
-    }
-  });
-  
-  // Handle errors
-  child.on('error', (err) => {
-    error(`[Optimization] Failed to start process:`, err);
-    
-    const errorMsg = JSON.stringify({ 
-      type: 'error', 
-      message: `Failed to start process: ${err.message}` 
-    });
-    
-    optimizationJobs.complete(job, errorMsg, { closeClients: true });
+    },
+    onError: (err) => {
+      error(`[Optimization] Failed to start process:`, err);
+
+      return JSON.stringify({
+        type: 'error',
+        message: `Failed to start process: ${err.message}`
+      });
+    },
+    closeClientsOnComplete: true,
+    closeClientsOnError: true
   });
 });
 

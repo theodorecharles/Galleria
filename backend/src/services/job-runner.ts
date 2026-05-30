@@ -15,6 +15,21 @@ export interface StartJobResult<TState extends object> {
   reconnected: boolean;
 }
 
+export interface ProcessJobOptions<TState extends object> {
+  command: string;
+  args?: string[];
+  spawnOptions?: SpawnOptionsWithoutStdio;
+  onStdoutLine?: (line: string, job: RunningJob<TState>) => string | string[] | undefined;
+  onStderrLine?: (line: string, job: RunningJob<TState>) => string | string[] | undefined;
+  onClose?: (code: number | null, job: RunningJob<TState>) => string | undefined | Promise<string | undefined>;
+  onComplete?: (code: number | null, job: RunningJob<TState>) => void | Promise<void>;
+  onError?: (err: Error, job: RunningJob<TState>) => string | undefined;
+  closeClientsOnComplete?: boolean;
+  cleanupOnComplete?: boolean;
+  closeClientsOnError?: boolean;
+  cleanupOnError?: boolean;
+}
+
 interface JobManagerOptions {
   cleanupDelayMs?: number;
   cacheControl?: string;
@@ -128,10 +143,57 @@ export class JobManager<TState extends object = Record<string, unknown>> {
     res.flushHeaders();
   }
 
-  setProcess(job: RunningJob<TState>, childProcess: ChildProcess): void {
-    if (this.runningJob === job) {
-      job.process = childProcess;
+  startProcess(job: RunningJob<TState>, options: ProcessJobOptions<TState>): ChildProcess | null {
+    if (this.runningJob !== job) {
+      return null;
     }
+
+    const childProcess = spawn(options.command, options.args ?? [], options.spawnOptions);
+    job.process = childProcess;
+
+    childProcess.stdout?.on("data", data => {
+      this.handleOutputLines(job, data, options.onStdoutLine);
+    });
+
+    childProcess.stderr?.on("data", data => {
+      this.handleOutputLines(job, data, options.onStderrLine);
+    });
+
+    childProcess.on("close", async code => {
+      if (this.runningJob !== job || job.isComplete) {
+        return;
+      }
+
+      const message = await options.onClose?.(code, job);
+      const completed = this.complete(job, message, {
+        closeClients: options.closeClientsOnComplete,
+        cleanup: false
+      });
+
+      if (!completed) {
+        return;
+      }
+
+      await options.onComplete?.(code, job);
+
+      if (options.cleanupOnComplete !== false) {
+        this.complete(job);
+      }
+    });
+
+    childProcess.on("error", err => {
+      if (this.runningJob !== job || job.isComplete) {
+        return;
+      }
+
+      const message = options.onError?.(err, job);
+      this.complete(job, message, {
+        closeClients: options.closeClientsOnError,
+        cleanup: options.cleanupOnError
+      });
+    });
+
+    return childProcess;
   }
 
   append(job: RunningJob<TState>, message: string): void {
@@ -204,6 +266,30 @@ export class JobManager<TState extends object = Record<string, unknown>> {
         this.runningJob = null;
       }
     }, this.cleanupDelayMs);
+  }
+
+  private handleOutputLines(
+    job: RunningJob<TState>,
+    data: Buffer,
+    onLine?: (line: string, job: RunningJob<TState>) => string | string[] | undefined
+  ): void {
+    if (this.runningJob !== job || job.isComplete) {
+      return;
+    }
+
+    data.toString().split("\n").forEach((line: string) => {
+      if (!line.trim()) {
+        return;
+      }
+
+      const messages = onLine?.(line, job);
+      if (!messages) {
+        return;
+      }
+
+      const output = Array.isArray(messages) ? messages : [messages];
+      output.forEach(message => this.append(job, message));
+    });
   }
 }
 

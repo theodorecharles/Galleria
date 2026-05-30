@@ -3,7 +3,6 @@
  */
 
 import express from "express";
-import { spawn } from "child_process";
 import { csrfProtection } from "../security.js";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -29,6 +28,26 @@ const videoOptimizationJobs = new JobManager<VideoOptimizationJobState>({
   cacheControl: 'no-cache, no-transform'
 });
 
+const gpuDiagnosticJobs = new JobManager({
+  cacheControl: 'no-cache, no-transform',
+  onClientDisconnect: (remainingClients) => {
+    if (remainingClients === 0 && gpuDiagnosticJobs.isRunning) {
+      info('[GPU Test] Client disconnected, cleaning up');
+      gpuDiagnosticJobs.stop(JSON.stringify({ type: 'error', message: 'GPU diagnostic cancelled' }));
+    }
+  }
+});
+
+function formatDuration(duration: number): string {
+  const totalSeconds = Math.floor(duration / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return minutes > 0
+    ? `${minutes} minute${minutes !== 1 ? 's' : ''} ${seconds} second${seconds !== 1 ? 's' : ''}`
+    : `${seconds} second${seconds !== 1 ? 's' : ''}`;
+}
+
 /**
  * POST /api/video-optimization/regenerate
  * Regenerate video master playlists with current configuration
@@ -48,92 +67,67 @@ router.post('/regenerate', requireManager, (req, res) => {
 
   const scriptPath = path.resolve(__dirname, '../../../scripts/generate-master-playlists.js');
   
-  // Spawn the script
-  const child = spawn('node', [scriptPath], {
-    cwd: path.resolve(__dirname, '../../../'),
-    env: { ...process.env, TERM: 'dumb' } // Disable terminal colors/animations
-  });
-  videoOptimizationJobs.setProcess(job, child);
+  videoOptimizationJobs.startProcess(job, {
+    command: 'node',
+    args: [scriptPath],
+    spawnOptions: {
+      cwd: path.resolve(__dirname, '../../../'),
+      env: { ...process.env, TERM: 'dumb' } // Disable terminal colors/animations
+    },
+    onStdoutLine: (line, runningJob) => {
+      info(`[VideoOptimization] ${line}`);
 
-  // Capture stdout
-  child.stdout.on('data', (data: Buffer) => {
-    const lines = data.toString().split('\n');
-    lines.forEach((line: string) => {
-      if (line.trim()) {
-        const output = JSON.stringify({ type: 'stdout', message: line });
-        info(`[VideoOptimization] ${line}`);
-        
-        // Parse video counts from script output
-        if (job.state.videoCount) {
-          const generatedMatch = line.match(/✅ Generated: (\d+)/);
-          const skippedMatch = line.match(/⏭️  Skipped: (\d+)/);
-          const errorsMatch = line.match(/❌ Errors: (\d+)/);
-          
-          if (generatedMatch) job.state.videoCount.generated = parseInt(generatedMatch[1], 10);
-          if (skippedMatch) job.state.videoCount.skipped = parseInt(skippedMatch[1], 10);
-          if (errorsMatch) job.state.videoCount.errors = parseInt(errorsMatch[1], 10);
-        }
-        
-        // Store output and broadcast to all clients
-        videoOptimizationJobs.append(job, output);
+      // Parse video counts from script output
+      if (runningJob.state.videoCount) {
+        const generatedMatch = line.match(/✅ Generated: (\d+)/);
+        const skippedMatch = line.match(/⏭️  Skipped: (\d+)/);
+        const errorsMatch = line.match(/❌ Errors: (\d+)/);
+
+        if (generatedMatch) runningJob.state.videoCount.generated = parseInt(generatedMatch[1], 10);
+        if (skippedMatch) runningJob.state.videoCount.skipped = parseInt(skippedMatch[1], 10);
+        if (errorsMatch) runningJob.state.videoCount.errors = parseInt(errorsMatch[1], 10);
       }
-    });
-  });
 
-  // Capture stderr
-  child.stderr.on('data', (data: Buffer) => {
-    const lines = data.toString().split('\n');
-    lines.forEach((line: string) => {
-      if (line.trim()) {
-        const errorOutput = JSON.stringify({ type: 'stderr', message: line });
-        warn(`[VideoOptimization] ${line}`);
-        
-        // Store output and broadcast to all clients
-        videoOptimizationJobs.append(job, errorOutput);
-      }
-    });
-  });
+      return JSON.stringify({ type: 'stdout', message: line });
+    },
+    onStderrLine: (line) => {
+      warn(`[VideoOptimization] ${line}`);
+      return JSON.stringify({ type: 'stderr', message: line });
+    },
+    onClose: (code, runningJob) => {
+      const duration = Date.now() - runningJob.startTime;
+      const timeStr = formatDuration(duration);
+      const counts = runningJob.state.videoCount;
 
-  // Handle process completion
-  child.on('close', async (code: number) => {
-    const duration = Date.now() - job.startTime;
-    const totalSeconds = Math.floor(duration / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const timeStr = minutes > 0 
-      ? `${minutes} minute${minutes !== 1 ? 's' : ''} ${seconds} second${seconds !== 1 ? 's' : ''}`
-      : `${seconds} second${seconds !== 1 ? 's' : ''}`;
-    
-    const counts = job.state.videoCount;
-    const videoCountStr = counts 
-      ? ` • ${counts.generated} processed${counts.skipped > 0 ? `, ${counts.skipped} skipped` : ''}${counts.errors > 0 ? `, ${counts.errors} failed` : ''}`
-      : '';
-    
-    const message = code === 0 
-      ? `✓ Video playlist regeneration complete (${timeStr})${videoCountStr}`
-      : `✗ Video playlist regeneration failed with code ${code}`;
-    
-    const notificationBody = code === 0
-      ? `Completed in ${timeStr}${videoCountStr}`
-      : `Failed with code ${code}`;
-    
-    info(`[VideoOptimization] ${message}`);
-    
-    const completeOutput = JSON.stringify({
-      type: 'complete',
-      exitCode: code,
-      message
-    });
+      const videoCountStr = counts
+        ? ` • ${counts.generated} processed${counts.skipped > 0 ? `, ${counts.skipped} skipped` : ''}${counts.errors > 0 ? `, ${counts.errors} failed` : ''}`
+        : '';
 
-    if (videoOptimizationJobs.complete(job, completeOutput, { cleanup: false })) {
-      
+      const message = code === 0
+        ? `✓ Video playlist regeneration complete (${timeStr})${videoCountStr}`
+        : `✗ Video playlist regeneration failed with code ${code}`;
+
+      info(`[VideoOptimization] ${message}`);
+
+      const completeOutput = JSON.stringify({
+        type: 'complete',
+        exitCode: code,
+        message
+      });
+
+      return completeOutput;
+    },
+    onComplete: async (code, runningJob) => {
+      const duration = Date.now() - runningJob.startTime;
+      const timeStr = formatDuration(duration);
+
       // Send push notification to user
       if (req.user && 'id' in req.user) {
         const userId = (req.user as any).id;
         const titleKey = code === 0 ? 'notifications.backend.videoProcessingComplete' : 'notifications.backend.videoProcessingFailed';
         const bodyKey = code === 0 ? 'notifications.backend.videoPlaylistRegenerationCompleteBody' : 'notifications.backend.videoPlaylistRegenerationFailedBody';
 
-        const batchCounts = job.state.videoCount ?? { generated: 0, skipped: 0, errors: 0 };
+        const batchCounts = runningJob.state.videoCount ?? { generated: 0, skipped: 0, errors: 0 };
         const variables = code === 0
           ? { duration: timeStr, generated: batchCounts.generated, skipped: batchCounts.skipped, errors: batchCounts.errors }
           : { error: `Exit code ${code}` };
@@ -152,20 +146,16 @@ router.post('/regenerate', requireManager, (req, res) => {
           warn('[VideoOptimization] Failed to send push notification:', err);
         });
       }
-      
-      videoOptimizationJobs.complete(job);
-    }
-  });
+    },
+    onError: (err) => {
+      error('[VideoOptimization] Failed to start script:', err);
+      const message = `✗ Failed to start video playlist regeneration: ${err.message}`;
 
-  child.on('error', (err: Error) => {
-    error('[VideoOptimization] Failed to start script:', err);
-    const message = `✗ Failed to start video playlist regeneration: ${err.message}`;
-    
-    const errorOutput = JSON.stringify({
-      type: 'error',
-      message
-    });
-    videoOptimizationJobs.complete(job, errorOutput);
+      return JSON.stringify({
+        type: 'error',
+        message
+      });
+    }
   });
 });
 
@@ -188,69 +178,43 @@ router.post('/reprocess', requireManager, (req, res) => {
   const scriptPath = path.join(projectRoot, 'scripts/reprocess_all_videos.js');
   const tsNodeLoader = path.join(projectRoot, 'node_modules/ts-node/esm.mjs');
   
-  // Spawn the script with ts-node loader to handle TypeScript imports
-  const child = spawn('node', ['--no-warnings', '--loader', tsNodeLoader, scriptPath], {
-    cwd: projectRoot,
-    env: { ...process.env, TERM: 'dumb', TS_NODE_PROJECT: path.join(projectRoot, 'backend/tsconfig.json') }
-  });
-  videoOptimizationJobs.setProcess(job, child);
+  videoOptimizationJobs.startProcess(job, {
+    command: 'node',
+    args: ['--no-warnings', '--loader', tsNodeLoader, scriptPath],
+    spawnOptions: {
+      cwd: projectRoot,
+      env: { ...process.env, TERM: 'dumb', TS_NODE_PROJECT: path.join(projectRoot, 'backend/tsconfig.json') }
+    },
+    onStdoutLine: (line) => {
+      info(`[VideoReprocessing] ${line}`);
+      return JSON.stringify({ type: 'stdout', message: line });
+    },
+    onStderrLine: (line) => {
+      warn(`[VideoReprocessing] ${line}`);
+      return JSON.stringify({ type: 'stderr', message: line });
+    },
+    onClose: (code, runningJob) => {
+      const duration = Date.now() - runningJob.startTime;
+      const timeStr = formatDuration(duration);
 
-  // Capture stdout
-  child.stdout.on('data', (data: Buffer) => {
-    const lines = data.toString().split('\n');
-    lines.forEach((line: string) => {
-      if (line.trim()) {
-        const output = JSON.stringify({ type: 'stdout', message: line });
-        info(`[VideoReprocessing] ${line}`);
-        
-        // Store output and broadcast to all clients
-        videoOptimizationJobs.append(job, output);
-      }
-    });
-  });
+      const message = code === 0
+        ? `✓ Video reprocessing complete (${timeStr})`
+        : `✗ Video reprocessing failed with code ${code}`;
 
-  // Capture stderr
-  child.stderr.on('data', (data: Buffer) => {
-    const lines = data.toString().split('\n');
-    lines.forEach((line: string) => {
-      if (line.trim()) {
-        const errorOutput = JSON.stringify({ type: 'stderr', message: line });
-        warn(`[VideoReprocessing] ${line}`);
-        
-        // Store output and broadcast to all clients
-        videoOptimizationJobs.append(job, errorOutput);
-      }
-    });
-  });
+      info(`[VideoReprocessing] ${message}`);
 
-  // Handle process completion
-  child.on('close', async (code: number) => {
-    const duration = Date.now() - job.startTime;
-    const totalSeconds = Math.floor(duration / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const timeStr = minutes > 0 
-      ? `${minutes} minute${minutes !== 1 ? 's' : ''} ${seconds} second${seconds !== 1 ? 's' : ''}`
-      : `${seconds} second${seconds !== 1 ? 's' : ''}`;
-    
-    const message = code === 0 
-      ? `✓ Video reprocessing complete (${timeStr})`
-      : `✗ Video reprocessing failed with code ${code}`;
-    
-    const notificationBody = code === 0
-      ? `Completed in ${timeStr}`
-      : `Failed with code ${code}`;
-    
-    info(`[VideoReprocessing] ${message}`);
-    
-    const completeOutput = JSON.stringify({
-      type: 'complete',
-      exitCode: code,
-      message
-    });
+      const completeOutput = JSON.stringify({
+        type: 'complete',
+        exitCode: code,
+        message
+      });
 
-    if (videoOptimizationJobs.complete(job, completeOutput, { cleanup: false })) {
-      
+      return completeOutput;
+    },
+    onComplete: async (code, runningJob) => {
+      const duration = Date.now() - runningJob.startTime;
+      const timeStr = formatDuration(duration);
+
       // Send push notification to user
       if (req.user && 'id' in req.user) {
         const userId = (req.user as any).id;
@@ -275,21 +239,17 @@ router.post('/reprocess', requireManager, (req, res) => {
           warn('[VideoReprocessing] Failed to send push notification:', err);
         });
       }
-      
-      videoOptimizationJobs.complete(job);
-    }
-  });
+    },
+    onError: (err) => {
+      error('[VideoReprocessing] Failed to start script:', err);
+      const errorMessage = err?.message || err?.toString() || 'Unknown error';
+      const message = `✗ Failed to start video reprocessing: ${errorMessage}`;
 
-  child.on('error', (err: Error) => {
-    error('[VideoReprocessing] Failed to start script:', err);
-    const errorMessage = err?.message || err?.toString() || 'Unknown error';
-    const message = `✗ Failed to start video reprocessing: ${errorMessage}`;
-    
-    const errorOutput = JSON.stringify({
-      type: 'error',
-      message
-    });
-    videoOptimizationJobs.complete(job, errorOutput);
+      return JSON.stringify({
+        type: 'error',
+        message
+      });
+    }
   });
 });
 
@@ -323,84 +283,54 @@ router.post('/stop', requireManager, (req, res) => {
  * Streams diagnostic output via SSE
  */
 router.post('/test-gpu', requireManager, (req, res) => {
-  // Set up SSE headers
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache, no-transform',
-    'Connection': 'keep-alive',
-    'X-Accel-Buffering': 'no'
-  });
-  res.setTimeout(0);
+  const { job, reconnected } = gpuDiagnosticJobs.connectOrStart(req, res, {});
+
+  if (reconnected) {
+    info('[GPU Test] Client connecting to existing diagnostic');
+    return;
+  }
 
   info('[GPU Test] Starting NVIDIA GPU diagnostic test');
 
   const scriptPath = path.resolve(__dirname, '../../../scripts/test-nvidia-hardware.sh');
   
-  // Spawn the diagnostic script
-  const child = spawn('/bin/bash', [scriptPath], {
-    cwd: path.resolve(__dirname, '../../../'),
-    env: { ...process.env }
-  });
+  gpuDiagnosticJobs.startProcess(job, {
+    command: '/bin/bash',
+    args: [scriptPath],
+    spawnOptions: {
+      cwd: path.resolve(__dirname, '../../../'),
+      env: { ...process.env }
+    },
+    onStdoutLine: (line) => {
+      info(`[GPU Test] ${line}`);
+      return JSON.stringify({ type: 'stdout', message: line });
+    },
+    onStderrLine: (line) => {
+      warn(`[GPU Test] ${line}`);
+      return JSON.stringify({ type: 'stderr', message: line });
+    },
+    onClose: (code) => {
+      const exitCode = code || 0;
+      const completeMessage = JSON.stringify({
+        type: 'complete',
+        exitCode,
+        message: exitCode === 0
+          ? '✓ GPU diagnostic test completed'
+          : '✗ GPU diagnostic test completed with errors'
+      });
 
-  // Capture stdout
-  child.stdout.on('data', (data: Buffer) => {
-    const lines = data.toString().split('\n');
-    lines.forEach((line: string) => {
-      if (line.trim()) {
-        const output = JSON.stringify({ type: 'stdout', message: line });
-        info(`[GPU Test] ${line}`);
-        res.write(`data: ${output}\n\n`);
-      }
-    });
-  });
-
-  // Capture stderr
-  child.stderr.on('data', (data: Buffer) => {
-    const lines = data.toString().split('\n');
-    lines.forEach((line: string) => {
-      if (line.trim()) {
-        const output = JSON.stringify({ type: 'stderr', message: line });
-        warn(`[GPU Test] ${line}`);
-        res.write(`data: ${output}\n\n`);
-      }
-    });
-  });
-
-  // Handle completion
-  child.on('close', (code: number | null) => {
-    const exitCode = code || 0;
-    const completeMessage = JSON.stringify({
-      type: 'complete',
-      exitCode,
-      message: exitCode === 0 
-        ? '✓ GPU diagnostic test completed' 
-        : '✗ GPU diagnostic test completed with errors'
-    });
-    
-    info(`[GPU Test] Diagnostic completed with exit code: ${exitCode}`);
-    res.write(`data: ${completeMessage}\n\n`);
-    res.end();
-  });
-
-  // Handle errors
-  child.on('error', (err: Error) => {
-    error('[GPU Test] Failed to start diagnostic script:', err);
-    const errorOutput = JSON.stringify({
-      type: 'error',
-      message: `Failed to start GPU test: ${err.message}`
-    });
-    res.write(`data: ${errorOutput}\n\n`);
-    res.end();
-  });
-
-  // Clean up when client disconnects
-  req.on('close', () => {
-    info('[GPU Test] Client disconnected, cleaning up');
-    try {
-      child.kill('SIGTERM');
-    } catch (err) {
-      // Ignore cleanup errors
-    }
+      info(`[GPU Test] Diagnostic completed with exit code: ${exitCode}`);
+      return completeMessage;
+    },
+    onError: (err) => {
+      error('[GPU Test] Failed to start diagnostic script:', err);
+      return JSON.stringify({
+        type: 'error',
+        message: `Failed to start GPU test: ${err.message}`
+      });
+    },
+    closeClientsOnComplete: true,
+    closeClientsOnError: true
   });
 });
 
