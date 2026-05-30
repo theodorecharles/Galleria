@@ -49,13 +49,95 @@ import {
 // Initialize logger early with config or environment variable
 initLogger(getLogLevel());
 
-// In-memory cache for optimized images (thumbnails + modals)
-const imageCache = new Map<
-  string,
-  { data: Buffer; contentType: string; timestamp: number }
->();
+// In-memory LRU cache for optimized images (thumbnails + modals)
+type ImageCacheEntry = {
+  data: Buffer;
+  contentType: string;
+  timestamp: number;
+  bytes: number;
+};
+
+const imageCache = new Map<string, ImageCacheEntry>();
 const IMAGE_CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
-const IMAGE_CACHE_MAX_ITEMS = 2000; // Limit cache size (thumbnails + modals)
+const DEFAULT_IMAGE_CACHE_MAX_BYTES = 512 * 1024 * 1024; // 512 MB
+
+function getImageCacheMaxBytes(): number {
+  const rawBytes = process.env.IMAGE_CACHE_MAX_BYTES;
+  if (isEnvSet(rawBytes)) {
+    const parsedBytes = Number(rawBytes);
+    if (Number.isFinite(parsedBytes) && parsedBytes > 0) {
+      return Math.floor(parsedBytes);
+    }
+    warn(
+      `[Cache] Invalid IMAGE_CACHE_MAX_BYTES value "${rawBytes}", using default`
+    );
+  }
+
+  const rawMb = process.env.IMAGE_CACHE_MAX_MB;
+  if (isEnvSet(rawMb)) {
+    const parsedMb = Number(rawMb);
+    if (Number.isFinite(parsedMb) && parsedMb > 0) {
+      return Math.floor(parsedMb * 1024 * 1024);
+    }
+    warn(`[Cache] Invalid IMAGE_CACHE_MAX_MB value "${rawMb}", using default`);
+  }
+
+  return DEFAULT_IMAGE_CACHE_MAX_BYTES;
+}
+
+const IMAGE_CACHE_MAX_BYTES = getImageCacheMaxBytes();
+let imageCacheBytes = 0;
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+  return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
+function deleteImageCacheEntry(key: string): boolean {
+  const entry = imageCache.get(key);
+  if (!entry) {
+    return false;
+  }
+
+  imageCache.delete(key);
+  imageCacheBytes = Math.max(0, imageCacheBytes - entry.bytes);
+  return true;
+}
+
+function pruneExpiredImageCacheEntries(now: number): number {
+  let pruned = 0;
+  for (const [key, entry] of imageCache) {
+    if (now - entry.timestamp >= IMAGE_CACHE_MAX_AGE) {
+      deleteImageCacheEntry(key);
+      pruned += 1;
+    }
+  }
+  return pruned;
+}
+
+function evictImageCacheForBytes(bytesToAdd: number, now: number): number {
+  let evicted = pruneExpiredImageCacheEntries(now);
+
+  while (
+    imageCacheBytes + bytesToAdd > IMAGE_CACHE_MAX_BYTES &&
+    imageCache.size > 0
+  ) {
+    const oldestKey = imageCache.keys().next().value;
+    if (!oldestKey) {
+      break;
+    }
+
+    if (deleteImageCacheEntry(oldestKey)) {
+      evicted += 1;
+    }
+  }
+
+  return evicted;
+}
+
+info(`[Cache] Image cache budget: ${formatBytes(IMAGE_CACHE_MAX_BYTES)}`);
 
 // Import authentication middleware
 import { requireAdmin } from "./auth/middleware.ts";
@@ -545,6 +627,10 @@ const cacheImageMiddleware = (
   // Check cache first
   const cached = imageCache.get(imagePath);
   if (cached && now - cached.timestamp < IMAGE_CACHE_MAX_AGE) {
+    // Refresh insertion order so the oldest Map entry is the least recently used.
+    imageCache.delete(imagePath);
+    imageCache.set(imagePath, cached);
+
     res.setHeader("Content-Type", cached.contentType);
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
@@ -553,17 +639,14 @@ const cacheImageMiddleware = (
     res.send(cached.data);
     return;
   }
+  if (cached) {
+    deleteImageCacheEntry(imagePath);
+  }
 
   // Read from disk
   fs.readFile(imagePath, (err, data) => {
     if (err) {
       return next(); // Fall through to express.static
-    }
-
-    // Limit cache size (LRU-style: remove oldest if at limit)
-    if (imageCache.size >= IMAGE_CACHE_MAX_ITEMS) {
-      const oldestKey = imageCache.keys().next().value;
-      if (oldestKey) imageCache.delete(oldestKey);
     }
 
     // Determine content type from file extension
@@ -575,19 +658,34 @@ const cacheImageMiddleware = (
         ? "image/webp"
         : "image/jpeg";
 
-    // Store in cache
-    imageCache.set(imagePath, {
-      data: data,
-      contentType: contentType,
-      timestamp: now,
-    });
-
     const sizeType = req.path.includes("/thumbnail/") ? "thumbnail" : "modal";
-    debug(
-      `[Cache] Cached ${sizeType}: ${path.basename(imagePath)} (${(
-        data.length / 1024
-      ).toFixed(1)} KB, total: ${imageCache.size})`
-    );
+
+    if (data.length <= IMAGE_CACHE_MAX_BYTES) {
+      deleteImageCacheEntry(imagePath);
+      const evicted = evictImageCacheForBytes(data.length, now);
+
+      imageCache.set(imagePath, {
+        data: data,
+        contentType: contentType,
+        timestamp: now,
+        bytes: data.length,
+      });
+      imageCacheBytes += data.length;
+
+      debug(
+        `[Cache] Cached ${sizeType}: ${path.basename(imagePath)} (${formatBytes(
+          data.length
+        )}, total: ${formatBytes(imageCacheBytes)}/${formatBytes(
+          IMAGE_CACHE_MAX_BYTES
+        )}, entries: ${imageCache.size}, evicted: ${evicted})`
+      );
+    } else {
+      debug(
+        `[Cache] Skipped ${sizeType}: ${path.basename(imagePath)} (${formatBytes(
+          data.length
+        )}) exceeds cache budget ${formatBytes(IMAGE_CACHE_MAX_BYTES)}`
+      );
+    }
 
     res.setHeader("Content-Type", contentType);
     res.setHeader("Access-Control-Allow-Origin", "*");
