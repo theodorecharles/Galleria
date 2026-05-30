@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "Công việc song song tối đa",
     "warningNote": "Thay đổi cài đặt chất lượng hình ảnh chỉ áp dụng cho những bức ảnh mới được tải lên. Các hình ảnh hiện có sẽ giữ nguyên cài đặt hiện tại trừ khi bạn sử dụng",
     "forceRegenerate": "Buộc Tái Tạo Tất Cả",
-    "warningNoteLocation": "trong Cài Đặt Nâng Cao → Hình Ảnh Tối Ưu."
+    "warningNoteLocation": "trong Cài Đặt Nâng Cao → Hình Ảnh Tối Ưu.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "Liên kết",

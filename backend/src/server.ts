@@ -30,6 +30,7 @@ import config, {
   RATE_LIMIT_WINDOW_MS,
   RATE_LIMIT_MAX_REQUESTS,
   getLogLevel,
+  getCurrentConfig,
   isEnvSet,
 } from "./config.ts";
 import { validateProductionSecurity } from "./security.ts";
@@ -606,6 +607,14 @@ const checkAlbumPublishedMiddleware = (
 ) => {
   // Extract album from path: /optimized/{size}/{album}/{filename}
   const pathParts = req.path.split('/').filter(p => p);
+
+  if (pathParts[0] === 'download') {
+    const downloadsEnabled = getCurrentConfig().optimization?.images?.download?.enabled !== false;
+    if (!downloadsEnabled) {
+      res.status(403).json({ error: "Downloads are disabled" });
+      return;
+    }
+  }
   
   if (pathParts.length >= 2) {
     const album = decodeURIComponent(pathParts[1]); // Second part is the album name (URL decode it!)

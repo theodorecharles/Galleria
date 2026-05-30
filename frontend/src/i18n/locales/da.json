@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "Maksimalt antal parallelle job",
     "warningNote": "Ændringer i billedkvalitetsindstillinger gælder kun for nyligt uploadede fotos. Eksisterende billeder vil beholde deres nuværende indstillinger, medmindre du bruger",
     "forceRegenerate": "Tving regenerering af alle",
-    "warningNoteLocation": "i Avancerede indstillinger → Optimerede billeder."
+    "warningNoteLocation": "i Avancerede indstillinger → Optimerede billeder.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "Ingen videoer endnu",

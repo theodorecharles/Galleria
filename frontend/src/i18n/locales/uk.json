@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "Максимальна кількість паралельних завдань",
     "warningNote": "Зміни налаштувань якості зображення застосовуються лише до нових завантажених фотографій. Існуючі зображення збережуть свої поточні налаштування, якщо ви не використаєте",
     "forceRegenerate": "Примусово перегенерувати всі",
-    "warningNoteLocation": "у Розширених налаштуваннях → Оптимізовані зображення."
+    "warningNoteLocation": "у Розширених налаштуваннях → Оптимізовані зображення.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "Відео ще немає",

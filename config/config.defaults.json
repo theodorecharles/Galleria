@@ -23,6 +23,7 @@
           "maxDimension": 2048
         },
         "download": {
+          "enabled": true,
           "quality": 100,
           "maxDimension": 4096
         }

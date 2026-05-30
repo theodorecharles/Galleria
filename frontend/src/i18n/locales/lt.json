@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "Maksimalus lygiagrečių darbų skaičius",
     "warningNote": "Pakeitimai vaizdo kokybės nustatymuose taikomi tik naujai įkeltoms nuotraukoms. Esami vaizdai išlaikys savo dabartinius nustatymus, nebent naudosite",
     "forceRegenerate": "Priverstinai atkurti viską",
-    "warningNoteLocation": "Išplėstiniuose nustatymuose → Optimizuoti vaizdai."
+    "warningNoteLocation": "Išplėstiniuose nustatymuose → Optimizuoti vaizdai.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "Dar nėra vaizdo įrašų",

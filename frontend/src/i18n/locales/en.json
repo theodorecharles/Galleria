@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "Max Parallel Jobs",
     "warningNote": "Changes to image quality settings only apply to newly uploaded photos. Existing images will keep their current settings unless you use",
     "forceRegenerate": "Force Regenerate All",
-    "warningNoteLocation": "in Advanced Settings → Optimized Images."
+    "warningNoteLocation": "in Advanced Settings → Optimized Images.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "No videos yet",

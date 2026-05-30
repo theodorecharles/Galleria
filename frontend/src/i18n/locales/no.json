@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "Maks parallelle jobber",
     "warningNote": "Endringer i bildekvalitetsinnstillinger gjelder kun for nylig opplastede bilder. Eksisterende bilder vil beholde sine nåværende innstillinger med mindre du bruker",
     "forceRegenerate": "Tving Regenerer Alle",
-    "warningNoteLocation": "i Avanserte Innstillinger → Optimaliserte Bilder."
+    "warningNoteLocation": "i Avanserte Innstillinger → Optimaliserte Bilder.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "Lenker",

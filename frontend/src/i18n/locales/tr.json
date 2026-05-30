@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "Maksimum Paralel İş",
     "warningNote": "Görüntü kalitesi ayarındaki değişiklikler yalnızca yeni yüklenen fotoğraflara uygulanır. Mevcut görüntüler,",
     "forceRegenerate": "Tümünü Yeniden Üret",
-    "warningNoteLocation": "seçeneğini kullanmadığınız sürece mevcut ayarlarını koruyacaktır."
+    "warningNoteLocation": "seçeneğini kullanmadığınız sürece mevcut ayarlarını koruyacaktır.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "Bağlantılar",

@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "最大并行作业",
     "warningNote": "图像质量设置的更改仅适用于新上传的照片。现有图像将保持其当前设置，除非您使用",
     "forceRegenerate": "强制重新生成所有",
-    "warningNoteLocation": "在高级设置 → 优化图像中。"
+    "warningNoteLocation": "在高级设置 → 优化图像中。",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "链接",

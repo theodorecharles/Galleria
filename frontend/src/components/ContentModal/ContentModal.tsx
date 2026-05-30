@@ -20,6 +20,11 @@ import { error as logError } from '../../utils/logger';
 // Lazy load VideoPlayer (includes hls.js which is 300KB+)
 const VideoPlayer = lazy(() => import('./VideoPlayer'));
 
+type RuntimeBrandingWindow = Window & {
+  __RUNTIME_BRANDING__?: {
+    downloadsEnabled?: boolean;
+  };
+};
 
 interface ContentModalProps {
   selectedPhoto: Photo;
@@ -59,6 +64,9 @@ const ContentModal: React.FC<ContentModalProps> = ({
     () => !localStorage.getItem('hideNavigationHint')
   );
   const [siteName, setSiteName] = useState<string>('Galleria');
+  const [downloadsEnabled, setDownloadsEnabled] = useState(
+    () => (window as RuntimeBrandingWindow).__RUNTIME_BRANDING__?.downloadsEnabled !== false
+  );
   
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
@@ -96,6 +104,7 @@ const ContentModal: React.FC<ContentModalProps> = ({
         if (res.ok) {
           const data = await res.json();
           setSiteName(data.siteName || 'Galleria');
+          setDownloadsEnabled(data.downloadsEnabled !== false);
         }
       } catch (err) {
         logError('Failed to fetch branding:', err);
@@ -353,6 +362,8 @@ const ContentModal: React.FC<ContentModalProps> = ({
 
   // Handle download
   const handleDownload = useCallback(async (photo: Photo) => {
+    if (!downloadsEnabled) return;
+
     const originalFilename = photo.id.split('/').pop() || 'photo.jpg';
     const fileExtension = originalFilename.substring(originalFilename.lastIndexOf('.'));
     
@@ -383,7 +394,7 @@ const ContentModal: React.FC<ContentModalProps> = ({
       logError('Download failed:', err);
       window.open(`${API_URL}${photo.download}${imageQueryString}`, '_blank');
     }
-  }, [imageQueryString, siteName]);
+  }, [downloadsEnabled, imageQueryString, siteName]);
 
   // Navigate to previous photo
   const handleNavigatePrev = useCallback(() => {
@@ -635,6 +646,7 @@ const ContentModal: React.FC<ContentModalProps> = ({
               onClose={handleClose}
               selectedPhoto={selectedPhoto}
               isVideo={selectedPhoto.media_type === 'video'}
+              downloadsEnabled={downloadsEnabled}
               style={{}}
             />
 

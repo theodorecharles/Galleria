@@ -84,6 +84,7 @@ interface BrandingConfig {
   gridColumns900?: number;
   gridColumns1200?: number;
   gridColumns1600?: number;
+  downloadsEnabled?: boolean;
 }
 
 // Get current branding configuration
@@ -123,6 +124,7 @@ router.get("/", (req: Request, res: Response) => {
       gridColumns900: branding.gridColumns900,
       gridColumns1200: branding.gridColumns1200,
       gridColumns1600: branding.gridColumns1600,
+      downloadsEnabled: config.environment?.optimization?.images?.download?.enabled !== false,
     };
 
     res.json(brandingConfig);

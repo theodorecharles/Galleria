@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "Maxim Sarcini Paralele",
     "warningNote": "Modificările la setările de calitate a imaginii se aplică doar fotografiilor încărcate recent. Imaginile existente vor păstra setările curente, cu excepția cazului în care folosiți",
     "forceRegenerate": "Forțează Regenerarea Tuturor",
-    "warningNoteLocation": "în Setări Avansate → Imagini Optimizate."
+    "warningNoteLocation": "în Setări Avansate → Imagini Optimizate.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "Linkuri",

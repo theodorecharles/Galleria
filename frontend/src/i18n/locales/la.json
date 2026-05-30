@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "Maxima Opera Parallela",
     "warningNote": "Mutationes ad occasus qualitatis imaginis tantum applicantur ad novas imagines uploadatas. Exsistentes imagines suas occasus actuales retinebunt nisi utaris",
     "forceRegenerate": "Omnia Regenerare Coacte",
-    "warningNoteLocation": "in Occasus Provectos → Imagines Optimatae."
+    "warningNoteLocation": "in Occasus Provectos → Imagines Optimatae.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "Nulli adhuc videos",

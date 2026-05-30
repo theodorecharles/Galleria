@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "Kerja Selari Maksimum",
     "warningNote": "Perubahan kepada tetapan kualiti imej hanya terpakai kepada foto yang dimuat naik baru. Imej sedia ada akan mengekalkan tetapan semasa mereka kecuali anda menggunakan",
     "forceRegenerate": "Paksa Menjana Semula Semua",
-    "warningNoteLocation": "dalam Tetapan Lanjutan → Imej Dioptimumkan."
+    "warningNoteLocation": "dalam Tetapan Lanjutan → Imej Dioptimumkan.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "Tiada video lagi",

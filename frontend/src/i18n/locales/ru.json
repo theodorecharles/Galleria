@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "Максимальное количество параллельных задач",
     "warningNote": "Изменения в настройках качества изображения применяются только к вновь загруженным фотографиям. Существующие изображения сохранят свои текущие настройки, если вы не используете",
     "forceRegenerate": "Принудительная регенерация всех",
-    "warningNoteLocation": "в Расширенных настройках → Оптимизированные изображения."
+    "warningNoteLocation": "в Расширенных настройках → Оптимизированные изображения.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "Ссылки",

@@ -20,6 +20,7 @@ interface ModalControlsProps {
   onClose: () => void;
   selectedPhoto: Photo;
   isVideo?: boolean;
+  downloadsEnabled?: boolean;
   style?: React.CSSProperties;
 }
 
@@ -35,6 +36,7 @@ const ModalControls: React.FC<ModalControlsProps> = ({
   onClose,
   selectedPhoto,
   isVideo = false,
+  downloadsEnabled = true,
   style,
 }) => {
   const { t } = useTranslation();
@@ -70,8 +72,8 @@ const ModalControls: React.FC<ModalControlsProps> = ({
           )}
         </button>
 
-        {/* Download button - hidden for videos */}
-        {!isVideo && (
+        {/* Download button - hidden for videos and portfolios with downloads disabled */}
+        {!isVideo && downloadsEnabled && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -113,4 +115,3 @@ const ModalControls: React.FC<ModalControlsProps> = ({
 };
 
 export default ModalControls;
-

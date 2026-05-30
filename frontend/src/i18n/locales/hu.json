@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "Maximális párhuzamos feladatok",
     "warningNote": "A képminőség beállításainak módosításai csak az újonnan feltöltött fotókra vonatkoznak. A meglévő képek megtartják jelenlegi beállításaikat, hacsak nem használja",
     "forceRegenerate": "Minden újragenerálása kényszerítve",
-    "warningNoteLocation": "a Speciális beállítások → Optimalizált képek menüben."
+    "warningNoteLocation": "a Speciális beállítások → Optimalizált képek menüben.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "Még nincsenek videók",

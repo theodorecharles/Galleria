@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "最大並列ジョブ数",
     "warningNote": "画像品質設定の変更は、新しくアップロードされた写真にのみ適用されます。既存の画像は、使用しない限り現在の設定を保持します",
     "forceRegenerate": "すべて強制再生成",
-    "warningNoteLocation": "詳細設定 → 最適化された画像。"
+    "warningNoteLocation": "詳細設定 → 最適化された画像。",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "リンク",

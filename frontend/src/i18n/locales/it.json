@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "Lavori Paralleli Massimi",
     "warningNote": "Le modifiche alle impostazioni di qualità dell'immagine si applicano solo alle foto caricate di recente. Le immagini esistenti manterranno le loro impostazioni attuali a meno che tu non utilizzi",
     "forceRegenerate": "Forza Rigenera Tutto",
-    "warningNoteLocation": "in Impostazioni Avanzate → Immagini Ottimizzate."
+    "warningNoteLocation": "in Impostazioni Avanzate → Immagini Ottimizzate.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "Link",

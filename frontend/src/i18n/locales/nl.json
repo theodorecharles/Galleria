@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "Max Parallelle Taken",
     "warningNote": "Wijzigingen in de afbeeldingskwaliteitsinstellingen zijn alleen van toepassing op nieuw geüploade foto's. Bestaande afbeeldingen behouden hun huidige instellingen, tenzij je",
     "forceRegenerate": "Dwing opnieuw genereren van alles",
-    "warningNoteLocation": "gebruikt in Geavanceerde Instellingen → Geoptimaliseerde Afbeeldingen."
+    "warningNoteLocation": "gebruikt in Geavanceerde Instellingen → Geoptimaliseerde Afbeeldingen.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "Links",

@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "Treballs paral·lels màxims",
     "warningNote": "Els canvis en la configuració de qualitat de la imatge només s'apliquen a les fotos recentment pujades. Les imatges existents mantindran la seva configuració actual tret que utilitzis",
     "forceRegenerate": "Força regenerar tot",
-    "warningNoteLocation": "a Configuració avançada → Imatges optimitzades."
+    "warningNoteLocation": "a Configuració avançada → Imatges optimitzades.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "Encara no hi ha vídeos",

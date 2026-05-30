@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "최대 병렬 작업",
     "warningNote": "이미지 품질 설정에 대한 변경 사항은 새로 업로드된 사진에만 적용됩니다. 기존 이미지는 현재 설정을 유지하며, 사용하지 않는 한",
     "forceRegenerate": "모두 강제 재생성",
-    "warningNoteLocation": "고급 설정 → 최적화된 이미지에서."
+    "warningNoteLocation": "고급 설정 → 최적화된 이미지에서.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "링크",

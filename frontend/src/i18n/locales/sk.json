@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "Max. počet paralelných úloh",
     "warningNote": "Zmeny nastavení kvality obrázkov sa vzťahujú iba na novo nahrané fotografie. Existujúce obrázky si ponechajú svoje aktuálne nastavenia, pokiaľ nepoužijete",
     "forceRegenerate": "Vynútiť regeneráciu všetkých",
-    "warningNoteLocation": "v Pokročilých nastaveniach → Optimalizované obrázky."
+    "warningNoteLocation": "v Pokročilých nastaveniach → Optimalizované obrázky.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "Zatiaľ žiadne videá",

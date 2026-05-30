@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "Maksimalan broj paralelnih poslova",
     "warningNote": "Promene u postavkama kvaliteta slike primenjuju se samo na novo otpremljene fotografije. Postojeće slike će zadržati svoje trenutne postavke osim ako ne koristite",
     "forceRegenerate": "Prisilno regeneriši sve",
-    "warningNoteLocation": "u Naprednim postavkama → Optimizovane slike."
+    "warningNoteLocation": "u Naprednim postavkama → Optimizovane slike.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "Još nema video zapisa",

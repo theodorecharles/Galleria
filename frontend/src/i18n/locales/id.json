@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "Pekerjaan Paralel Maks",
     "warningNote": "Perubahan pada pengaturan kualitas gambar hanya berlaku untuk foto yang baru diunggah. Gambar yang ada akan tetap menggunakan pengaturan saat ini kecuali Anda menggunakan",
     "forceRegenerate": "Paksa Regenerasi Semua",
-    "warningNoteLocation": "di Pengaturan Lanjutan → Gambar yang Dioptimalkan."
+    "warningNoteLocation": "di Pengaturan Lanjutan → Gambar yang Dioptimalkan.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "Tautan",

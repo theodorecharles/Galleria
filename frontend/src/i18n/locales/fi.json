@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "Maksimi rinnakkaiset työt",
     "warningNote": "Muutokset kuvan laatuasetuksiin koskevat vain uusia ladattuja kuvia. Olemassa olevat kuvat säilyttävät nykyiset asetuksensa, ellei käytetä",
     "forceRegenerate": "Pakota regenerointi kaikille",
-    "warningNoteLocation": "kohdassa Lisäasetukset → Optimoidut kuvat."
+    "warningNoteLocation": "kohdassa Lisäasetukset → Optimoidut kuvat.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "Ei vielä videoita",

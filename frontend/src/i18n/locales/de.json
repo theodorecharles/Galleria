@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "Maximale parallele Jobs",
     "warningNote": "Änderungen an den Bildqualitätseinstellungen gelten nur für neu hochgeladene Fotos. Bestehende Bilder behalten ihre aktuellen Einstellungen, es sei denn, Sie verwenden",
     "forceRegenerate": "Alle neu generieren erzwingen",
-    "warningNoteLocation": "in den erweiterten Einstellungen → Optimierte Bilder."
+    "warningNoteLocation": "in den erweiterten Einstellungen → Optimierte Bilder.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "Links",

@@ -489,7 +489,7 @@ router.post(
               images: {
                 thumbnail: { quality: 60, maxDimension: 512 },
                 modal: { quality: 90, maxDimension: 2048 },
-                download: { quality: 100, maxDimension: 4096 },
+                download: { enabled: true, quality: 100, maxDimension: 4096 },
               },
             },
             security: {

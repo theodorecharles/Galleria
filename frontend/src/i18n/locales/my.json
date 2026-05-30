@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "အများဆုံး တစ်ပြိုင်နက်အလုပ်များ",
     "warningNote": "ပုံအရည်အသွေး ဆက်တင်များကို ပြောင်းလဲခြင်းသည် အသစ်တင်ထားသော ဓာတ်ပုံများတွင်သာ အကျုံးဝင်သည်။ ရှိပြီးသားပုံများသည် ၎င်းတို့၏ လက်ရှိဆက်တင်များကို ဆက်လက်ထားရှိမည်ဖြစ်ပြီး သင်",
     "forceRegenerate": "အားလုံးကို ပြန်လည်ထုတ်လုပ်ရန် အားသွန်သန်စွမ်း",
-    "warningNoteLocation": "အဆင့်မြင့်ဆက်တင်များ → အထူးပြု ပုံများတွင်။"
+    "warningNoteLocation": "အဆင့်မြင့်ဆက်တင်များ → အထူးပြု ပုံများတွင်။",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "ဗီဒီယိုများ မရှိသေးပါ",

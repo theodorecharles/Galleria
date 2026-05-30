@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "Μέγιστες παράλληλες εργασίες",
     "warningNote": "Οι αλλαγές στις ρυθμίσεις ποιότητας εικόνας ισχύουν μόνο για τις νεοανεβασμένες φωτογραφίες. Οι υπάρχουσες εικόνες θα διατηρήσουν τις τρέχουσες ρυθμίσεις τους εκτός αν χρησιμοποιήσετε",
     "forceRegenerate": "Αναγκαστική αναγέννηση όλων",
-    "warningNoteLocation": "στις Προηγμένες Ρυθμίσεις → Βελτιστοποιημένες εικόνες."
+    "warningNoteLocation": "στις Προηγμένες Ρυθμίσεις → Βελτιστοποιημένες εικόνες.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "Δεν υπάρχουν ακόμα βίντεο",

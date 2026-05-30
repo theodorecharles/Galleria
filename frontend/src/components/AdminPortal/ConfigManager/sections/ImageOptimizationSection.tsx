@@ -364,6 +364,43 @@ const ImageOptimizationSection: React.FC<ImageOptimizationSectionProps> = ({
               )}
             </div>
             <div className="branding-group">
+              <label className="branding-label">{t('imageOptimization.enableDownloads')}</label>
+              <p
+                style={{
+                  fontSize: "0.85rem",
+                  color: "#888",
+                  marginTop: "0",
+                  marginBottom: "0.75rem",
+                }}
+              >
+                {t('imageOptimization.enableDownloadsDescription')}
+              </p>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={config.environment.optimization.images.download.enabled ?? true}
+                  onChange={(e) =>
+                    updateConfig(
+                      [
+                        "environment",
+                        "optimization",
+                        "images",
+                        "download",
+                        "enabled",
+                      ],
+                      e.target.checked
+                    )
+                  }
+                />
+                <span className="toggle-slider"></span>
+                <span className="toggle-label">
+                  {config.environment.optimization.images.download.enabled ?? true
+                    ? t('common.enabled')
+                    : t('common.disabled')}
+                </span>
+              </label>
+            </div>
+            <div className="branding-group">
               <label className="branding-label">
                 {t('imageOptimization.quality')}: {config.environment.optimization.images.download.quality}
               </label>

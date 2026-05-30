@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "งานคู่ขนานสูงสุด",
     "warningNote": "การเปลี่ยนแปลงการตั้งค่าคุณภาพของภาพจะมีผลเฉพาะกับภาพที่อัปโหลดใหม่เท่านั้น ภาพที่มีอยู่จะคงการตั้งค่าปัจจุบันไว้เว้นแต่คุณจะใช้",
     "forceRegenerate": "บังคับสร้างใหม่ทั้งหมด",
-    "warningNoteLocation": "ในการตั้งค่าขั้นสูง → ภาพที่ปรับให้เหมาะสม"
+    "warningNoteLocation": "ในการตั้งค่าขั้นสูง → ภาพที่ปรับให้เหมาะสม",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "ยังไม่มีวิดีโอ",

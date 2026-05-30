@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "Maksymalna liczba równoległych zadań",
     "warningNote": "Zmiany w ustawieniach jakości obrazu dotyczą tylko nowo przesłanych zdjęć. Istniejące obrazy zachowają swoje aktualne ustawienia, chyba że użyjesz",
     "forceRegenerate": "Wymuś regenerację wszystkich",
-    "warningNoteLocation": "w Ustawieniach zaawansowanych → Optymalizowane obrazy."
+    "warningNoteLocation": "w Ustawieniach zaawansowanych → Optymalizowane obrazy.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "Linki",

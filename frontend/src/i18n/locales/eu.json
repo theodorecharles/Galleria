@@ -1135,7 +1135,9 @@
     "maxParallelJobs": "Lan paralelo maximoak",
     "warningNote": "Irudi kalitatearen ezarpenen aldaketak soilik aplikatzen zaizkie berriki igo diren argazkiei. Dauden irudiek beren egungo ezarpenak mantenduko dituzte, ez baduzu erabiltzen",
     "forceRegenerate": "Indarrez Berriro Sortu Guztiak",
-    "warningNoteLocation": "Ezarpen aurreratuak → Optimizatutako Irudiak."
+    "warningNoteLocation": "Ezarpen aurreratuak → Optimizatutako Irudiak.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "videoList": {
     "noVideosYet": "Oraindik ez dago bideorik",

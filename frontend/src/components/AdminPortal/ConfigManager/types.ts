@@ -22,7 +22,7 @@ export interface EnvironmentConfig {
     images: {
       thumbnail: { quality: number; maxDimension: number };
       modal: { quality: number; maxDimension: number };
-      download: { quality: number; maxDimension: number };
+      download: { enabled?: boolean; quality: number; maxDimension: number };
     };
     video?: {
       segmentDuration?: number;

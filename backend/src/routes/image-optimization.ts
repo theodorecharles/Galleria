@@ -61,7 +61,7 @@ router.get('/settings', requireAuth, (req, res) => {
       images: config.environment?.optimization?.images || {
         thumbnail: { quality: 60, maxDimension: 512 },
         modal: { quality: 90, maxDimension: 2048 },
-        download: { quality: 100, maxDimension: 4096 }
+        download: { enabled: true, quality: 100, maxDimension: 4096 }
       }
     };
     
@@ -112,6 +112,7 @@ router.put('/settings', requireAdmin, (req, res) => {
         maxDimension: Math.max(512, Math.min(8192, parseInt(modal.maxDimension) || 2048))
       },
       download: {
+        enabled: download.enabled !== false,
         quality: Math.max(0, Math.min(100, parseInt(download.quality) || 100)),
         maxDimension: Math.max(1024, Math.min(16384, parseInt(download.maxDimension) || 4096))
       }
@@ -409,4 +410,3 @@ router.post('/optimize', requireManager, (req, res) => {
 });
 
 export default router;
-

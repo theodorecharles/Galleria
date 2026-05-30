@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "Max parallella jobb",
     "warningNote": "Ändringar i bildkvalitetsinställningar gäller endast för nyuppladdade foton. Befintliga bilder behåller sina nuvarande inställningar om du inte använder",
     "forceRegenerate": "Tvinga Återgenerera Alla",
-    "warningNoteLocation": "i Avancerade Inställningar → Optimerade Bilder."
+    "warningNoteLocation": "i Avancerade Inställningar → Optimerade Bilder.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "Länkar",

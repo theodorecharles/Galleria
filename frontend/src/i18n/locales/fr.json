@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "Travaux Parallèles Maximum",
     "warningNote": "Les modifications des paramètres de qualité d'image ne s'appliquent qu'aux photos nouvellement téléchargées. Les images existantes conserveront leurs paramètres actuels, sauf si vous utilisez",
     "forceRegenerate": "Forcer la régénération de tout",
-    "warningNoteLocation": "dans Paramètres avancés → Images optimisées."
+    "warningNoteLocation": "dans Paramètres avancés → Images optimisées.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "Liens",

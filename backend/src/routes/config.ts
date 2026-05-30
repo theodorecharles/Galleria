@@ -393,6 +393,7 @@ router.put("/", requireAdmin, express.json(), async (req, res) => {
         'imageOptimization.thumbnailSize': 'Image Optimization → Thumbnail Size',
         'imageOptimization.modalSize': 'Image Optimization → Modal Size',
         'imageOptimization.downloadSize': 'Image Optimization → Download Size',
+        'environment.optimization.images.download.enabled': 'Image Optimization → Downloads',
         'videoOptimization.enabled': 'Video Optimization → Enabled',
         'videoOptimization.quality': 'Video Optimization → Quality',
       };

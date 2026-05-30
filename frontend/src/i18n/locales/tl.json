@@ -1043,7 +1043,9 @@
     "maxParallelJobs": "Max Parallel Jobs",
     "warningNote": "Ang mga pagbabago sa mga setting ng kalidad ng larawan ay nalalapat lamang sa mga bagong na-upload na larawan. Ang mga umiiral na larawan ay mananatili sa kanilang kasalukuyang mga setting maliban kung gagamitin mo ang",
     "forceRegenerate": "Piliting I-regenerate Lahat",
-    "warningNoteLocation": "sa Advanced Settings → Optimized Images."
+    "warningNoteLocation": "sa Advanced Settings → Optimized Images.",
+    "enableDownloads": "Enable Downloads",
+    "enableDownloadsDescription": "Show the lightbox download button and allow original download requests."
   },
   "links": {
     "title": "Mga Link",

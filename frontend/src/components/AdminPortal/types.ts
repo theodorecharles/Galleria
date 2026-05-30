@@ -66,6 +66,7 @@ export interface ImageOptimizationSettings {
       maxDimension: number;
     };
     download: {
+      enabled?: boolean;
       quality: number;
       maxDimension: number;
     };
@@ -98,4 +99,3 @@ export type { Photo } from '../../types/photo';
 export type Tab = 'branding' | 'links' | 'albums' | 'metrics' | 'config';
 
 export type AuthMethod = 'google' | 'credentials' | 'passkey' | null;
-
