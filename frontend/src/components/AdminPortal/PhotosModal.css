@@ -327,6 +327,10 @@
   .mobile-toggles-stack.hidden-mobile {
     display: none;
   }
+
+  .visibility-button-mobile.hidden-mobile {
+    display: none !important;
+  }
   
   /* Hide close button when editing title */
   .photos-close-btn.hidden-when-editing {
@@ -395,6 +399,15 @@
 
 .photos-controls-right {
   justify-content: flex-end; /* Stick content to the right */
+}
+
+.visibility-button-mobile {
+  display: none;
+  flex: 0 0 auto;
+}
+
+.visibility-button-desktop {
+  max-width: 12rem;
 }
 
 /* Buttons should expand to fill available space */
@@ -657,6 +670,14 @@ label.photos-btn {
   .homepage-toggle-desktop {
     display: none !important; /* Hide text toggle from controls bar on mobile (<= 740px) */
   }
+
+  .visibility-button-mobile {
+    display: inline-flex;
+  }
+
+  .visibility-button-desktop {
+    display: none !important;
+  }
   
   .toggle-switch-mobile-vertical {
     display: flex !important; /* Ensure vertical toggle shows on mobile */
@@ -759,4 +780,3 @@ label.photos-btn {
     order: 2;
   }
 }
-

@@ -113,6 +113,8 @@ const getContentInAlbum = (photosDir: string, album: string) => {
   try {
     // Get images from database
     const images = getImagesInAlbum(album);
+    const albumState = getAlbumState(album);
+    const downloadsEnabled = albumState?.downloads_enabled ?? true;
     
     // Transform to photo objects
     const photos = images.map((img) => {
@@ -132,7 +134,8 @@ const getContentInAlbum = (photosDir: string, album: string) => {
         album: album,
         thumbnail: `/optimized/thumbnail/${album}/${thumbnailFilename}`,
         modal: `/optimized/modal/${album}/${thumbnailFilename}`,
-        download: isVideo ? '' : `/optimized/download/${album}/${img.filename}`,
+        download: isVideo || !downloadsEnabled ? '' : `/optimized/download/${album}/${img.filename}`,
+        downloads_enabled: downloadsEnabled,
         sort_order: img.sort_order ?? null,
         media_type: img.media_type || 'photo',
       };
@@ -180,10 +183,14 @@ const getAllPhotos = (photosDir: string, includeUnpublished: boolean = false) =>
     if (includeUnpublished) {
       // Get all images from all albums
       const allAlbums = getAllAlbums()
-        .map(a => a.name)
-        .filter(name => name !== 'homepage');
-      
-      images = allAlbums.flatMap(album => getImagesInAlbum(album));
+        .filter(a => a.name !== 'homepage');
+
+      images = allAlbums.flatMap(album =>
+        getImagesInAlbum(album.name).map(img => ({
+          ...img,
+          downloads_enabled: album.downloads_enabled
+        }))
+      );
     } else {
       // Get only images from published albums
       images = getImagesFromPublishedAlbums().filter(img => img.album !== 'homepage');
@@ -198,6 +205,7 @@ const getAllPhotos = (photosDir: string, includeUnpublished: boolean = false) =>
       // For videos, thumbnails are stored as JPG
       const isVideo = img.media_type === 'video';
       const thumbnailFilename = isVideo ? img.filename.replace(/\.[^.]+$/, '.jpg') : img.filename;
+      const downloadsEnabled = (img as any).downloads_enabled ?? true;
 
       return {
         id: `${img.album}/${img.filename}`,
@@ -206,7 +214,8 @@ const getAllPhotos = (photosDir: string, includeUnpublished: boolean = false) =>
         album: img.album,
         thumbnail: `/optimized/thumbnail/${img.album}/${thumbnailFilename}`,
         modal: `/optimized/modal/${img.album}/${thumbnailFilename}`,
-        download: isVideo ? '' : `/optimized/download/${img.album}/${img.filename}`,
+        download: isVideo || !downloadsEnabled ? '' : `/optimized/download/${img.album}/${img.filename}`,
+        downloads_enabled: downloadsEnabled,
         media_type: img.media_type || 'photo',
       };
     });
@@ -266,6 +275,7 @@ router.get("/api/albums", (req: Request, res) => {
         name: albumName,
         published: state?.published ?? false,
         show_on_homepage: state?.show_on_homepage ?? true,
+        downloads_enabled: state?.downloads_enabled ?? true,
         folder_id: state?.folder_id ?? null
       };
     });
@@ -287,7 +297,8 @@ router.get("/api/albums", (req: Request, res) => {
         name: albumName,
         folder_id: state?.folder_id ?? null,
         published: true, // Already filtered to published albums
-        show_on_homepage: state?.show_on_homepage ?? true
+        show_on_homepage: state?.show_on_homepage ?? true,
+        downloads_enabled: state?.downloads_enabled ?? true
       };
     });
     
@@ -405,7 +416,8 @@ const serveAlbumPhotos = (req: Request, res: Response, albumName: string): void 
     // Return cached photos with published state
     res.json({
       photos: cached.photos,
-      published: albumState.published
+      published: albumState.published,
+      downloads_enabled: albumState.downloads_enabled
     });
     return;
   }
@@ -428,7 +440,8 @@ const serveAlbumPhotos = (req: Request, res: Response, albumName: string): void 
   // Return photos with published state
   res.json({
     photos,
-    published: albumState.published
+    published: albumState.published,
+    downloads_enabled: albumState.downloads_enabled
   });
 };
 
@@ -451,6 +464,7 @@ router.get("/api/random-photos", (req: Request, res) => {
     // For videos, thumbnails are stored as JPG
     const isVideo = img.media_type === 'video';
     const thumbnailFilename = isVideo ? img.filename.replace(/\.[^.]+$/, '.jpg') : img.filename;
+    const downloadsEnabled = (img as any).downloads_enabled ?? true;
 
     return {
       id: `${img.album}/${img.filename}`,
@@ -459,7 +473,8 @@ router.get("/api/random-photos", (req: Request, res) => {
       album: img.album,
       thumbnail: `/optimized/thumbnail/${img.album}/${thumbnailFilename}`,
       modal: `/optimized/modal/${img.album}/${thumbnailFilename}`,
-      download: isVideo ? '' : `/optimized/download/${img.album}/${img.filename}`,
+      download: isVideo || !downloadsEnabled ? '' : `/optimized/download/${img.album}/${img.filename}`,
+      downloads_enabled: downloadsEnabled,
       media_type: img.media_type || 'photo',
     };
   });

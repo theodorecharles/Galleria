@@ -41,11 +41,17 @@ async function writeJSON(outputDir: string, filename: string, data: any): Promis
 
 /**
  * Transform database image to optimized array format
- * Album format: [filename, title, media_type, description]
- * Homepage format: [filename, title, album, media_type, description]
+ * Album format: [filename, title, media_type, description, downloads_enabled]
+ * Homepage format: [filename, title, album, media_type, description, downloads_enabled]
  * media_type: 0 = photo, 1 = video
+ * downloads_enabled: 0 = disabled, 1 = enabled
  */
-function transformImageToArray(img: any, album: string, includeAlbum: boolean = false) {
+function transformImageToArray(
+  img: any,
+  album: string,
+  includeAlbum: boolean = false,
+  downloadsEnabled: boolean = true
+) {
   const defaultTitle = img.filename
     .replace(/\.[^/.]+$/, '') // Remove extension
     .replace(/[-_]/g, ' '); // Replace hyphens and underscores with spaces
@@ -55,9 +61,9 @@ function transformImageToArray(img: any, album: string, includeAlbum: boolean = 
   const description = img.description || null;
   
   if (includeAlbum) {
-    return [img.filename, title, album, mediaType, description];
+    return [img.filename, title, album, mediaType, description, downloadsEnabled ? 1 : 0];
   }
-  return [img.filename, title, mediaType, description];
+  return [img.filename, title, mediaType, description, downloadsEnabled ? 1 : 0];
 }
 
 /**
@@ -73,7 +79,6 @@ export async function generateStaticJSONFiles(appRoot: string): Promise<{ succes
     const albums = albumsData
       .filter(a => a.name !== 'homepage')
       .map(a => a.name);
-    const publishedAlbums = albumsData.filter(a => a.published && a.name !== 'homepage').map(a => a.name);
 
     // Clean up stale JSON files for DELETED albums only (keep unpublished albums)
     if (fs.existsSync(outputDir)) {
@@ -94,8 +99,11 @@ export async function generateStaticJSONFiles(appRoot: string): Promise<{ succes
     await Promise.all(
       albums.map(async (album) => {
         try {
+          const albumState = albumsData.find(a => a.name === album);
           const images = getImagesInAlbum(album);
-          const photos = images.map((img) => transformImageToArray(img, album, false));
+          const photos = images.map((img) =>
+            transformImageToArray(img, album, false, albumState?.downloads_enabled ?? true)
+          );
           await writeJSON(outputDir, `${album}.json`, photos);
         } catch (err) {
           error(`[StaticJSON] Error generating JSON for album "${album}":`, err);
@@ -115,7 +123,7 @@ export async function generateStaticJSONFiles(appRoot: string): Promise<{ succes
       // Keep photos in order (by album sort order, then by photo sort order)
       // Frontend will shuffle if shuffle setting is enabled
       const photos = homepageImages.map((img) => 
-        transformImageToArray(img, img.album, true)
+        transformImageToArray(img, img.album, true, (img as any).downloads_enabled ?? true)
       );
       
       // Include shuffle setting in homepage JSON
@@ -231,4 +239,3 @@ router.get("/status", async (req: Request, res: Response): Promise<void> => {
 });
 
 export default router;
-

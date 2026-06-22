@@ -6,8 +6,8 @@ import { Photo, ImageDimensions } from '../types/photo';
 
 /**
  * Reconstruct full photo/video object from optimized array format
- * Album format: [filename, title, media_type, description]
- * Homepage format: [filename, title, album, media_type, description]
+ * Album format: [filename, title, media_type, description, downloads_enabled]
+ * Homepage format: [filename, title, album, media_type, description, downloads_enabled]
  * media_type: 0 = photo, 1 = video
  */
 export const reconstructPhoto = (data: any[], albumName: string): Photo => {
@@ -16,8 +16,10 @@ export const reconstructPhoto = (data: any[], albumName: string): Photo => {
   const albumFromData = typeof data[2] === 'string' ? data[2] : null;
   const mediaTypeIndex = albumFromData ? 3 : 2; // If we have album name, media_type is at index 3, otherwise index 2
   const descriptionIndex = albumFromData ? 4 : 3; // Description is after media_type
+  const downloadsEnabledIndex = albumFromData ? 5 : 4;
   const mediaType = data[mediaTypeIndex] === 1 ? 'video' : 'photo';
   const description = data[descriptionIndex] || undefined;
+  const downloadsEnabled = data[downloadsEnabledIndex] === undefined ? true : data[downloadsEnabledIndex] === 1 || data[downloadsEnabledIndex] === true;
   
   const photoAlbum = albumFromData || albumName;
   
@@ -30,11 +32,12 @@ export const reconstructPhoto = (data: any[], albumName: string): Photo => {
     id: `${photoAlbum}/${filename}`,
     thumbnail: `/optimized/thumbnail/${photoAlbum}/${actualFilename}`,
     modal: `/optimized/modal/${photoAlbum}/${actualFilename}`,
-    download: mediaType === 'video' ? '' : `/optimized/download/${photoAlbum}/${filename}`,
+    download: mediaType === 'video' || !downloadsEnabled ? '' : `/optimized/download/${photoAlbum}/${filename}`,
     title: title,
     description,
     album: photoAlbum,
-    media_type: mediaType
+    media_type: mediaType,
+    downloads_enabled: downloadsEnabled
   };
 };
 
@@ -137,4 +140,3 @@ export const distributePhotos = (
 
   return columns;
 };
-

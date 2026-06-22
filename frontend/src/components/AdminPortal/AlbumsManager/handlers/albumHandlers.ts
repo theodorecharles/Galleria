@@ -38,6 +38,12 @@ interface AlbumHandlersProps {
   t: TFunction;
 }
 
+interface AlbumVisibilitySettings {
+  published: boolean;
+  show_on_homepage: boolean;
+  downloads_enabled: boolean;
+}
+
 export const createAlbumHandlers = (props: AlbumHandlersProps) => {
   const {
     localAlbums,
@@ -179,6 +185,69 @@ export const createAlbumHandlers = (props: AlbumHandlersProps) => {
       }
     } catch (err) {
       setMessage({ type: 'error', text: 'Network error occurred' });
+    }
+  };
+
+  const handleUpdateVisibility = async (
+    albumName: string,
+    visibility: AlbumVisibilitySettings
+  ): Promise<boolean> => {
+    const currentAlbum = localAlbums.find(a => a.name === albumName);
+    const normalizedVisibility = {
+      ...visibility,
+      show_on_homepage: visibility.published ? visibility.show_on_homepage : false,
+    };
+
+    try {
+      const res = await fetchWithRateLimitCheck(
+        `${API_URL}/api/albums/${encodeURIComponent(albumName)}/visibility`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            published: normalizedVisibility.published,
+            showOnHomepage: normalizedVisibility.show_on_homepage,
+            downloadsEnabled: normalizedVisibility.downloads_enabled,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const error = await res.json();
+        setMessage({ type: 'error', text: error.error || t('albumsManager.failedToUpdateAlbum') });
+        return false;
+      }
+
+      if (currentAlbum?.published !== normalizedVisibility.published) {
+        trackAlbumPublishToggle(albumName, normalizedVisibility.published);
+      }
+
+      if (currentAlbum?.show_on_homepage !== normalizedVisibility.show_on_homepage) {
+        trackAlbumHomepageToggle(albumName, normalizedVisibility.show_on_homepage);
+      }
+
+      setLocalAlbums(localAlbums.map(album =>
+        album.name === albumName
+          ? {
+              ...album,
+              published: normalizedVisibility.published,
+              show_on_homepage: normalizedVisibility.show_on_homepage,
+              downloads_enabled: normalizedVisibility.downloads_enabled,
+            }
+          : album
+      ));
+
+      setMessage({
+        type: 'success',
+        text: t('albumsManager.visibilityUpdated', { albumName }),
+      });
+      await loadAlbums();
+      window.dispatchEvent(new Event('albums-updated'));
+      return true;
+    } catch (err) {
+      setMessage({ type: 'error', text: t('albumsManager.networkErrorOccurred') });
+      return false;
     }
   };
 
@@ -373,10 +442,10 @@ export const createAlbumHandlers = (props: AlbumHandlersProps) => {
     handleDeleteAlbum,
     handleTogglePublished,
     handleToggleHomepage,
+    handleUpdateVisibility,
     handleOpenRenameModal,
     handleRenameAlbum,
     handleInlineRenameAlbum,
     handleMoveAlbumToFolder,
   };
 };
-

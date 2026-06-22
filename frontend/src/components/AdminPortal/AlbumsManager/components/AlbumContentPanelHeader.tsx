@@ -19,7 +19,6 @@ type ViewMode = 'grid' | 'list';
 interface AlbumContentPanelHeaderProps {
   selectedAlbum: string;
   localAlbums: any[];
-  localFolders: any[];
   albumPhotos: any[];
   uploadingImages: any[];
   viewMode: ViewMode;
@@ -27,8 +26,11 @@ interface AlbumContentPanelHeaderProps {
   onUploadPhotos: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDeleteAlbum: (albumName: string) => void;
   onShareAlbum: (albumName: string) => void;
-  onTogglePublished: (albumName: string, currentPublished: boolean) => void;
-  onToggleHomepage: (albumName: string, currentShowOnHomepage: boolean) => void;
+  onUpdateVisibility: (albumName: string, visibility: {
+    published: boolean;
+    show_on_homepage: boolean;
+    downloads_enabled: boolean;
+  }) => Promise<boolean>;
   onPreviewAlbum: (albumName: string) => void;
   onViewModeChange: (mode: ViewMode) => void;
   onRenameAlbum: (oldName: string, newName: string) => Promise<void>;
@@ -38,7 +40,6 @@ interface AlbumContentPanelHeaderProps {
 const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
   selectedAlbum,
   localAlbums,
-  localFolders: _localFolders,
   albumPhotos,
   uploadingImages,
   viewMode,
@@ -46,8 +47,7 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
   onUploadPhotos,
   onDeleteAlbum,
   onShareAlbum,
-  onTogglePublished,
-  onToggleHomepage,
+  onUpdateVisibility,
   onPreviewAlbum,
   onViewModeChange,
   onRenameAlbum,
@@ -57,11 +57,19 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
   const [editedTitle, setEditedTitle] = React.useState(selectedAlbum);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [showVisibilityModal, setShowVisibilityModal] = React.useState(false);
+  const [isSavingVisibility, setIsSavingVisibility] = React.useState(false);
   const titleInputRef = React.useRef<HTMLInputElement>(null);
   
   const currentAlbum = localAlbums.find(a => a.name === selectedAlbum);
   const isPublished = currentAlbum?.published !== false;
-  const showOnHomepage = currentAlbum?.show_on_homepage !== false;
+  const showOnHomepage = currentAlbum?.show_on_homepage === true;
+  const downloadsEnabled = currentAlbum?.downloads_enabled !== false;
+  const [visibilityDraft, setVisibilityDraft] = React.useState({
+    published: isPublished,
+    show_on_homepage: showOnHomepage,
+    downloads_enabled: downloadsEnabled,
+  });
   
   // Count completed uploads (optimization + AI done)
   const completedUploads = uploadingImages.filter((img: any) => img.state === 'complete').length;
@@ -82,6 +90,16 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
     setIsEditingTitle(false);
     setEditedTitle(selectedAlbum);
   }, [selectedAlbum]);
+
+  React.useEffect(() => {
+    if (showVisibilityModal) {
+      setVisibilityDraft({
+        published: isPublished,
+        show_on_homepage: isPublished ? showOnHomepage : false,
+        downloads_enabled: downloadsEnabled,
+      });
+    }
+  }, [showVisibilityModal, isPublished, showOnHomepage, downloadsEnabled]);
   
   // Focus input when editing starts
   React.useEffect(() => {
@@ -144,7 +162,35 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
     }
   };
 
+  const handleOpenVisibilityModal = () => {
+    setVisibilityDraft({
+      published: isPublished,
+      show_on_homepage: isPublished ? showOnHomepage : false,
+      downloads_enabled: downloadsEnabled,
+    });
+    setShowVisibilityModal(true);
+  };
+
+  const handleSaveVisibility = async () => {
+    setIsSavingVisibility(true);
+    try {
+      const success = await onUpdateVisibility(selectedAlbum, visibilityDraft);
+      if (success) {
+        setShowVisibilityModal(false);
+      }
+    } finally {
+      setIsSavingVisibility(false);
+    }
+  };
+
+  const visibilitySummary = [
+    isPublished ? t('albumsManager.published') : t('albumsManager.unpublished'),
+    showOnHomepage ? t('albumsManager.onHomepage') : t('albumsManager.notOnHomepage'),
+    downloadsEnabled ? t('albumsManager.downloadsEnabled') : t('albumsManager.downloadsDisabled'),
+  ].join(' · ');
+
   return (
+    <>
     <div className="photos-modal-header">
       {/* Title Bar */}
       <div className="photos-title-bar">
@@ -202,50 +248,17 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
         
         {/* Right: Toggles + close button */}
         <div className="photos-title-right">
-          {/* Mobile Toggle Stack: Homepage toggle above Publish toggle (hidden when editing title) */}
-          <div className={`mobile-toggles-stack ${isEditingTitle ? 'hidden-mobile' : ''}`}>
-            {/* Homepage Toggle (Mobile Only - vertical layout) */}
-            {canEdit && isPublished && (
-              <label className="toggle-switch-mobile-vertical homepage-toggle-mobile" onClick={(e) => e.stopPropagation()}>
-                <input
-                  type="checkbox"
-                  checked={showOnHomepage}
-                  onChange={() => onToggleHomepage(selectedAlbum, showOnHomepage)}
-                />
-                <span className="toggle-slider"></span>
-                <span className="toggle-label-below">
-                  {t('albumsManager.homepage')}
-                </span>
-              </label>
-            )}
-            
-            {/* Publish/Unpublish Toggle (Mobile Only - vertical layout) */}
-            {canEdit && !isInFolder ? (
-              <label className="toggle-switch-mobile-vertical publish-toggle-titlebar" onClick={(e) => e.stopPropagation()}>
-                <input
-                  type="checkbox"
-                  checked={isPublished}
-                  onChange={() => onTogglePublished(selectedAlbum, isPublished)}
-                />
-                <span className="toggle-slider"></span>
-                <span className="toggle-label-below">
-                  {isPublished ? t('albumsManager.published') : t('albumsManager.unpublished')}
-                </span>
-              </label>
-            ) : (
-              <span className="photos-status-badge publish-toggle-titlebar" style={{
-                padding: '0.5rem 0.75rem',
-                borderRadius: '6px',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                background: isPublished ? 'rgba(34, 197, 94, 0.2)' : 'rgba(251, 191, 36, 0.2)',
-                color: isPublished ? '#4ade80' : '#fbbf24',
-                border: isPublished ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(251, 191, 36, 0.3)',
-              }}>
-                {isPublished ? t('albumsManager.published') : t('albumsManager.unpublished')}
-              </span>
-            )}
-          </div>
+          {canEdit && (
+            <button
+              type="button"
+              className={`photos-btn photos-btn-secondary visibility-button-mobile ${isEditingTitle ? 'hidden-mobile' : ''}`}
+              onClick={handleOpenVisibilityModal}
+              title={t('albumsManager.visibilitySettings')}
+            >
+              <EyeIcon width="16" height="16" />
+              <span>{t('albumsManager.visibility')}</span>
+            </button>
+          )}
           
           <button 
             onClick={onClose} 
@@ -333,53 +346,125 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
         </div>
 
         <div className="photos-controls-right">
-          {/* Homepage Toggle (Desktop Only - full toggle with text) */}
-          {canEdit && isPublished && (
-            <label className="toggle-switch compact homepage-toggle-desktop" onClick={(e) => e.stopPropagation()} style={{ marginRight: '0.75rem' }}>
-              <span className="toggle-label">
-                {showOnHomepage ? t('albumsManager.onHomepage') : t('albumsManager.notOnHomepage')}
-              </span>
-              <input
-                type="checkbox"
-                checked={showOnHomepage}
-                onChange={() => onToggleHomepage(selectedAlbum, showOnHomepage)}
-              />
-              <span className="toggle-slider"></span>
-            </label>
-          )}
-          
-          {/* Publish/Unpublish Toggle (Desktop Only - shown on wide screens) */}
-          {canEdit && !isInFolder ? (
-            <label className="toggle-switch compact publish-toggle-controlbar" onClick={(e) => e.stopPropagation()}>
-              <span className="toggle-label">
-                {isPublished ? t('albumsManager.published') : t('albumsManager.unpublished')}
-              </span>
-              <input
-                type="checkbox"
-                checked={isPublished}
-                onChange={() => onTogglePublished(selectedAlbum, isPublished)}
-              />
-              <span className="toggle-slider"></span>
-            </label>
-          ) : (
-            <span className="photos-status-badge publish-toggle-controlbar" style={{
-              padding: '0.5rem 0.75rem',
-              borderRadius: '6px',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              background: isPublished ? 'rgba(34, 197, 94, 0.2)' : 'rgba(251, 191, 36, 0.2)',
-              color: isPublished ? '#4ade80' : '#fbbf24',
-              border: isPublished ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(251, 191, 36, 0.3)',
-            }}>
-              {isPublished ? t('albumsManager.published') : t('albumsManager.unpublished')}
-            </span>
+          {canEdit && (
+            <button
+              type="button"
+              className="photos-btn photos-btn-secondary visibility-button-desktop"
+              onClick={handleOpenVisibilityModal}
+              title={visibilitySummary}
+            >
+              <EyeIcon width="16" height="16" />
+              <span>{t('albumsManager.visibility')}</span>
+            </button>
           )}
         </div>
       </div>
 
     </div>
+    {showVisibilityModal && (
+      <div
+        className="edit-title-modal"
+        onClick={() => setShowVisibilityModal(false)}
+      >
+        <div className="edit-modal visibility-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="edit-modal-header">
+            <h3>{t('albumsManager.visibilitySettings')}</h3>
+            <button
+              className="modal-close-btn"
+              onClick={() => setShowVisibilityModal(false)}
+              title={t('common.close')}
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="edit-modal-body visibility-modal-body">
+            <label className={`visibility-option ${isInFolder ? 'disabled' : ''}`}>
+              <span>
+                <span className="visibility-option-title">{t('albumsManager.published')}</span>
+                <span className="visibility-option-description">
+                  {isInFolder ? t('albumsManager.folderControlsPublished') : t('albumsManager.publishedVisibilityDescription')}
+                </span>
+              </span>
+              <span className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={visibilityDraft.published}
+                  disabled={isInFolder}
+                  onChange={(e) => {
+                    const published = e.target.checked;
+                    setVisibilityDraft(prev => ({
+                      ...prev,
+                      published,
+                      show_on_homepage: published ? prev.show_on_homepage : false,
+                    }));
+                  }}
+                />
+                <span className="toggle-slider"></span>
+              </span>
+            </label>
+
+            <label className={`visibility-option ${!visibilityDraft.published ? 'disabled' : ''}`}>
+              <span>
+                <span className="visibility-option-title">{t('albumsManager.onHomepage')}</span>
+                <span className="visibility-option-description">{t('albumsManager.homepageVisibilityDescription')}</span>
+              </span>
+              <span className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={visibilityDraft.show_on_homepage}
+                  disabled={!visibilityDraft.published}
+                  onChange={(e) => setVisibilityDraft(prev => ({
+                    ...prev,
+                    show_on_homepage: e.target.checked,
+                  }))}
+                />
+                <span className="toggle-slider"></span>
+              </span>
+            </label>
+
+            <label className="visibility-option">
+              <span>
+                <span className="visibility-option-title">{t('albumsManager.downloadsEnabled')}</span>
+                <span className="visibility-option-description">{t('albumsManager.downloadsVisibilityDescription')}</span>
+              </span>
+              <span className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={visibilityDraft.downloads_enabled}
+                  onChange={(e) => setVisibilityDraft(prev => ({
+                    ...prev,
+                    downloads_enabled: e.target.checked,
+                  }))}
+                />
+                <span className="toggle-slider"></span>
+              </span>
+            </label>
+          </div>
+
+          <div className="edit-modal-footer">
+            <button
+              type="button"
+              className="photos-btn photos-btn-ghost"
+              onClick={() => setShowVisibilityModal(false)}
+              disabled={isSavingVisibility}
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="button"
+              className="photos-btn photos-btn-success"
+              onClick={handleSaveVisibility}
+              disabled={isSavingVisibility}
+            >
+              {isSavingVisibility ? t('common.saving') : t('common.save')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 
 export default AlbumContentPanelHeader;
-

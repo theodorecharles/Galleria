@@ -846,7 +846,6 @@ const AlbumsManager: React.FC<AlbumsManagerProps> = ({
               isDragging={isDragging}
               isShuffling={isShuffling}
               localAlbums={localAlbums}
-              localFolders={localFolders}
               deletingPhotoId={deletingPhotoId}
               onClose={deselectAlbum}
               setCloseHandler={setAlbumContentPanelCloseHandler}
@@ -857,8 +856,7 @@ const AlbumsManager: React.FC<AlbumsManagerProps> = ({
                 setShareAlbumName(albumName);
                 setShowShareModal(true);
               }}
-              onTogglePublished={albumHandlers.handleTogglePublished}
-              onToggleHomepage={albumHandlers.handleToggleHomepage}
+              onUpdateVisibility={albumHandlers.handleUpdateVisibility}
               onPreviewAlbum={(albumName) => {
                 window.open(`/album/${encodeURIComponent(albumName)}`, '_blank');
               }}
@@ -951,4 +949,3 @@ const AlbumsManager: React.FC<AlbumsManagerProps> = ({
 };
 
 export default AlbumsManager;
-

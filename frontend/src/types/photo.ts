@@ -15,6 +15,7 @@ export interface Photo {
   description?: string;
   album: string;
   media_type?: 'photo' | 'video';
+  downloads_enabled?: boolean;
   metadata?: {
     created: string;
     modified: string;
@@ -37,4 +38,3 @@ export interface ImageDimensions {
     height: number;
   };
 }
-

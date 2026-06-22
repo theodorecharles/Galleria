@@ -636,6 +636,11 @@ const checkAlbumPublishedMiddleware = (
       res.status(403).json({ error: "Access denied" });
       return;
     }
+
+    if (pathParts[0] === "download" && !albumState.downloads_enabled && !isAuthenticated) {
+      res.status(403).json({ error: "Downloads disabled" });
+      return;
+    }
   }
   
   next();

@@ -38,6 +38,7 @@ const ModalControls: React.FC<ModalControlsProps> = ({
   style,
 }) => {
   const { t } = useTranslation();
+  const canDownload = !isVideo && selectedPhoto.downloads_enabled !== false && Boolean(selectedPhoto.download);
   
   return (
     <div
@@ -71,7 +72,7 @@ const ModalControls: React.FC<ModalControlsProps> = ({
         </button>
 
         {/* Download button - hidden for videos */}
-        {!isVideo && (
+        {canDownload && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -113,4 +114,3 @@ const ModalControls: React.FC<ModalControlsProps> = ({
 };
 
 export default ModalControls;
-

@@ -1894,6 +1894,51 @@
   background: rgba(0, 0, 0, 0.5);
 }
 
+.visibility-modal {
+  max-width: 560px;
+}
+
+.visibility-modal-body {
+  padding-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.visibility-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.visibility-option.disabled {
+  opacity: 0.65;
+}
+
+.visibility-option-title {
+  display: block;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.visibility-option-description {
+  display: block;
+  margin-top: 0.25rem;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.visibility-option .toggle-switch {
+  flex: 0 0 auto;
+}
+
 .edit-modal-footer {
   display: flex;
   justify-content: flex-end;
@@ -3079,4 +3124,3 @@ body.dragging .ghost-folder-tile {
   border-radius: 2px;
   transition: width 0.3s ease;
 }
-

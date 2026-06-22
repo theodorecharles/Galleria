@@ -24,6 +24,7 @@ import {
   deleteAlbumState,
   setAlbumPublished,
   setAlbumShowOnHomepage,
+  setAlbumVisibility,
   updateImageSortOrder,
   saveImageMetadata,
   updateAlbumSortOrder,
@@ -71,6 +72,25 @@ async function notifyAllAdmins(title: string, body: string, tag: string, notific
   } catch (err) {
     error('[AlbumManagement] Failed to send admin notification:', err);
   }
+}
+
+async function regenerateAlbumVisibilityAssets(appRoot: string, logPrefix: string): Promise<void> {
+  info(`[${logPrefix}] Regenerating static JSON files...`);
+  const result = await generateStaticJSONFiles(appRoot);
+  if (result.success) {
+    info(`[${logPrefix}] Static JSON regenerated (${result.albumCount} albums)`);
+  } else {
+    error(`[${logPrefix}] Failed to regenerate static JSON:`, result.error);
+  }
+
+  const htmlResult = await generateHomepageHTML(appRoot);
+  if (htmlResult.success) {
+    info(`[${logPrefix}] Homepage HTML regenerated`);
+  } else {
+    error(`[${logPrefix}] Failed to regenerate homepage HTML:`, htmlResult.error);
+  }
+
+  invalidateAlbumCache();
 }
 
 /**
@@ -1347,6 +1367,140 @@ router.patch("/:album/publish", requireManager, async (req: Request, res: Respon
 });
 
 /**
+ * Update album visibility settings
+ */
+router.patch("/:album/visibility", requireManager, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { album } = req.params;
+    const { published, showOnHomepage, downloadsEnabled } = req.body;
+
+    const sanitizedAlbum = sanitizeName(album);
+    if (!sanitizedAlbum) {
+      res.status(400).json({ error: 'Invalid album name' });
+      return;
+    }
+
+    if (typeof published !== 'boolean') {
+      res.status(400).json({ error: 'Published state must be a boolean' });
+      return;
+    }
+
+    if (typeof showOnHomepage !== 'boolean') {
+      res.status(400).json({ error: 'Show on homepage state must be a boolean' });
+      return;
+    }
+
+    if (typeof downloadsEnabled !== 'boolean') {
+      res.status(400).json({ error: 'Downloads enabled state must be a boolean' });
+      return;
+    }
+
+    const photosDir = req.app.get("photosDir");
+    const albumPath = path.join(photosDir, sanitizedAlbum);
+
+    if (!fs.existsSync(albumPath)) {
+      res.status(404).json({ error: 'Album not found' });
+      return;
+    }
+
+    let albumState = getAlbumState(sanitizedAlbum);
+    if (!albumState) {
+      saveAlbum(sanitizedAlbum, published);
+      albumState = getAlbumState(sanitizedAlbum);
+    }
+
+    if (!albumState) {
+      res.status(404).json({ error: 'Album not found in database' });
+      return;
+    }
+
+    const normalizedShowOnHomepage = published ? showOnHomepage : false;
+    const changed =
+      albumState.published !== published ||
+      albumState.show_on_homepage !== normalizedShowOnHomepage ||
+      albumState.downloads_enabled !== downloadsEnabled;
+
+    const success = setAlbumVisibility(sanitizedAlbum, {
+      published,
+      show_on_homepage: normalizedShowOnHomepage,
+      downloads_enabled: downloadsEnabled
+    });
+
+    if (!success) {
+      error(`[AlbumManagement] Failed to update visibility for "${sanitizedAlbum}"`);
+      res.status(500).json({ error: 'Failed to update album visibility' });
+      return;
+    }
+
+    info(
+      `[AlbumManagement] Set album "${sanitizedAlbum}" visibility: ` +
+      `published=${published}, show_on_homepage=${normalizedShowOnHomepage}, downloads_enabled=${downloadsEnabled}`
+    );
+
+    const userName = (req.user as any).name || (req.user as any).email;
+
+    if (albumState.published !== published) {
+      if (published) {
+        await notifyAllAdmins(
+          'notifications.backend.albumPublishedTitle',
+          'notifications.backend.albumPublishedBody',
+          'album-published',
+          'albumPublished',
+          {
+            albumName: sanitizedAlbum,
+            publishedBy: userName
+          }
+        ).catch(err => error('[AlbumManagement] Failed to send album publish notification:', err));
+      } else {
+        await notifyAllAdmins(
+          'notifications.backend.albumUnpublishedTitle',
+          'notifications.backend.albumUnpublishedBody',
+          'album-unpublished',
+          'albumUnpublished',
+          {
+            albumName: sanitizedAlbum,
+            unpublishedBy: userName
+          }
+        ).catch(err => error('[AlbumManagement] Failed to send album unpublish notification:', err));
+      }
+    }
+
+    if (albumState.show_on_homepage !== normalizedShowOnHomepage) {
+      const action = normalizedShowOnHomepage ? 'added' : 'removed';
+      const preposition = normalizedShowOnHomepage ? 'to' : 'from';
+      await notifyAllAdmins(
+        'notifications.backend.homepageUpdatedTitle',
+        'notifications.backend.homepageUpdatedBody',
+        'homepage-updated',
+        'homepageUpdated',
+        {
+          updatedBy: userName,
+          albumName: sanitizedAlbum,
+          action,
+          preposition
+        }
+      ).catch(err => error('[AlbumManagement] Failed to send homepage update notification:', err));
+    }
+
+    if (changed) {
+      const appRoot = req.app.get('appRoot');
+      await regenerateAlbumVisibilityAssets(appRoot, 'Visibility');
+    }
+
+    res.json({
+      success: true,
+      album: sanitizedAlbum,
+      published,
+      showOnHomepage: normalizedShowOnHomepage,
+      downloadsEnabled
+    });
+  } catch (err) {
+    error('[AlbumManagement] Failed to update album visibility:', err);
+    res.status(500).json({ error: 'Failed to update album visibility' });
+  }
+});
+
+/**
  * Toggle album show_on_homepage state
  */
 router.patch("/:album/show-on-homepage", requireManager, async (req: Request, res: Response): Promise<void> => {
@@ -1918,4 +2072,3 @@ router.post('/:albumName/video/:filename/update-thumbnail', requireManager, asyn
 });
 
 export default router;
-
