@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "✗ サムネイルのアップロードに失敗しました",
     "pleaseSelectImageFile": "✗ 画像ファイルを選択してください",
     "unableToLoadVideo": "サムネイル選択のためのビデオを読み込めません。ビデオはまだ処理中かもしれません。",
-    "uploadThumbnail": "サムネイルをアップロード"
+    "uploadThumbnail": "サムネイルをアップロード",
+    "visibility": "表示",
+    "visibilitySettings": "表示設定",
+    "visibilityUpdated": "\"{{albumName}}\" の表示設定が保存されました",
+    "downloadsEnabled": "ダウンロード有効",
+    "downloadsDisabled": "ダウンロード無効",
+    "publishedVisibilityDescription": "このアルバムを公開ギャラリーに表示します。",
+    "folderControlsPublished": "このアルバムはフォルダーから公開ステータスを継承します。",
+    "homepageVisibilityDescription": "このアルバムの写真をホームページに含めます。",
+    "downloadsVisibilityDescription": "訪問者がこのアルバムからフルサイズの最適化された写真をダウンロードできるようにします。"
   },
   "settings": {
     "saved": "{{section}}設定が保存されました！",

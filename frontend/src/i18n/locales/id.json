@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "✗ Gagal mengunggah thumbnail",
     "pleaseSelectImageFile": "✗ Silakan pilih file gambar",
     "unableToLoadVideo": "Tidak dapat memuat video untuk pemilihan thumbnail. Video mungkin masih dalam proses.",
-    "uploadThumbnail": "Unggah Thumbnail"
+    "uploadThumbnail": "Unggah Thumbnail",
+    "visibility": "Visibilitas",
+    "visibilitySettings": "Pengaturan Visibilitas",
+    "visibilityUpdated": "Pengaturan visibilitas disimpan untuk \"{{albumName}}\"",
+    "downloadsEnabled": "Unduhan Diaktifkan",
+    "downloadsDisabled": "Unduhan Dinonaktifkan",
+    "publishedVisibilityDescription": "Tampilkan album ini di galeri publik.",
+    "folderControlsPublished": "Album ini mewarisi status publikasi dari foldernya.",
+    "homepageVisibilityDescription": "Sertakan foto album ini di beranda.",
+    "downloadsVisibilityDescription": "Izinkan pengunjung mengunduh foto berukuran penuh yang dioptimalkan dari album ini."
   },
   "settings": {
     "saved": "Pengaturan {{section}} disimpan!",

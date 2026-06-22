@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "✗ Fehler beim Hochladen des Thumbnails",
     "pleaseSelectImageFile": "✗ Bitte wählen Sie eine Bilddatei aus",
     "unableToLoadVideo": "Video kann für die Thumbnail-Auswahl nicht geladen werden. Das Video wird möglicherweise noch verarbeitet.",
-    "uploadThumbnail": "Thumbnail hochladen"
+    "uploadThumbnail": "Thumbnail hochladen",
+    "visibility": "Sichtbarkeit",
+    "visibilitySettings": "Sichtbarkeitseinstellungen",
+    "visibilityUpdated": "Sichtbarkeitseinstellungen für \"{{albumName}}\" gespeichert",
+    "downloadsEnabled": "Downloads aktiviert",
+    "downloadsDisabled": "Downloads deaktiviert",
+    "publishedVisibilityDescription": "Dieses Album in der öffentlichen Galerie anzeigen.",
+    "folderControlsPublished": "Dieses Album übernimmt den Veröffentlichungsstatus von seinem Ordner.",
+    "homepageVisibilityDescription": "Fotos dieses Albums auf der Startseite einbeziehen.",
+    "downloadsVisibilityDescription": "Besuchern erlauben, optimierte Fotos in voller Größe aus diesem Album herunterzuladen."
   },
   "settings": {
     "saved": "{{section}} Einstellungen gespeichert!",

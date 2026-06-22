@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "Албумите в непубликувани папки винаги са частни",
     "moveToFolderTitle": "Преместете \"{{albumName}}\" в папка",
     "moveToFolderHint": "Изберете целева папка или изберете Некатегоризирани, за да премахнете от всяка папка.",
-    "currentFolder": "Текущо"
+    "currentFolder": "Текущо",
+    "visibility": "Видимост",
+    "visibilitySettings": "Настройки за видимост",
+    "visibilityUpdated": "Настройките за видимост са запазени за \"{{albumName}}\"",
+    "downloadsEnabled": "Изтеглянията са разрешени",
+    "downloadsDisabled": "Изтеглянията са забранени",
+    "publishedVisibilityDescription": "Показване на този албум в публичната галерия.",
+    "folderControlsPublished": "Този албум наследява статуса на публикуване от своята папка.",
+    "homepageVisibilityDescription": "Включване на снимките от този албум на началната страница.",
+    "downloadsVisibilityDescription": "Позволяване на посетителите да изтеглят оптимизирани снимки в пълен размер от този албум."
   },
   "settings": {
     "saved": "Настройките на {{section}} са запазени!",

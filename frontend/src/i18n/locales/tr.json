@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "✗ Küçük resmi yükleme başarısız oldu",
     "pleaseSelectImageFile": "✗ Lütfen bir resim dosyası seçin",
     "unableToLoadVideo": "Küçük resim seçimi için video yüklenemedi. Video hala işleniyor olabilir.",
-    "uploadThumbnail": "Küçük Resim Yükle"
+    "uploadThumbnail": "Küçük Resim Yükle",
+    "visibility": "Görünürlük",
+    "visibilitySettings": "Görünürlük Ayarları",
+    "visibilityUpdated": "\"{{albumName}}\" için görünürlük ayarları kaydedildi",
+    "downloadsEnabled": "İndirmeler Etkin",
+    "downloadsDisabled": "İndirmeler Devre Dışı",
+    "publishedVisibilityDescription": "Bu albümü genel galeride göster.",
+    "folderControlsPublished": "Bu albüm, klasöründen yayımlanma durumunu devralır.",
+    "homepageVisibilityDescription": "Bu albümün fotoğraflarını ana sayfada göster.",
+    "downloadsVisibilityDescription": "Ziyaretçilerin bu albümden tam boyutlu optimize edilmiş fotoğrafları indirmesine izin ver."
   },
   "settings": {
     "saved": "{{section}} ayarları kaydedildi!",

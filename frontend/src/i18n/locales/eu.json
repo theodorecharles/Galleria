@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "Argitaratu gabeko karpetetan dauden albumak beti pribatuak dira",
     "moveToFolderTitle": "Mugitu \"{{albumName}}\" Karpeta batera",
     "moveToFolderHint": "Hautatu helmuga-karpeta bat edo aukeratu Kategoritzatu gabe edozein karpetatik kentzeko.",
-    "currentFolder": "Unekoa"
+    "currentFolder": "Unekoa",
+    "visibility": "Ikusgarritasuna",
+    "visibilitySettings": "Ikusgarritasun Ezarpenak",
+    "visibilityUpdated": "Ikusgarritasun ezarpenak \"{{albumName}}\" albumarentzat gorde dira",
+    "downloadsEnabled": "Deskargak Gaituta",
+    "downloadsDisabled": "Deskargak Desgaituta",
+    "publishedVisibilityDescription": "Erakutsi album hau galeria publikoan.",
+    "folderControlsPublished": "Album honek bere karpetatik argitaratutako egoera heredatzen du.",
+    "homepageVisibilityDescription": "Sartu album honen argazkiak hasierako orrian.",
+    "downloadsVisibilityDescription": "Baimendu bisitariei album honetako tamaina osoko argazki optimizatuak deskargatzea."
   },
   "settings": {
     "saved": "{{section}} ezarpenak gorde dira!",

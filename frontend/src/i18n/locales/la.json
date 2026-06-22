@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "Albuma in folders non publicatis semper privata sunt",
     "moveToFolderTitle": "Move \"{{albumName}}\" ad Folder",
     "moveToFolderHint": "Selecte destinationem folder vel elige Non Categorized ad removendum ex quolibet folder.",
-    "currentFolder": "Currentis"
+    "currentFolder": "Currentis",
+    "visibility": "Visibilitas",
+    "visibilitySettings": "Visibilitas Occasus",
+    "visibilityUpdated": "Visibilitas occasus servati pro \"{{albumName}}\"",
+    "downloadsEnabled": "Download Permissi",
+    "downloadsDisabled": "Download Prohibiti",
+    "publishedVisibilityDescription": "Ostende hoc album in galeria publica.",
+    "folderControlsPublished": "Hoc album statum editum a sua folder accipit.",
+    "homepageVisibilityDescription": "Include huius album imagines in pagina domestica.",
+    "downloadsVisibilityDescription": "Permitte visitatores ad plenas magnitudines optimizatas imagines ex hoc album detrahere."
   },
   "settings": {
     "saved": "{{section}} configurationes servatae!",

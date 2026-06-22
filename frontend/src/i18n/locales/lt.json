@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "Albumai nepublikuotuose kataloguose visada yra privatūs",
     "moveToFolderTitle": "Perkelti \"{{albumName}}\" į katalogą",
     "moveToFolderHint": "Pasirinkite paskirties katalogą arba pasirinkite Nekategorizuota, kad pašalintumėte iš bet kurio katalogo.",
-    "currentFolder": "Dabartinis"
+    "currentFolder": "Dabartinis",
+    "visibility": "Matomumas",
+    "visibilitySettings": "Matomumo nustatymai",
+    "visibilityUpdated": "Matomumo nustatymai išsaugoti \"{{albumName}}\"",
+    "downloadsEnabled": "Atsisiuntimai įjungti",
+    "downloadsDisabled": "Atsisiuntimai išjungti",
+    "publishedVisibilityDescription": "Rodyti šį albumą viešojoje galerijoje.",
+    "folderControlsPublished": "Šis albumas paveldi paskelbtą būseną iš savo aplanko.",
+    "homepageVisibilityDescription": "Įtraukti šio albumo nuotraukas į pagrindinį puslapį.",
+    "downloadsVisibilityDescription": "Leisti lankytojams atsisiųsti viso dydžio optimizuotas nuotraukas iš šio albumo."
   },
   "settings": {
     "saved": "{{section}} nustatymai išsaugoti!",

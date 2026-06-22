@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "✗ Încărcarea miniaturii a eșuat",
     "pleaseSelectImageFile": "✗ Te rugăm să selectezi un fișier imagine",
     "unableToLoadVideo": "Imposibil de încărcat video pentru selecția miniaturii. Video-ul poate fi încă în procesare.",
-    "uploadThumbnail": "Încărcați miniatura"
+    "uploadThumbnail": "Încărcați miniatura",
+    "visibility": "Vizibilitate",
+    "visibilitySettings": "Setări de vizibilitate",
+    "visibilityUpdated": "Setările de vizibilitate au fost salvate pentru \"{{albumName}}\"",
+    "downloadsEnabled": "Descărcări activate",
+    "downloadsDisabled": "Descărcări dezactivate",
+    "publishedVisibilityDescription": "Afișează acest album în galeria publică.",
+    "folderControlsPublished": "Acest album moștenește statutul publicat de la dosarul său.",
+    "homepageVisibilityDescription": "Include fotografiile acestui album pe pagina principală.",
+    "downloadsVisibilityDescription": "Permite vizitatorilor să descarce fotografii optimizate la dimensiune completă din acest album."
   },
   "settings": {
     "saved": "Setările {{section}} au fost salvate!",

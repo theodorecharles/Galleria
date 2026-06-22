@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "✗ 无法上传缩略图",
     "pleaseSelectImageFile": "✗ 请选择一个图像文件",
     "unableToLoadVideo": "无法加载视频以进行缩略图选择。视频可能仍在处理中。",
-    "uploadThumbnail": "上传缩略图"
+    "uploadThumbnail": "上传缩略图",
+    "visibility": "可见性",
+    "visibilitySettings": "可见性设置",
+    "visibilityUpdated": "\"{{albumName}}\" 的可见性设置已保存",
+    "downloadsEnabled": "启用下载",
+    "downloadsDisabled": "禁用下载",
+    "publishedVisibilityDescription": "在公共画廊中显示此相册。",
+    "folderControlsPublished": "此相册继承其文件夹的发布状态。",
+    "homepageVisibilityDescription": "在主页上包含此相册的照片。",
+    "downloadsVisibilityDescription": "允许访客从此相册下载全尺寸优化照片。"
   },
   "settings": {
     "saved": "{{section}} 设置已保存！",

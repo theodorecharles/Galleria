@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "✗ Misslyckades med att ladda upp miniatyrbild",
     "pleaseSelectImageFile": "✗ Vänligen välj en bildfil",
     "unableToLoadVideo": "Kunde inte ladda videon för miniatyrval. Videon kan fortfarande bearbetas.",
-    "uploadThumbnail": "Ladda upp miniatyrbild"
+    "uploadThumbnail": "Ladda upp miniatyrbild",
+    "visibility": "Synlighet",
+    "visibilitySettings": "Synlighetsinställningar",
+    "visibilityUpdated": "Synlighetsinställningar sparade för \"{{albumName}}\"",
+    "downloadsEnabled": "Nedladdningar aktiverade",
+    "downloadsDisabled": "Nedladdningar inaktiverade",
+    "publishedVisibilityDescription": "Visa detta album i det offentliga galleriet.",
+    "folderControlsPublished": "Detta album ärver publiceringsstatus från sin mapp.",
+    "homepageVisibilityDescription": "Inkludera detta albums foton på hemsidan.",
+    "downloadsVisibilityDescription": "Tillåt besökare att ladda ner fullstora optimerade foton från detta album."
   },
   "settings": {
     "saved": "{{section}} inställningar sparade!",

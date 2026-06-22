@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "Els àlbums en carpetes no publicades sempre són privats",
     "moveToFolderTitle": "Mou \"{{albumName}}\" a la carpeta",
     "moveToFolderHint": "Seleccioneu una carpeta de destinació o trieu Sense categoritzar per eliminar de qualsevol carpeta.",
-    "currentFolder": "Actual"
+    "currentFolder": "Actual",
+    "visibility": "Visibilitat",
+    "visibilitySettings": "Configuració de visibilitat",
+    "visibilityUpdated": "Configuració de visibilitat guardada per a \"{{albumName}}\"",
+    "downloadsEnabled": "Descàrregues habilitades",
+    "downloadsDisabled": "Descàrregues deshabilitades",
+    "publishedVisibilityDescription": "Mostra aquest àlbum a la galeria pública.",
+    "folderControlsPublished": "Aquest àlbum hereta l'estat de publicació de la seva carpeta.",
+    "homepageVisibilityDescription": "Inclou les fotos d'aquest àlbum a la pàgina d'inici.",
+    "downloadsVisibilityDescription": "Permet als visitants descarregar fotos optimitzades a mida completa d'aquest àlbum."
   },
   "settings": {
     "saved": "Configuració de {{section}} desada!",

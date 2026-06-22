@@ -406,13 +406,6 @@
   padding: 0.5rem 0.75rem;
 }
 
-/* Buttons should expand to fill available space */
-.photos-controls-left .photos-btn,
-.photos-controls-right .photos-btn {
-  flex: 1;
-  min-width: 0;
-}
-
 .photos-action-buttons {
   display: flex;
   gap: 0.5rem;
@@ -685,6 +678,13 @@ label.photos-btn {
 
   .photos-controls-right {
     justify-content: stretch;
+  }
+
+  /* Buttons should expand to fill available space on mobile only */
+  .photos-controls-left .photos-btn,
+  .photos-controls-right .photos-btn {
+    flex: 1;
+    min-width: 0;
   }
   
   /* Hide empty controls-right on mobile (publish toggle moved to title bar) */

@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "Τα άλμπουμ σε μη δημοσιευμένους φακέλους είναι πάντα ιδιωτικά",
     "moveToFolderTitle": "Μετακίνηση του \"{{albumName}}\" σε Φάκελο",
     "moveToFolderHint": "Επιλέξτε έναν προορισμό φάκελο ή επιλέξτε Χωρίς Κατηγορία για να αφαιρέσετε από οποιονδήποτε φάκελο.",
-    "currentFolder": "Τρέχον"
+    "currentFolder": "Τρέχον",
+    "visibility": "Ορατότητα",
+    "visibilitySettings": "Ρυθμίσεις Ορατότητας",
+    "visibilityUpdated": "Οι ρυθμίσεις ορατότητας αποθηκεύτηκαν για το \"{{albumName}}\"",
+    "downloadsEnabled": "Λήψεις Ενεργοποιημένες",
+    "downloadsDisabled": "Λήψεις Απενεργοποιημένες",
+    "publishedVisibilityDescription": "Εμφάνιση αυτού του άλμπουμ στη δημόσια συλλογή.",
+    "folderControlsPublished": "Αυτό το άλμπουμ κληρονομεί την κατάσταση δημοσίευσης από τον φάκελό του.",
+    "homepageVisibilityDescription": "Συμπερίληψη των φωτογραφιών αυτού του άλμπουμ στην αρχική σελίδα.",
+    "downloadsVisibilityDescription": "Επιτρέψτε στους επισκέπτες να κατεβάσουν βελτιστοποιημένες φωτογραφίες πλήρους μεγέθους από αυτό το άλμπουμ."
   },
   "settings": {
     "saved": "Οι ρυθμίσεις του {{section}} αποθηκεύτηκαν!",

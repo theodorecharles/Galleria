@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "Альбоми в неопублікованих папках завжди приватні",
     "moveToFolderTitle": "Перемістити \"{{albumName}}\" до папки",
     "moveToFolderHint": "Виберіть папку призначення або виберіть Некатегоризовані, щоб видалити з будь-якої папки.",
-    "currentFolder": "Поточний"
+    "currentFolder": "Поточний",
+    "visibility": "Видимість",
+    "visibilitySettings": "Налаштування видимості",
+    "visibilityUpdated": "Налаштування видимості збережено для \"{{albumName}}\"",
+    "downloadsEnabled": "Завантаження увімкнено",
+    "downloadsDisabled": "Завантаження вимкнено",
+    "publishedVisibilityDescription": "Показати цей альбом у публічній галереї.",
+    "folderControlsPublished": "Цей альбом успадковує статус публікації від своєї папки.",
+    "homepageVisibilityDescription": "Включити фотографії цього альбому на головну сторінку.",
+    "downloadsVisibilityDescription": "Дозволити відвідувачам завантажувати оптимізовані фотографії повного розміру з цього альбому."
   },
   "settings": {
     "saved": "Налаштування {{section}} збережено!",

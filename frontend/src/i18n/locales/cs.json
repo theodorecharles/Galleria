@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "Alba v nepublikovaných složkách jsou vždy soukromá",
     "moveToFolderTitle": "Přesunout \"{{albumName}}\" do složky",
     "moveToFolderHint": "Vyberte cílovou složku nebo zvolte Nezařazené pro odstranění ze složky.",
-    "currentFolder": "Aktuální"
+    "currentFolder": "Aktuální",
+    "visibility": "Viditelnost",
+    "visibilitySettings": "Nastavení viditelnosti",
+    "visibilityUpdated": "Nastavení viditelnosti uloženo pro \"{{albumName}}\"",
+    "downloadsEnabled": "Stahování povoleno",
+    "downloadsDisabled": "Stahování zakázáno",
+    "publishedVisibilityDescription": "Zobrazit tento album ve veřejné galerii.",
+    "folderControlsPublished": "Tento album přebírá publikovaný stav ze své složky.",
+    "homepageVisibilityDescription": "Zahrnout fotografie tohoto alba na úvodní stránku.",
+    "downloadsVisibilityDescription": "Povolit návštěvníkům stahovat optimalizované fotografie v plné velikosti z tohoto alba."
   },
   "settings": {
     "saved": "Nastavení {{section}} bylo uloženo!",

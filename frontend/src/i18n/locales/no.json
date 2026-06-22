@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "✗ Mislyktes i å laste opp miniatyrbilde",
     "pleaseSelectImageFile": "✗ Vennligst velg en bildefil",
     "unableToLoadVideo": "Kan ikke laste inn video for valg av miniatyrbilde. Videoen kan fortsatt være under behandling.",
-    "uploadThumbnail": "Last opp miniatyrbilde"
+    "uploadThumbnail": "Last opp miniatyrbilde",
+    "visibility": "Synlighet",
+    "visibilitySettings": "Synlighetsinnstillinger",
+    "visibilityUpdated": "Synlighetsinnstillinger lagret for \"{{albumName}}\"",
+    "downloadsEnabled": "Nedlastinger aktivert",
+    "downloadsDisabled": "Nedlastinger deaktivert",
+    "publishedVisibilityDescription": "Vis dette albumet i det offentlige galleriet.",
+    "folderControlsPublished": "Dette albumet arver publisert status fra mappen sin.",
+    "homepageVisibilityDescription": "Inkluder dette albumets bilder på hjemmesiden.",
+    "downloadsVisibilityDescription": "Tillat besøkende å laste ned fullstørrelse optimaliserte bilder fra dette albumet."
   },
   "settings": {
     "saved": "{{section}} innstillinger lagret!",

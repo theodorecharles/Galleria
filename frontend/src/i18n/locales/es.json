@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "✗ Error al subir la miniatura",
     "pleaseSelectImageFile": "✗ Por favor, selecciona un archivo de imagen",
     "unableToLoadVideo": "No se puede cargar el video para la selección de miniatura. El video puede estar aún en procesamiento.",
-    "uploadThumbnail": "Subir miniatura"
+    "uploadThumbnail": "Subir miniatura",
+    "visibility": "Visibilidad",
+    "visibilitySettings": "Configuración de visibilidad",
+    "visibilityUpdated": "Configuración de visibilidad guardada para \"{{albumName}}\"",
+    "downloadsEnabled": "Descargas habilitadas",
+    "downloadsDisabled": "Descargas deshabilitadas",
+    "publishedVisibilityDescription": "Mostrar este álbum en la galería pública.",
+    "folderControlsPublished": "Este álbum hereda el estado publicado de su carpeta.",
+    "homepageVisibilityDescription": "Incluir las fotos de este álbum en la página de inicio.",
+    "downloadsVisibilityDescription": "Permitir a los visitantes descargar fotos optimizadas en tamaño completo de este álbum."
   },
   "settings": {
     "saved": "¡Configuración de {{section}} guardada!",

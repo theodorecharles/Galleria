@@ -249,7 +249,7 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
               onClick={handleOpenVisibilityModal}
               title={t('albumsManager.visibilitySettings')}
             >
-              <EyeIcon width="16" height="16" />
+              <EyeIcon width="16" height="16" isSlashed={!isPublished} />
               <span>{t('albumsManager.visibility')}</span>
             </button>
           )}

@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "Julkaisemattomat kansiot sisältävät aina yksityisiä albumeja",
     "moveToFolderTitle": "Siirrä \"{{albumName}}\" kansioon",
     "moveToFolderHint": "Valitse kohdekansio tai valitse Luokittelematon poistaaksesi mistä tahansa kansiosta.",
-    "currentFolder": "Nykyinen"
+    "currentFolder": "Nykyinen",
+    "visibility": "Näkyvyys",
+    "visibilitySettings": "Näkyvyysasetukset",
+    "visibilityUpdated": "Näkyvyysasetukset tallennettu \"{{albumName}}\"",
+    "downloadsEnabled": "Lataukset käytössä",
+    "downloadsDisabled": "Lataukset pois käytöstä",
+    "publishedVisibilityDescription": "Näytä tämä albumi julkisessa galleriassa.",
+    "folderControlsPublished": "Tämä albumi perii julkaistun tilan kansiostaan.",
+    "homepageVisibilityDescription": "Sisällytä tämän albumin valokuvat etusivulle.",
+    "downloadsVisibilityDescription": "Salli vierailijoiden ladata täysikokoisia optimoituja valokuvia tästä albumista."
   },
   "settings": {
     "saved": "{{section}} asetukset tallennettu!",

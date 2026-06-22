@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "✗ Не удалось загрузить миниатюру",
     "pleaseSelectImageFile": "✗ Пожалуйста, выберите файл изображения",
     "unableToLoadVideo": "Не удалось загрузить видео для выбора миниатюры. Видео может все еще обрабатываться.",
-    "uploadThumbnail": "Загрузить миниатюру"
+    "uploadThumbnail": "Загрузить миниатюру",
+    "visibility": "Видимость",
+    "visibilitySettings": "Настройки видимости",
+    "visibilityUpdated": "Настройки видимости сохранены для \"{{albumName}}\"",
+    "downloadsEnabled": "Загрузки включены",
+    "downloadsDisabled": "Загрузки отключены",
+    "publishedVisibilityDescription": "Показать этот альбом в публичной галерее.",
+    "folderControlsPublished": "Этот альбом наследует статус публикации от своей папки.",
+    "homepageVisibilityDescription": "Включить фотографии этого альбома на главной странице.",
+    "downloadsVisibilityDescription": "Разрешить посетителям загружать полноразмерные оптимизированные фотографии из этого альбома."
   },
   "settings": {
     "saved": "Настройки {{section}} сохранены!",
