@@ -274,9 +274,9 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
 
           {canEdit && (
             <>
-              <label 
+              <label
                 className={`photos-btn photos-btn-primary ${hasActiveUploads ? 'disabled' : ''}`}
-                style={{ 
+                style={{
                   cursor: hasActiveUploads ? 'not-allowed' : 'pointer',
                   opacity: hasActiveUploads ? 0.6 : 1
                 }}
@@ -323,19 +323,23 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
                   </button>
                 </>
               )}
-
-              <button
-                type="button"
-                className="photos-btn photos-btn-secondary visibility-button-action"
-                onClick={handleOpenVisibilityModal}
-                title={t('albumsManager.visibilitySettings')}
-              >
-                <EyeIcon width="16" height="16" isSlashed={!isPublished} />
-                <span>{t('albumsManager.visibility')}</span>
-              </button>
             </>
           )}
         </div>
+
+        {canEdit && (
+          <div className="photos-controls-right">
+            <button
+              type="button"
+              className="photos-btn photos-btn-secondary visibility-button-action"
+              onClick={handleOpenVisibilityModal}
+              title={t('albumsManager.visibilitySettings')}
+            >
+              <EyeIcon width="16" height="16" isSlashed={!isPublished} />
+              <span>{t('albumsManager.visibility')}</span>
+            </button>
+          </div>
+        )}
 
       </div>
 
