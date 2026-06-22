@@ -378,7 +378,7 @@
 /* Controls Bar */
 .photos-controls-bar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   padding: 1rem 1.5rem;
   gap: 1rem;
@@ -390,7 +390,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex: 1;
+  flex: 0 1 auto;
 }
 
 .photos-controls-right {
@@ -398,7 +398,7 @@
 }
 
 .visibility-button-action {
-  margin-left: auto;
+  margin-left: 1rem;
 }
 
 .photos-action-buttons {
@@ -669,6 +669,7 @@ label.photos-btn {
   .photos-controls-right {
     width: 100%;
     flex-wrap: wrap;
+    flex: 1;
   }
 
   .photos-controls-right {
@@ -680,6 +681,10 @@ label.photos-btn {
   .photos-controls-right .photos-btn {
     flex: 1;
     min-width: 0;
+  }
+
+  .visibility-button-action {
+    margin-left: 0;
   }
   
   /* Hide empty controls-right on mobile (publish toggle moved to title bar) */
