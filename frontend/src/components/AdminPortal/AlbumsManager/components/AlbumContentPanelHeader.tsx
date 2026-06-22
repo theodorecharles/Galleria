@@ -242,18 +242,6 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
         
         {/* Right: Toggles + close button */}
         <div className="photos-title-right">
-          {canEdit && (
-            <button
-              type="button"
-              className={`photos-btn photos-btn-secondary visibility-button-titlebar ${isEditingTitle ? 'hidden-mobile' : ''}`}
-              onClick={handleOpenVisibilityModal}
-              title={t('albumsManager.visibilitySettings')}
-            >
-              <EyeIcon width="16" height="16" isSlashed={!isPublished} />
-              <span>{t('albumsManager.visibility')}</span>
-            </button>
-          )}
-          
           <button 
             onClick={onClose} 
             className={`photos-close-btn ${isEditingTitle ? 'hidden-when-editing' : ''}`}
@@ -335,6 +323,16 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
                   </button>
                 </>
               )}
+
+              <button
+                type="button"
+                className="photos-btn photos-btn-secondary visibility-button-action"
+                onClick={handleOpenVisibilityModal}
+                title={t('albumsManager.visibilitySettings')}
+              >
+                <EyeIcon width="16" height="16" isSlashed={!isPublished} />
+                <span>{t('albumsManager.visibility')}</span>
+              </button>
             </>
           )}
         </div>

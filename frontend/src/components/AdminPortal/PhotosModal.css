@@ -328,10 +328,6 @@
     display: none;
   }
 
-  .visibility-button-titlebar.hidden-mobile {
-    display: none !important;
-  }
-  
   /* Hide close button when editing title */
   .photos-close-btn.hidden-when-editing {
     display: none !important;
@@ -382,7 +378,7 @@
 /* Controls Bar */
 .photos-controls-bar {
   display: flex;
-  justify-content: flex-start;
+  justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
   gap: 1rem;
@@ -394,16 +390,15 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex: 0 1 auto;
+  flex: 1;
 }
 
 .photos-controls-right {
   justify-content: flex-end; /* Stick content to the right */
 }
 
-.visibility-button-titlebar {
-  flex: 0 0 auto;
-  padding: 0.5rem 0.75rem;
+.visibility-button-action {
+  margin-left: auto;
 }
 
 .photos-action-buttons {
