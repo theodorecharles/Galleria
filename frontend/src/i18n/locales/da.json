@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "Albums i ikke-udgivne mapper er altid private",
     "moveToFolderTitle": "Flyt \"{{albumName}}\" til mappe",
     "moveToFolderHint": "Vælg en destinationsmappe eller vælg Ikke-kategoriseret for at fjerne fra enhver mappe.",
-    "currentFolder": "Nuværende"
+    "currentFolder": "Nuværende",
+    "visibility": "Synlighed",
+    "visibilitySettings": "Synlighedsindstillinger",
+    "visibilityUpdated": "Synlighedsindstillinger gemt for \"{{albumName}}\"",
+    "downloadsEnabled": "Downloads aktiveret",
+    "downloadsDisabled": "Downloads deaktiveret",
+    "publishedVisibilityDescription": "Vis dette album i det offentlige galleri.",
+    "folderControlsPublished": "Dette album arver offentliggjort status fra sin mappe.",
+    "homepageVisibilityDescription": "Inkluder dette albums fotos på hjemmesiden.",
+    "downloadsVisibilityDescription": "Tillad besøgende at downloade fuld størrelse optimerede fotos fra dette album."
   },
   "settings": {
     "saved": "{{section}} indstillinger gemt!",

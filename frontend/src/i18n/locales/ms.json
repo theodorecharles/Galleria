@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "Album dalam folder yang tidak diterbitkan sentiasa peribadi",
     "moveToFolderTitle": "Pindahkan \"{{albumName}}\" ke Folder",
     "moveToFolderHint": "Pilih folder destinasi atau pilih Tidak Dikategorikan untuk mengeluarkan dari sebarang folder.",
-    "currentFolder": "Semasa"
+    "currentFolder": "Semasa",
+    "visibility": "Kebolehlihatan",
+    "visibilitySettings": "Tetapan Kebolehlihatan",
+    "visibilityUpdated": "Tetapan kebolehlihatan disimpan untuk \"{{albumName}}\"",
+    "downloadsEnabled": "Muat Turun Dibenarkan",
+    "downloadsDisabled": "Muat Turun Tidak Dibenarkan",
+    "publishedVisibilityDescription": "Paparkan album ini dalam galeri awam.",
+    "folderControlsPublished": "Album ini mewarisi status diterbitkan daripada foldernya.",
+    "homepageVisibilityDescription": "Sertakan foto album ini di halaman utama.",
+    "downloadsVisibilityDescription": "Benarkan pelawat memuat turun foto bersaiz penuh yang dioptimumkan daripada album ini."
   },
   "settings": {
     "saved": "Tetapan {{section}} disimpan!",

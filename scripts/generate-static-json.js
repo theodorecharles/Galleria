@@ -45,22 +45,28 @@ try {
     console.log(`   ✅ Generated: ${filename} (${Array.isArray(data) ? data.length : 'N/A'} items, ${size} KB)`);
   }
 
+  const albumColumns = db.pragma('table_info(albums)');
+  const hasDownloadsEnabled = albumColumns.some(col => col.name === 'downloads_enabled');
+  const downloadsEnabledSelect = hasDownloadsEnabled ? 'downloads_enabled' : '1 AS downloads_enabled';
+  const homepageDownloadsEnabledSelect = hasDownloadsEnabled ? 'a.downloads_enabled' : '1 AS downloads_enabled';
+
   // Optimized format: [filename, title, media_type] arrays
   // Frontend will reconstruct full photo objects
   // media_type: 0 = photo, 1 = video (kept as number to minimize JSON size)
-  // Format: [filename, title, media_type, description]
-  function transformImageToOptimized(image) {
+  // Format: [filename, title, media_type, description, downloads_enabled]
+  function transformImageToOptimized(image, downloadsEnabled = true) {
     return [
       image.filename,
       image.title || image.filename,
       image.media_type === 'video' ? 1 : 0,
-      image.description || null
+      image.description || null,
+      downloadsEnabled ? 1 : 0
     ];
   }
 
   // Get all albums (including unpublished)
   console.log('\n📁 Fetching albums...');
-  const albums = db.prepare('SELECT name FROM albums ORDER BY sort_order, name').all();
+  const albums = db.prepare(`SELECT name, ${downloadsEnabledSelect} FROM albums ORDER BY sort_order, name`).all();
   console.log(`   Found ${albums.length} albums (including unpublished)`);
 
   // Generate JSON for each album
@@ -76,7 +82,7 @@ try {
       `).all(album);
       
       // Generate optimized format: array of [filename, title]
-      const photos = images.map(transformImageToOptimized);
+      const photos = images.map(image => transformImageToOptimized(image, albumRow.downloads_enabled === 1));
       writeJSON(`${album}.json`, photos);
     } catch (error) {
       console.error(`   ⚠️  Error generating JSON for "${album}":`, error.message);
@@ -92,7 +98,7 @@ try {
     if (homepageAlbumNames.length > 0) {
       const placeholders = homepageAlbumNames.map(() => '?').join(',');
       const images = db.prepare(`
-        SELECT im.filename, im.title, im.description, im.album, im.media_type, im.sort_order, a.sort_order as album_sort_order
+        SELECT im.filename, im.title, im.description, im.album, im.media_type, im.sort_order, a.sort_order as album_sort_order, ${homepageDownloadsEnabledSelect}
         FROM image_metadata im
         INNER JOIN albums a ON im.album = a.name
         WHERE im.album IN (${placeholders})
@@ -106,7 +112,8 @@ try {
         img.title || img.filename,
         img.album,
         img.media_type === 'video' ? 1 : 0,
-        img.description || null
+        img.description || null,
+        img.downloads_enabled === 1 ? 1 : 0
       ]);
       
       // Include shuffle setting in homepage JSON

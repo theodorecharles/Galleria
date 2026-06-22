@@ -327,7 +327,7 @@
   .mobile-toggles-stack.hidden-mobile {
     display: none;
   }
-  
+
   /* Hide close button when editing title */
   .photos-close-btn.hidden-when-editing {
     display: none !important;
@@ -390,18 +390,20 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex: 1; /* Allow controls sections to grow */
+}
+
+.photos-controls-left {
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
 }
 
 .photos-controls-right {
+  flex: 0 0 auto;
   justify-content: flex-end; /* Stick content to the right */
 }
 
-/* Buttons should expand to fill available space */
-.photos-controls-left .photos-btn,
-.photos-controls-right .photos-btn {
-  flex: 1;
-  min-width: 0;
+.visibility-button-action {
+  margin-left: 0;
 }
 
 .photos-action-buttons {
@@ -657,25 +659,32 @@ label.photos-btn {
   .homepage-toggle-desktop {
     display: none !important; /* Hide text toggle from controls bar on mobile (<= 740px) */
   }
-  
+
   .toggle-switch-mobile-vertical {
     display: flex !important; /* Ensure vertical toggle shows on mobile */
   }
 
   .photos-controls-bar {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
     align-items: stretch;
-    gap: 0rem;
+    gap: 0.75rem;
   }
 
   .photos-controls-left,
   .photos-controls-right {
-    width: 100%;
-    flex-wrap: wrap;
+    display: contents;
   }
 
-  .photos-controls-right {
-    justify-content: stretch;
+  /* Buttons should expand to fill available space on mobile only */
+  .photos-controls-left .photos-btn,
+  .photos-controls-right .photos-btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .visibility-button-action {
+    margin-left: 0;
   }
   
   /* Hide empty controls-right on mobile (publish toggle moved to title bar) */
@@ -759,4 +768,3 @@ label.photos-btn {
     order: 2;
   }
 }
-

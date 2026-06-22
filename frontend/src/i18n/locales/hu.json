@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "A nem publikált mappákban lévő albumok mindig privátak",
     "moveToFolderTitle": "Mozgassa a(z) \"{{albumName}}\" albumot a mappába",
     "moveToFolderHint": "Válasszon célmappát, vagy válassza a Nem kategorizált lehetőséget a mappából való eltávolításhoz.",
-    "currentFolder": "Jelenlegi"
+    "currentFolder": "Jelenlegi",
+    "visibility": "Láthatóság",
+    "visibilitySettings": "Láthatósági beállítások",
+    "visibilityUpdated": "Láthatósági beállítások elmentve a(z) \"{{albumName}}\" számára",
+    "downloadsEnabled": "Letöltések engedélyezve",
+    "downloadsDisabled": "Letöltések letiltva",
+    "publishedVisibilityDescription": "Mutassa ezt az albumot a nyilvános galériában.",
+    "folderControlsPublished": "Ez az album a közzétett státuszt a mappájából örökli.",
+    "homepageVisibilityDescription": "Tartalmazza ennek az albumnak a fotóit a kezdőlapon.",
+    "downloadsVisibilityDescription": "Engedélyezze a látogatóknak, hogy teljes méretű optimalizált fotókat töltsenek le ebből az albumból."
   },
   "settings": {
     "saved": "{{section}} beállítások elmentve!",

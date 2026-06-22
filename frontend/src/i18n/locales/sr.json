@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "Albumi u nepublikovanim fasciklama su uvek privatni",
     "moveToFolderTitle": "Premesti \"{{albumName}}\" u Fasciklu",
     "moveToFolderHint": "Izaberite odredišnu fasciklu ili izaberite Nekategorizovano da uklonite iz bilo koje fascikle.",
-    "currentFolder": "Trenutno"
+    "currentFolder": "Trenutno",
+    "visibility": "Vidljivost",
+    "visibilitySettings": "Postavke vidljivosti",
+    "visibilityUpdated": "Postavke vidljivosti sačuvane za \"{{albumName}}\"",
+    "downloadsEnabled": "Preuzimanja omogućena",
+    "downloadsDisabled": "Preuzimanja onemogućena",
+    "publishedVisibilityDescription": "Prikaži ovaj album u javnoj galeriji.",
+    "folderControlsPublished": "Ovaj album nasleđuje status objavljivanja iz svoje fascikle.",
+    "homepageVisibilityDescription": "Uključi fotografije ovog albuma na početnu stranicu.",
+    "downloadsVisibilityDescription": "Dozvoli posetiocima da preuzmu optimizovane fotografije u punoj veličini iz ovog albuma."
   },
   "settings": {
     "saved": "Podešavanja za {{section}} sačuvana!",

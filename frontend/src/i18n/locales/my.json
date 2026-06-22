@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "မထုတ်ဝေထားသော ဖိုလ်ဒါများအတွင်းရှိ အယ်လ်ဘမ်များသည် အမြဲပုဂ္ဂလိကဖြစ်သည်",
     "moveToFolderTitle": "\"{{albumName}}\" ကို ဖိုလ်ဒါသို့ ရွှေ့ပါ",
     "moveToFolderHint": "ရွှေ့ရန် ဖိုလ်ဒါတစ်ခုကို ရွေးချယ်ပါ သို့မဟုတ် မည်သည့်ဖိုလ်ဒါမှ မပါရန် Uncategorized ကို ရွေးပါ။",
-    "currentFolder": "လက်ရှိ"
+    "currentFolder": "လက်ရှိ",
+    "visibility": "မြင်သာမှု",
+    "visibilitySettings": "မြင်သာမှု ဆက်တင်များ",
+    "visibilityUpdated": "\"{{albumName}}\" အတွက် မြင်သာမှု ဆက်တင်များကို သိမ်းဆည်းပြီးပြီ",
+    "downloadsEnabled": "ဒေါင်းလုဒ်များ ဖွင့်ထားသည်",
+    "downloadsDisabled": "ဒေါင်းလုဒ်များ ပိတ်ထားသည်",
+    "publishedVisibilityDescription": "ဒီအယ်လ်ဘမ်ကို အများပြည်သူ ဂယ်လရီတွင် ပြပါ။",
+    "folderControlsPublished": "ဒီအယ်လ်ဘမ်သည် ၎င်း၏ဖိုလ်ဒါမှ ထုတ်ဝေထားသော အခြေအနေကို အမွေဆက်ခံသည်။",
+    "homepageVisibilityDescription": "ဒီအယ်လ်ဘမ်၏ ဓာတ်ပုံများကို မူလစာမျက်နှာတွင် ထည့်ပါ။",
+    "downloadsVisibilityDescription": "ဧည့်သည်များကို ဒီအယ်လ်ဘမ်မှ အပြည့်အဝ အရွယ်အစား အထူးပြုလုပ်ထားသော ဓာတ်ပုံများကို ဒေါင်းလုဒ်လုပ်ရန် ခွင့်ပြုပါ။"
   },
   "settings": {
     "saved": "{{section}} ဆက်တင်များ သိမ်းဆည်းပြီးပါပြီ!",

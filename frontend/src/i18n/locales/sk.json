@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "Albumy v nezverejnených priečinkoch sú vždy súkromné",
     "moveToFolderTitle": "Presunúť \"{{albumName}}\" do priečinka",
     "moveToFolderHint": "Vyberte cieľový priečinok alebo zvoľte Nezaradené na odstránenie z akéhokoľvek priečinka.",
-    "currentFolder": "Aktuálne"
+    "currentFolder": "Aktuálne",
+    "visibility": "Viditeľnosť",
+    "visibilitySettings": "Nastavenia viditeľnosti",
+    "visibilityUpdated": "Nastavenia viditeľnosti uložené pre \"{{albumName}}\"",
+    "downloadsEnabled": "Sťahovanie povolené",
+    "downloadsDisabled": "Sťahovanie zakázané",
+    "publishedVisibilityDescription": "Zobraziť tento album vo verejnej galérii.",
+    "folderControlsPublished": "Tento album zdedí stav zverejnenia zo svojho priečinka.",
+    "homepageVisibilityDescription": "Zahrnúť fotografie z tohto albumu na domovskú stránku.",
+    "downloadsVisibilityDescription": "Povoliť návštevníkom sťahovať optimalizované fotografie v plnej veľkosti z tohto albumu."
   },
   "settings": {
     "saved": "Nastavenia {{section}} uložené!",

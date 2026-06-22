@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "Albumi v neobjavljenih mapah so vedno zasebni",
     "moveToFolderTitle": "Premakni \"{{albumName}}\" v mapo",
     "moveToFolderHint": "Izberite ciljno mapo ali izberite Nerazvrščeno za odstranitev iz katere koli mape.",
-    "currentFolder": "Trenutno"
+    "currentFolder": "Trenutno",
+    "visibility": "Vidnost",
+    "visibilitySettings": "Nastavitve vidnosti",
+    "visibilityUpdated": "Nastavitve vidnosti shranjene za \"{{albumName}}\"",
+    "downloadsEnabled": "Prenosi omogočeni",
+    "downloadsDisabled": "Prenosi onemogočeni",
+    "publishedVisibilityDescription": "Prikaži ta album v javni galeriji.",
+    "folderControlsPublished": "Ta album podeduje objavljen status iz svoje mape.",
+    "homepageVisibilityDescription": "Vključi fotografije tega albuma na domačo stran.",
+    "downloadsVisibilityDescription": "Dovoli obiskovalcem prenos optimiziranih fotografij v polni velikosti iz tega albuma."
   },
   "settings": {
     "saved": "Nastavitve {{section}} shranjene!",

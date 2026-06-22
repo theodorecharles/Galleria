@@ -40,6 +40,7 @@ export function initializeDatabase(): any {
       name TEXT NOT NULL UNIQUE,
       published BOOLEAN NOT NULL DEFAULT 0,
       show_on_homepage BOOLEAN NOT NULL DEFAULT 0,
+      downloads_enabled BOOLEAN NOT NULL DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -132,6 +133,18 @@ export function initializeDatabase(): any {
     }
   } catch (err) {
     warn('[Database] Could not check/add sort_order column to albums:', err);
+  }
+
+  // Add downloads_enabled column to albums if it doesn't exist (migration)
+  try {
+    const tableInfo = db.pragma('table_info(albums)');
+    const hasDownloadsEnabled = tableInfo.some((col: any) => col.name === 'downloads_enabled');
+    if (!hasDownloadsEnabled) {
+      info('[Database] Adding downloads_enabled column to albums...');
+      db.exec('ALTER TABLE albums ADD COLUMN downloads_enabled BOOLEAN NOT NULL DEFAULT 1');
+    }
+  } catch (err) {
+    warn('[Database] Could not check/add downloads_enabled column to albums:', err);
   }
   
   // Add sort_order column to album_folders if it doesn't exist (migration)
@@ -380,8 +393,8 @@ export function saveAlbum(name: string, published: boolean = false): void {
   const db = getDatabase();
   
   const stmt = db.prepare(`
-    INSERT INTO albums (name, published, show_on_homepage)
-    VALUES (?, ?, 0)
+    INSERT INTO albums (name, published, show_on_homepage, downloads_enabled)
+    VALUES (?, ?, 0, 1)
     ON CONFLICT(name) 
     DO UPDATE SET 
       published = excluded.published,
@@ -399,6 +412,7 @@ export function getAlbumState(name: string): {
   name: string;
   published: boolean;
   show_on_homepage: boolean;
+  downloads_enabled: boolean;
   created_at: string;
   updated_at: string;
 } | undefined {
@@ -413,6 +427,7 @@ export function getAlbumState(name: string): {
   if (result) {
     result.published = Boolean(result.published);
     result.show_on_homepage = Boolean(result.show_on_homepage);
+    result.downloads_enabled = Boolean(result.downloads_enabled);
   }
   return result;
 }
@@ -425,6 +440,7 @@ export function getAllAlbums(): Array<{
   name: string;
   published: boolean;
   show_on_homepage: boolean;
+  downloads_enabled: boolean;
   folder_id: number | null;
   sort_order: number | null;
   created_at: string;
@@ -445,6 +461,7 @@ export function getAllAlbums(): Array<{
     ...result,
     published: Boolean(result.published),
     show_on_homepage: Boolean(result.show_on_homepage),
+    downloads_enabled: Boolean(result.downloads_enabled),
     folder_id: result.folder_id ?? null
   }));
 }
@@ -519,6 +536,50 @@ export function setAlbumShowOnHomepage(name: string, showOnHomepage: boolean): b
   `);
   
   const result = stmt.run(showOnHomepage ? 1 : 0, name);
+  return result.changes > 0;
+}
+
+/**
+ * Set album visibility and download state
+ */
+export function setAlbumVisibility(
+  name: string,
+  visibility: {
+    published: boolean;
+    show_on_homepage: boolean;
+    downloads_enabled: boolean;
+  }
+): boolean {
+  const db = getDatabase();
+
+  const stmt = db.prepare(`
+    UPDATE albums
+    SET published = ?, show_on_homepage = ?, downloads_enabled = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE name = ?
+  `);
+
+  const result = stmt.run(
+    visibility.published ? 1 : 0,
+    visibility.show_on_homepage ? 1 : 0,
+    visibility.downloads_enabled ? 1 : 0,
+    name
+  );
+  return result.changes > 0;
+}
+
+/**
+ * Set album downloads enabled state
+ */
+export function setAlbumDownloadsEnabled(name: string, downloadsEnabled: boolean): boolean {
+  const db = getDatabase();
+
+  const stmt = db.prepare(`
+    UPDATE albums
+    SET downloads_enabled = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE name = ?
+  `);
+
+  const result = stmt.run(downloadsEnabled ? 1 : 0, name);
   return result.changes > 0;
 }
 
@@ -670,6 +731,7 @@ export function getImagesFromPublishedAlbums(): Array<{
   title: string | null;
   description: string | null;
   media_type: 'photo' | 'video';
+  downloads_enabled: boolean;
   sort_order: number | null;
   created_at: string;
   updated_at: string;
@@ -677,13 +739,17 @@ export function getImagesFromPublishedAlbums(): Array<{
   const db = getDatabase();
   
   const stmt = db.prepare(`
-    SELECT im.* FROM image_metadata im
+    SELECT im.*, a.downloads_enabled AS downloads_enabled FROM image_metadata im
     INNER JOIN albums a ON im.album = a.name
     WHERE a.published = 1
     ORDER BY im.album, im.filename
   `);
   
-  return stmt.all() as any[];
+  const results = stmt.all() as any[];
+  return results.map(result => ({
+    ...result,
+    downloads_enabled: Boolean(result.downloads_enabled)
+  }));
 }
 
 /**
@@ -696,6 +762,7 @@ export function getImagesForHomepage(): Array<{
   title: string | null;
   description: string | null;
   media_type: 'photo' | 'video';
+  downloads_enabled: boolean;
   sort_order: number | null;
   created_at: string;
   updated_at: string;
@@ -703,13 +770,17 @@ export function getImagesForHomepage(): Array<{
   const db = getDatabase();
   
   const stmt = db.prepare(`
-    SELECT im.* FROM image_metadata im
+    SELECT im.*, a.downloads_enabled AS downloads_enabled FROM image_metadata im
     INNER JOIN albums a ON im.album = a.name
     WHERE a.published = 1 AND a.show_on_homepage = 1
     ORDER BY a.sort_order, a.name, im.sort_order, im.filename
   `);
   
-  return stmt.all() as any[];
+  const results = stmt.all() as any[];
+  return results.map(result => ({
+    ...result,
+    downloads_enabled: Boolean(result.downloads_enabled)
+  }));
 }
 
 /**
@@ -1041,6 +1112,8 @@ export function getAlbumsInFolder(folderId: number): Array<{
   id: number;
   name: string;
   published: boolean;
+  show_on_homepage: boolean;
+  downloads_enabled: boolean;
   folder_id: number | null;
   sort_order: number | null;
   created_at: string;
@@ -1061,6 +1134,8 @@ export function getAlbumsInFolder(folderId: number): Array<{
   return results.map(result => ({
     ...result,
     published: Boolean(result.published),
+    show_on_homepage: Boolean(result.show_on_homepage),
+    downloads_enabled: Boolean(result.downloads_enabled),
     folder_id: result.folder_id ?? null
   }));
 }
@@ -1072,6 +1147,8 @@ export function getAlbumsWithoutFolder(): Array<{
   id: number;
   name: string;
   published: boolean;
+  show_on_homepage: boolean;
+  downloads_enabled: boolean;
   folder_id: number | null;
   sort_order: number | null;
   created_at: string;
@@ -1092,6 +1169,8 @@ export function getAlbumsWithoutFolder(): Array<{
   return results.map(result => ({
     ...result,
     published: Boolean(result.published),
+    show_on_homepage: Boolean(result.show_on_homepage),
+    downloads_enabled: Boolean(result.downloads_enabled),
     folder_id: null
   }));
 }
@@ -1209,4 +1288,3 @@ export function closeDatabase(): void {
     info('[Database] Database connection closed');
   }
 }
-

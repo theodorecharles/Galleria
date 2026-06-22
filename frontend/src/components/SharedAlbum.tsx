@@ -27,6 +27,7 @@ interface Photo {
   download: string;
   title: string;
   album: string;
+  downloads_enabled?: boolean;
   sort_order?: number | null;
   metadata?: {
     created: string;

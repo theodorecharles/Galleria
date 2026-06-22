@@ -353,6 +353,10 @@ const ContentModal: React.FC<ContentModalProps> = ({
 
   // Handle download
   const handleDownload = useCallback(async (photo: Photo) => {
+    if (photo.downloads_enabled === false || !photo.download) {
+      return;
+    }
+
     const originalFilename = photo.id.split('/').pop() || 'photo.jpg';
     const fileExtension = originalFilename.substring(originalFilename.lastIndexOf('.'));
     

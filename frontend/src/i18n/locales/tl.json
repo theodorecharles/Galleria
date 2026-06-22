@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "❌ Nabigong i-upload ang thumbnail",
     "pleaseSelectImageFile": "❌ Pakisuyong pumili ng isang file ng larawan",
     "unableToLoadVideo": "Hindi ma-load ang video para sa pagpili ng thumbnail. Maaaring nasa proseso pa ang video.",
-    "uploadThumbnail": "I-upload ang Thumbnail"
+    "uploadThumbnail": "I-upload ang Thumbnail",
+    "visibility": "Nakikita",
+    "visibilitySettings": "Mga Setting ng Nakikita",
+    "visibilityUpdated": "Mga setting ng nakikita na na-save para sa \"{{albumName}}\"",
+    "downloadsEnabled": "Pinapagana ang Mga Pag-download",
+    "downloadsDisabled": "Hindi Pinapagana ang Mga Pag-download",
+    "publishedVisibilityDescription": "Ipakita ang album na ito sa pampublikong gallery.",
+    "folderControlsPublished": "Namamana ng album na ito ang status ng pag-publish mula sa folder nito.",
+    "homepageVisibilityDescription": "Isama ang mga larawan ng album na ito sa homepage.",
+    "downloadsVisibilityDescription": "Pahintulutan ang mga bisita na mag-download ng mga full-size na na-optimize na larawan mula sa album na ito."
   },
   "settings": {
     "saved": "{{section}} mga setting ay na-save!",

@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "✗ Nie udało się przesłać miniatury",
     "pleaseSelectImageFile": "✗ Proszę wybrać plik obrazu",
     "unableToLoadVideo": "Nie można załadować wideo do wyboru miniatury. Wideo może być wciąż przetwarzane.",
-    "uploadThumbnail": "Prześlij miniaturę"
+    "uploadThumbnail": "Prześlij miniaturę",
+    "visibility": "Widoczność",
+    "visibilitySettings": "Ustawienia widoczności",
+    "visibilityUpdated": "Ustawienia widoczności zapisane dla \"{{albumName}}\"",
+    "downloadsEnabled": "Pobieranie włączone",
+    "downloadsDisabled": "Pobieranie wyłączone",
+    "publishedVisibilityDescription": "Pokaż ten album w galerii publicznej.",
+    "folderControlsPublished": "Ten album dziedziczy status opublikowany z jego folderu.",
+    "homepageVisibilityDescription": "Uwzględnij zdjęcia z tego albumu na stronie głównej.",
+    "downloadsVisibilityDescription": "Pozwól odwiedzającym pobierać zoptymalizowane zdjęcia w pełnym rozmiarze z tego albumu."
   },
   "settings": {
     "saved": "Ustawienia {{section}} zapisane!",

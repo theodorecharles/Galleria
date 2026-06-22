@@ -24,7 +24,6 @@ interface AlbumContentPanelProps {
   isDragging: boolean;
   isShuffling: boolean;
   localAlbums: any[];
-  localFolders: any[];
   deletingPhotoId: string | null;
   onClose: () => void;
   setCloseHandler: (handler: () => void) => void;
@@ -32,8 +31,11 @@ interface AlbumContentPanelProps {
   onDeleteAlbum: (albumName: string) => void;
   onRenameAlbum: (oldName: string, newName: string) => Promise<void>;
   onShareAlbum: (albumName: string) => void;
-  onTogglePublished: (albumName: string, currentPublished: boolean) => void;
-  onToggleHomepage: (albumName: string, currentShowOnHomepage: boolean) => void;
+  onUpdateVisibility: (albumName: string, visibility: {
+    published: boolean;
+    show_on_homepage: boolean;
+    downloads_enabled: boolean;
+  }) => Promise<boolean>;
   onPreviewAlbum: (albumName: string) => void;
   onSavePhotoOrder: () => void;
   onCancelPhotoOrder: () => void;
@@ -65,15 +67,13 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
   isDragging,
   isShuffling,
   localAlbums,
-  localFolders,
   onClose,
   setCloseHandler,
   onUploadPhotos,
   onDeleteAlbum,
   onRenameAlbum,
   onShareAlbum,
-  onTogglePublished,
-  onToggleHomepage,
+  onUpdateVisibility,
   onPreviewAlbum,
   onSavePhotoOrder,
   onCancelPhotoOrder,
@@ -181,7 +181,6 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
           <AlbumContentPanelHeader
           selectedAlbum={selectedAlbum}
           localAlbums={localAlbums}
-          localFolders={localFolders}
           albumPhotos={albumPhotos}
           uploadingImages={uploadingImages}
           viewMode={viewMode}
@@ -190,8 +189,7 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
           onDeleteAlbum={onDeleteAlbum}
           onRenameAlbum={onRenameAlbum}
           onShareAlbum={onShareAlbum}
-          onTogglePublished={onTogglePublished}
-          onToggleHomepage={onToggleHomepage}
+          onUpdateVisibility={onUpdateVisibility}
           onPreviewAlbum={onPreviewAlbum}
           onViewModeChange={setViewMode}
           canEdit={canEdit}
@@ -264,4 +262,3 @@ const AlbumContentPanel: React.FC<AlbumContentPanelProps> = ({
 };
 
 export default AlbumContentPanel;
-

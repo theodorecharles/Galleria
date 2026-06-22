@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "✗ Uploaden van miniatuur mislukt",
     "pleaseSelectImageFile": "✗ Selecteer alstublieft een afbeeldingsbestand",
     "unableToLoadVideo": "Kan video niet laden voor miniatuurselectie. De video is mogelijk nog aan het verwerken.",
-    "uploadThumbnail": "Upload Miniatuur"
+    "uploadThumbnail": "Upload Miniatuur",
+    "visibility": "Zichtbaarheid",
+    "visibilitySettings": "Zichtbaarheidsinstellingen",
+    "visibilityUpdated": "Zichtbaarheidsinstellingen opgeslagen voor \"{{albumName}}\"",
+    "downloadsEnabled": "Downloads Ingeschakeld",
+    "downloadsDisabled": "Downloads Uitgeschakeld",
+    "publishedVisibilityDescription": "Toon dit album in de openbare galerij.",
+    "folderControlsPublished": "Dit album erft de publicatiestatus van zijn map.",
+    "homepageVisibilityDescription": "Neem de foto's van dit album op de startpagina op.",
+    "downloadsVisibilityDescription": "Sta bezoekers toe om geoptimaliseerde foto's op volledige grootte van dit album te downloaden."
   },
   "settings": {
     "saved": "{{section}} instellingen opgeslagen!",

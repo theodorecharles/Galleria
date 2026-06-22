@@ -452,7 +452,16 @@
     "albumsInUnpublishedFolders": "อัลบั้มในโฟลเดอร์ที่ไม่ได้เผยแพร่จะเป็นส่วนตัวเสมอ",
     "moveToFolderTitle": "ย้าย \"{{albumName}}\" ไปยังโฟลเดอร์",
     "moveToFolderHint": "เลือกโฟลเดอร์ปลายทางหรือเลือก ไม่ได้จัดประเภท เพื่อย้ายออกจากโฟลเดอร์ใดๆ",
-    "currentFolder": "ปัจจุบัน"
+    "currentFolder": "ปัจจุบัน",
+    "visibility": "การมองเห็น",
+    "visibilitySettings": "การตั้งค่าการมองเห็น",
+    "visibilityUpdated": "บันทึกการตั้งค่าการมองเห็นสำหรับ \"{{albumName}}\"",
+    "downloadsEnabled": "เปิดใช้งานการดาวน์โหลด",
+    "downloadsDisabled": "ปิดใช้งานการดาวน์โหลด",
+    "publishedVisibilityDescription": "แสดงอัลบั้มนี้ในแกลเลอรีสาธารณะ",
+    "folderControlsPublished": "อัลบั้มนี้สืบทอดสถานะการเผยแพร่จากโฟลเดอร์ของมัน",
+    "homepageVisibilityDescription": "รวมรูปภาพของอัลบั้มนี้ในหน้าแรก",
+    "downloadsVisibilityDescription": "อนุญาตให้ผู้เข้าชมดาวน์โหลดรูปภาพขนาดเต็มที่ปรับแต่งแล้วจากอัลบั้มนี้"
   },
   "settings": {
     "saved": "การตั้งค่า {{section}} บันทึกแล้ว!",

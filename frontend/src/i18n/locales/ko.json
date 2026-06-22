@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "✗ 썸네일 업로드에 실패했습니다",
     "pleaseSelectImageFile": "✗ 이미지 파일을 선택해 주세요",
     "unableToLoadVideo": "썸네일 선택을 위한 비디오를 로드할 수 없습니다. 비디오가 아직 처리 중일 수 있습니다.",
-    "uploadThumbnail": "썸네일 업로드"
+    "uploadThumbnail": "썸네일 업로드",
+    "visibility": "가시성",
+    "visibilitySettings": "가시성 설정",
+    "visibilityUpdated": "\"{{albumName}}\"에 대한 가시성 설정이 저장되었습니다.",
+    "downloadsEnabled": "다운로드 사용 가능",
+    "downloadsDisabled": "다운로드 사용 안 함",
+    "publishedVisibilityDescription": "이 앨범을 공개 갤러리에 표시합니다.",
+    "folderControlsPublished": "이 앨범은 폴더에서 게시 상태를 상속받습니다.",
+    "homepageVisibilityDescription": "이 앨범의 사진을 홈페이지에 포함합니다.",
+    "downloadsVisibilityDescription": "방문자가 이 앨범에서 전체 크기로 최적화된 사진을 다운로드할 수 있도록 허용합니다."
   },
   "settings": {
     "saved": "{{section}} 설정이 저장되었습니다!",

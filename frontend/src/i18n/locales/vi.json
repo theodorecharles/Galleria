@@ -358,7 +358,16 @@
     "failedToUploadThumbnail": "✗ Tải lên hình thu nhỏ không thành công",
     "pleaseSelectImageFile": "✗ Vui lòng chọn một tệp hình ảnh",
     "unableToLoadVideo": "Không thể tải video để chọn hình thu nhỏ. Video có thể vẫn đang được xử lý.",
-    "uploadThumbnail": "Tải lên Hình thu nhỏ"
+    "uploadThumbnail": "Tải lên Hình thu nhỏ",
+    "visibility": "Khả năng hiển thị",
+    "visibilitySettings": "Cài đặt khả năng hiển thị",
+    "visibilityUpdated": "Cài đặt khả năng hiển thị đã được lưu cho \"{{albumName}}\"",
+    "downloadsEnabled": "Tải xuống được bật",
+    "downloadsDisabled": "Tải xuống bị tắt",
+    "publishedVisibilityDescription": "Hiển thị album này trong thư viện công cộng.",
+    "folderControlsPublished": "Album này thừa hưởng trạng thái công khai từ thư mục của nó.",
+    "homepageVisibilityDescription": "Bao gồm ảnh của album này trên trang chủ.",
+    "downloadsVisibilityDescription": "Cho phép khách truy cập tải xuống ảnh tối ưu hóa kích thước đầy đủ từ album này."
   },
   "settings": {
     "saved": "Cài đặt {{section}} đã được lưu!",
