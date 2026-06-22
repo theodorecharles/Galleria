@@ -382,7 +382,7 @@
 /* Controls Bar */
 .photos-controls-bar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   padding: 1rem 1.5rem;
   gap: 1rem;
@@ -394,7 +394,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex: 1; /* Allow controls sections to grow */
+  flex: 0 1 auto;
 }
 
 .photos-controls-right {
