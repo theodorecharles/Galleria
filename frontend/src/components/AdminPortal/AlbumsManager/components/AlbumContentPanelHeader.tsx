@@ -183,12 +183,6 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
     }
   };
 
-  const visibilitySummary = [
-    isPublished ? t('albumsManager.published') : t('albumsManager.unpublished'),
-    showOnHomepage ? t('albumsManager.onHomepage') : t('albumsManager.notOnHomepage'),
-    downloadsEnabled ? t('albumsManager.downloadsEnabled') : t('albumsManager.downloadsDisabled'),
-  ].join(' · ');
-
   return (
     <>
     <div className="photos-modal-header">
@@ -251,7 +245,7 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
           {canEdit && (
             <button
               type="button"
-              className={`photos-btn photos-btn-secondary visibility-button-mobile ${isEditingTitle ? 'hidden-mobile' : ''}`}
+              className={`photos-btn photos-btn-secondary visibility-button-titlebar ${isEditingTitle ? 'hidden-mobile' : ''}`}
               onClick={handleOpenVisibilityModal}
               title={t('albumsManager.visibilitySettings')}
             >
@@ -345,19 +339,6 @@ const AlbumContentPanelHeader: React.FC<AlbumContentPanelHeaderProps> = ({
           )}
         </div>
 
-        <div className="photos-controls-right">
-          {canEdit && (
-            <button
-              type="button"
-              className="photos-btn photos-btn-secondary visibility-button-desktop"
-              onClick={handleOpenVisibilityModal}
-              title={visibilitySummary}
-            >
-              <EyeIcon width="16" height="16" />
-              <span>{t('albumsManager.visibility')}</span>
-            </button>
-          )}
-        </div>
       </div>
 
     </div>
