@@ -25,6 +25,7 @@ import {
   getAlbumsInFolder,
   incrementAlbumViewCount
 } from "../database.js";
+import { getAlbumAccess } from '../utils/album-access.js';
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 
 const router = Router();
@@ -318,20 +319,14 @@ const serveAlbumJSON = (req: Request, res: Response, albumName: string): void =>
     return;
   }
 
-  // Check if user is authenticated (Passport or credentials)
-  const isAuthenticated = (req.isAuthenticated && req.isAuthenticated()) || !!(req.session as any)?.userId;
-  
-  // Check album published state
-  const albumState = getAlbumState(sanitizedAlbum);
-  
-  // Return 404 if album doesn't exist at all
-  if (!albumState) {
+  const access = getAlbumAccess(req, sanitizedAlbum);
+
+  if (!access.exists) {
     res.status(404).json({ error: "Album not found" });
     return;
   }
-  
-  // Return 403 if album exists but is unpublished and user is not authenticated
-  if (!albumState.published && !isAuthenticated) {
+
+  if (!access.allowed) {
     res.status(403).json({ error: "Access denied" });
     return;
   }
@@ -373,28 +368,24 @@ const serveAlbumPhotos = (req: Request, res: Response, albumName: string): void 
 
   const photosDir = req.app.get("photosDir");
   const albumPath = path.join(photosDir, sanitizedAlbum);
-  
-  // Check if album directory exists
-  if (!fs.existsSync(albumPath) || !fs.statSync(albumPath).isDirectory()) {
+
+  const access = getAlbumAccess(req, sanitizedAlbum);
+
+  if (!access.exists) {
     res.status(404).json({ error: "Album not found" });
     return;
   }
 
-  // Check if user is authenticated (Passport or credentials)
-  const isAuthenticated = (req.isAuthenticated && req.isAuthenticated()) || !!(req.session as any)?.userId;
-  
-  // Check album published state
-  const albumState = getAlbumState(sanitizedAlbum);
-  
-  // Return 404 if album doesn't exist at all
-  if (!albumState) {
-    res.status(404).json({ error: "Album not found" });
+  if (!access.allowed) {
+    res.status(403).json({ error: "Access denied" });
     return;
   }
+
+  const albumState = access.albumState!;
   
-  // Return 403 if album exists but is unpublished and user is not authenticated
-  if (!albumState.published && !isAuthenticated) {
-    res.status(403).json({ error: "Access denied" });
+  // Check if album directory exists
+  if (!fs.existsSync(albumPath) || !fs.statSync(albumPath).isDirectory()) {
+    res.status(404).json({ error: "Album not found" });
     return;
   }
 
@@ -598,6 +589,18 @@ const servePhotoEXIF = async (req: Request, res: Response, albumName: string, fi
     return;
   }
 
+  const access = getAlbumAccess(req, sanitizedAlbum);
+
+  if (!access.exists) {
+    res.status(404).json({ error: "Image not found" });
+    return;
+  }
+
+  if (!access.allowed) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
   try {
     const photosDir = req.app.get("photosDir");
     const filePath = path.join(photosDir, sanitizedAlbum, sanitizedFilename);
@@ -642,6 +645,18 @@ const serveVideoMetadata = async (req: Request, res: Response, albumName: string
   // Ensure the filename has a video extension
   if (!/\.(mp4|mov|avi|mkv|webm)$/i.test(sanitizedFilename)) {
     res.status(400).json({ error: "Invalid video file" });
+    return;
+  }
+
+  const access = getAlbumAccess(req, sanitizedAlbum);
+
+  if (!access.exists) {
+    res.status(404).json({ error: "Video not found" });
+    return;
+  }
+
+  if (!access.allowed) {
+    res.status(403).json({ error: "Access denied" });
     return;
   }
 

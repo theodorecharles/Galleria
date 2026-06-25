@@ -74,13 +74,12 @@ export async function generateStaticJSONFiles(appRoot: string): Promise<{ succes
     const outputDir = getOutputDir(appRoot);
     ensureOutputDir(outputDir);
 
-    // Get ALL albums (published + unpublished) - admins need fast access to unpublished albums too
     const albumsData = getAllAlbums();
-    const albums = albumsData
-      .filter(a => a.name !== 'homepage')
+    const publicAlbumsData = albumsData.filter(a => a.name !== 'homepage' && a.published);
+    const albums = publicAlbumsData
       .map(a => a.name);
 
-    // Clean up stale JSON files for DELETED albums only (keep unpublished albums)
+    // Clean up stale JSON files for deleted or unpublished albums.
     if (fs.existsSync(outputDir)) {
       const existingFiles = fs.readdirSync(outputDir);
       const albumJsonFiles = existingFiles.filter(f => f.endsWith('.json') && f !== 'homepage.json' && f !== 'albums-list.json' && f !== '_metadata.json');
@@ -88,7 +87,6 @@ export async function generateStaticJSONFiles(appRoot: string): Promise<{ succes
       for (const file of albumJsonFiles) {
         const albumName = file.replace('.json', '');
         if (!albums.includes(albumName)) {
-          // This JSON file corresponds to a DELETED album (not just unpublished)
           const filePath = path.join(outputDir, file);
           fs.unlinkSync(filePath);
         }
@@ -99,7 +97,7 @@ export async function generateStaticJSONFiles(appRoot: string): Promise<{ succes
     await Promise.all(
       albums.map(async (album) => {
         try {
-          const albumState = albumsData.find(a => a.name === album);
+          const albumState = publicAlbumsData.find(a => a.name === album);
           const images = getImagesInAlbum(album);
           const photos = images.map((img) =>
             transformImageToArray(img, album, false, albumState?.downloads_enabled ?? true)

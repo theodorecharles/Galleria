@@ -23,6 +23,7 @@ interface InfoPanelProps {
   exifData: ExifData | null;
   loadingExif: boolean;
   imageTitle?: string | null;
+  secretKey?: string;
   style?: React.CSSProperties;
 }
 
@@ -34,6 +35,7 @@ const InfoPanel: React.FC<InfoPanelProps> = ({
   exifData,
   loadingExif,
   imageTitle,
+  secretKey,
   style,
 }) => {
   const { t, i18n } = useTranslation();
@@ -48,7 +50,8 @@ const InfoPanel: React.FC<InfoPanelProps> = ({
         setLoadingVideo(true);
         try {
           const filename = photo.id.split('/').pop();
-          const res = await fetch(`${API_URL}/api/videos/${photo.album}/${filename}/metadata`, {
+          const queryString = secretKey ? `?key=${encodeURIComponent(secretKey)}` : '';
+          const res = await fetch(`${API_URL}/api/videos/${photo.album}/${filename}/metadata${queryString}`, {
             credentials: 'include'
           });
           
@@ -65,7 +68,7 @@ const InfoPanel: React.FC<InfoPanelProps> = ({
       
       fetchVideoMetadata();
     }
-  }, [show, isVideo, photo.album, photo.id]);
+  }, [show, isVideo, photo.album, photo.id, secretKey]);
   
   // Format duration from seconds to MM:SS or HH:MM:SS
   const formatDuration = (seconds: number): string => {
@@ -214,4 +217,3 @@ const InfoPanel: React.FC<InfoPanelProps> = ({
 };
 
 export default InfoPanel;
-

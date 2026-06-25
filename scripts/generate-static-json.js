@@ -64,10 +64,33 @@ try {
     ];
   }
 
-  // Get all albums (including unpublished)
+  // Get only published albums for public static JSON.
   console.log('\n📁 Fetching albums...');
-  const albums = db.prepare(`SELECT name, ${downloadsEnabledSelect} FROM albums ORDER BY sort_order, name`).all();
-  console.log(`   Found ${albums.length} albums (including unpublished)`);
+  const albums = db.prepare(`
+    SELECT name, ${downloadsEnabledSelect}
+    FROM albums
+    WHERE published = 1
+    ORDER BY sort_order, name
+  `).all();
+  const albumNames = albums.map(a => a.name);
+  console.log(`   Found ${albums.length} published albums`);
+
+  const existingFiles = fs.readdirSync(OUTPUT_DIR);
+  const albumJsonFiles = existingFiles.filter(file =>
+    file.endsWith('.json') &&
+    file !== 'homepage.json' &&
+    file !== 'albums-list.json' &&
+    file !== '_metadata.json'
+  );
+
+  for (const file of albumJsonFiles) {
+    const albumName = file.slice(0, -'.json'.length);
+
+    if (!albumNames.includes(albumName)) {
+      fs.unlinkSync(path.join(OUTPUT_DIR, file));
+      console.log(`   🧹 Removed stale public JSON: ${file}`);
+    }
+  }
 
   // Generate JSON for each album
   console.log('\n📸 Generating album JSON files...');
@@ -138,7 +161,6 @@ try {
 
   // Generate albums list
   console.log('\n📋 Generating albums list...');
-  const albumNames = albums.map(a => a.name);
   writeJSON('albums-list.json', albumNames);
 
   // Generate metadata file

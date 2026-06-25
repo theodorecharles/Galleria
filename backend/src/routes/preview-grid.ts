@@ -9,9 +9,30 @@ import fs from "fs";
 import path from "path";
 import { getShareLinkBySecret, isShareLinkExpired, getImagesForHomepage } from "../database.js";
 import { DATA_DIR } from "../config.js";
+import { getAlbumAccess } from '../utils/album-access.js';
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 
 const router = Router();
+
+function resolveAlbumPath(photosDir: string, albumName: string): string | null {
+  const root = path.resolve(photosDir);
+  const candidate = path.resolve(root, albumName);
+
+  if (candidate === root || !candidate.startsWith(root + path.sep)) {
+    return null;
+  }
+
+  return candidate;
+}
+
+function sendAlbumAccessDenied(res: Response, access: { exists: boolean }): void {
+  if (!access.exists) {
+    res.status(404).json({ error: "Album not found" });
+    return;
+  }
+
+  res.status(403).json({ error: "Access denied" });
+}
 
 /**
  * Create a circular avatar with white border
@@ -233,8 +254,19 @@ router.get("/album/:albumName", async (req: Request, res: Response): Promise<voi
   try {
     const { albumName } = req.params;
     const photosDir = req.app.get("photosDir");
-    
-    const albumPath = path.join(photosDir, albumName);
+    const albumPath = resolveAlbumPath(photosDir, albumName);
+
+    if (!albumPath) {
+      res.status(400).json({ error: "Invalid album name" });
+      return;
+    }
+
+    const access = getAlbumAccess(req, albumName);
+
+    if (!access.allowed) {
+      sendAlbumAccessDenied(res, access);
+      return;
+    }
     
     if (!fs.existsSync(albumPath) || !fs.statSync(albumPath).isDirectory()) {
       res.status(404).json({ error: "Album not found" });
@@ -402,7 +434,12 @@ router.get("/shared/:secretKey", async (req: Request, res: Response): Promise<vo
     
     const albumName = shareLink.album;
     const photosDir = req.app.get("photosDir");
-    const albumPath = path.join(photosDir, albumName);
+    const albumPath = resolveAlbumPath(photosDir, albumName);
+
+    if (!albumPath) {
+      res.status(404).json({ error: "Album not found" });
+      return;
+    }
     
     if (!fs.existsSync(albumPath) || !fs.statSync(albumPath).isDirectory()) {
       res.status(404).json({ error: "Album not found" });
