@@ -9,6 +9,7 @@ import { csrfProtection } from '../security.js';
 import { requireManager } from '../auth/middleware.js';
 import { generateStaticJSONFiles } from './static-json.js';
 import { invalidateAlbumCache } from './albums.js';
+import { getAlbumAccess, getValidShareLinkAlbum, isRequestAuthenticated } from '../utils/album-access.js';
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 
 const require = createRequire(import.meta.url);
@@ -27,24 +28,41 @@ const router = express.Router();
 // Apply CSRF protection to all routes
 router.use(csrfProtection);
 
+function sendAlbumAccessDenied(res: express.Response, access: { exists: boolean }): void {
+  if (!access.exists) {
+    res.status(404).json({ error: 'Album not found' });
+    return;
+  }
+
+  res.status(403).json({ error: 'Access denied' });
+}
+
 /**
- * GET /api/image-metadata/:album/:filename
- * Get metadata for a specific image
+ * GET /api/image-metadata/all
+ * Get all image metadata
  */
-router.get('/:album/:filename', async (req, res) => {
+router.get('/all', async (req, res) => {
   try {
-    const { album, filename } = req.params;
     const db = await getDbFunctions();
-    const metadata = db.getImageMetadata(album, filename);
-    
-    if (!metadata) {
-      res.status(404).json({ error: 'Metadata not found' });
+    const metadata = db.getAllMetadata();
+
+    if (isRequestAuthenticated(req)) {
+      res.json(metadata);
       return;
     }
-    
-    res.json(metadata);
+
+    const accessibleAlbums = new Set<string>(
+      db.getPublishedAlbums().map((album: { name: string }) => album.name)
+    );
+    const shareLinkAlbum = getValidShareLinkAlbum(req);
+
+    if (shareLinkAlbum) {
+      accessibleAlbums.add(shareLinkAlbum);
+    }
+
+    res.json(metadata.filter((item: { album: string }) => accessibleAlbums.has(item.album)));
   } catch (err) {
-    error('[ImageMetadata] Failed to fetch image metadata:', err);
+    error('[ImageMetadata] Failed to fetch all metadata:', err);
     res.status(500).json({ error: 'Failed to fetch metadata' });
   }
 });
@@ -56,6 +74,13 @@ router.get('/:album/:filename', async (req, res) => {
 router.get('/album/:album', async (req, res) => {
   try {
     const { album } = req.params;
+    const access = getAlbumAccess(req, album);
+
+    if (!access.allowed) {
+      sendAlbumAccessDenied(res, access);
+      return;
+    }
+
     const db = await getDbFunctions();
     const metadata = db.getAlbumMetadata(album);
     res.json(metadata);
@@ -66,16 +91,30 @@ router.get('/album/:album', async (req, res) => {
 });
 
 /**
- * GET /api/image-metadata/all
- * Get all image metadata
+ * GET /api/image-metadata/:album/:filename
+ * Get metadata for a specific image
  */
-router.get('/all', async (req, res) => {
+router.get('/:album/:filename', async (req, res) => {
   try {
+    const { album, filename } = req.params;
+    const access = getAlbumAccess(req, album);
+
+    if (!access.allowed) {
+      sendAlbumAccessDenied(res, access);
+      return;
+    }
+
     const db = await getDbFunctions();
-    const metadata = db.getAllMetadata();
+    const metadata = db.getImageMetadata(album, filename);
+
+    if (!metadata) {
+      res.status(404).json({ error: 'Metadata not found' });
+      return;
+    }
+
     res.json(metadata);
   } catch (err) {
-    error('[ImageMetadata] Failed to fetch all metadata:', err);
+    error('[ImageMetadata] Failed to fetch image metadata:', err);
     res.status(500).json({ error: 'Failed to fetch metadata' });
   }
 });
@@ -180,4 +219,3 @@ router.delete('/:album/:filename', requireManager, async (req, res) => {
 });
 
 export default router;
-
