@@ -3,7 +3,7 @@
  * Handles initial setup and configuration for first-time users
  */
 
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -37,6 +37,77 @@ const upload = multer({
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+type SetupChecks = {
+  configExists: boolean;
+  databaseExists: boolean;
+  photosDirExists: boolean;
+  optimizedDirExists: boolean;
+  hasPhotos: boolean;
+  isConfigured: boolean;
+};
+
+function getSetupState(): { setupComplete: boolean; checks: SetupChecks } {
+  const projectRoot = path.join(__dirname, "../../../");
+  const dataDir = process.env.DATA_DIR || path.join(projectRoot, "data");
+  const configPath = path.join(dataDir, "config.json");
+  const dbPath = path.join(dataDir, "gallery.db");
+  const photosDir = path.join(dataDir, "photos");
+  const optimizedDir = path.join(dataDir, "optimized");
+
+  const checks = {
+    configExists: fs.existsSync(configPath),
+    databaseExists: fs.existsSync(dbPath),
+    photosDirExists: fs.existsSync(photosDir),
+    optimizedDirExists: fs.existsSync(optimizedDir),
+    hasPhotos: false,
+    isConfigured: false,
+  };
+
+  // Check if photos directory has any albums
+  if (checks.photosDirExists) {
+    const entries = fs.readdirSync(photosDir, { withFileTypes: true });
+    checks.hasPhotos = entries.some((entry) => entry.isDirectory());
+  }
+
+  // Check if config is properly configured (not just example values)
+  if (checks.configExists) {
+    try {
+      const configContent = fs.readFileSync(configPath, "utf8");
+      const config = JSON.parse(configContent);
+
+      const hasValidAuth =
+        config.environment?.auth?.sessionSecret &&
+        config.environment.auth.sessionSecret !== "your-session-secret-here";
+      const hasValidBranding =
+        config.branding?.siteName && config.branding.siteName !== "Your Name";
+
+      checks.isConfigured = hasValidAuth && hasValidBranding;
+    } catch (err) {
+      checks.isConfigured = false;
+    }
+  }
+
+  const setupComplete =
+    checks.configExists && checks.databaseExists && checks.isConfigured;
+
+  return { setupComplete, checks };
+}
+
+function rejectIfSetupComplete(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const { setupComplete } = getSetupState();
+
+  if (setupComplete) {
+    res.status(409).json({ error: "Setup is already complete" });
+    return;
+  }
+
+  next();
+}
 
 /**
  * Download GeoIP database for location lookup
@@ -143,49 +214,7 @@ async function downloadGeoIPDatabase(dataDir: string): Promise<boolean> {
  */
 router.get("/status", async (req: Request, res: Response): Promise<void> => {
   try {
-    const projectRoot = path.join(__dirname, "../../../");
-    const dataDir = process.env.DATA_DIR || path.join(projectRoot, "data");
-    const configPath = path.join(dataDir, "config.json");
-    const dbPath = path.join(dataDir, "gallery.db");
-    const photosDir = path.join(dataDir, "photos");
-    const optimizedDir = path.join(dataDir, "optimized");
-
-    const checks = {
-      configExists: fs.existsSync(configPath),
-      databaseExists: fs.existsSync(dbPath),
-      photosDirExists: fs.existsSync(photosDir),
-      optimizedDirExists: fs.existsSync(optimizedDir),
-      hasPhotos: false,
-      isConfigured: false,
-    };
-
-    // Check if photos directory has any albums
-    if (checks.photosDirExists) {
-      const entries = fs.readdirSync(photosDir, { withFileTypes: true });
-      checks.hasPhotos = entries.some((entry) => entry.isDirectory());
-    }
-
-    // Check if config is properly configured (not just example values)
-    if (checks.configExists) {
-      try {
-        const configContent = fs.readFileSync(configPath, "utf8");
-        const config = JSON.parse(configContent);
-
-        // Check if critical fields are configured (not example values)
-        const hasValidAuth =
-          config.environment?.auth?.sessionSecret &&
-          config.environment.auth.sessionSecret !== "your-session-secret-here";
-        const hasValidBranding =
-          config.branding?.siteName && config.branding.siteName !== "Your Name";
-
-        checks.isConfigured = hasValidAuth && hasValidBranding;
-      } catch (err) {
-        checks.isConfigured = false;
-      }
-    }
-
-    const setupComplete =
-      checks.configExists && checks.databaseExists && checks.isConfigured;
+    const { setupComplete, checks } = getSetupState();
 
     // Only send installation_started event if setup is NOT complete (actual OOBE)
     if (!setupComplete) {
@@ -246,6 +275,7 @@ router.get("/status", async (req: Request, res: Response): Promise<void> => {
  */
 router.post(
   "/initialize",
+  rejectIfSetupComplete,
   async (req: Request, res: Response): Promise<void> => {
     try {
       const {
@@ -640,7 +670,7 @@ router.post(
         // Use the default Galleria logo (icon-512.png for best quality)
         const defaultIconPath = path.join(projectRoot, "config/icons/icon-512.png");
 
-        if (fs.existsSync(defaultIconPath)) {
+        if (fs.existsSync(defaultIconPath) && !fs.existsSync(avatarPath)) {
           // Copy as avatar.png
           await sharp(defaultIconPath)
             .resize(512, 512, { fit: 'cover' })
@@ -685,6 +715,8 @@ router.post(
           fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf8");
 
           info("  ✓ Default avatar and icons set up successfully");
+        } else if (fs.existsSync(avatarPath)) {
+          info("  Custom avatar already exists, preserving it");
         } else {
           warn("  ⚠️ Default icon not found at:", defaultIconPath);
         }
@@ -755,6 +787,7 @@ router.post(
  */
 router.post(
   "/upload-avatar",
+  rejectIfSetupComplete,
   upload.single("avatar"),
   async (req: Request, res: Response): Promise<void> => {
     try {
