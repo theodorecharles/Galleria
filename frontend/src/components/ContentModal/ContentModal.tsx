@@ -648,6 +648,7 @@ const ContentModal: React.FC<ContentModalProps> = ({
               exifData={exifData}
               loadingExif={loadingExif}
               imageTitle={selectedPhoto.title}
+              secretKey={secretKey}
               style={{}}
             />
 

@@ -45,6 +45,7 @@ import {
   verbose,
   trace,
 } from "./utils/logger.ts";
+import { getAlbumAccess, isRequestAuthenticated } from "./utils/album-access.ts";
 
 // Initialize logger early with config or environment variable
 initLogger(getLogLevel());
@@ -667,42 +668,31 @@ const checkAlbumPublishedMiddleware = (
   const pathParts = req.path.split('/').filter(p => p);
   
   if (pathParts.length >= 2) {
-    const album = decodeURIComponent(pathParts[1]); // Second part is the album name (URL decode it!)
-    
-    // Check if user is authenticated
-    const isAuthenticated = (req.isAuthenticated && req.isAuthenticated()) || !!(req.session as any)?.userId;
-    
-    // Check for share link in query parameter
-    // Note: req.query.key can be a string OR an array if multiple keys are provided
-    const shareKeyParam = req.query.key;
-    const shareKey = Array.isArray(shareKeyParam) ? shareKeyParam[0] : shareKeyParam;
-    let hasValidShareLink = false;
-    
-    if (shareKey && typeof shareKey === 'string' && /^[a-f0-9]{64}$/i.test(shareKey)) {
-      const { getShareLinkBySecret, isShareLinkExpired } = require('./database.js');
-      const shareLink = getShareLinkBySecret(shareKey);
-      if (shareLink && shareLink.album === album && !isShareLinkExpired(shareLink)) {
-        hasValidShareLink = true;
-      }
+    let album: string;
+
+    try {
+      album = decodeURIComponent(pathParts[1]); // Second part is the album name (URL decode it!)
+    } catch {
+      res.status(400).json({ error: "Invalid image path" });
+      return;
     }
-    
-    // Check album published state
-    const { getAlbumState } = require('./database.js');
-    const albumState = getAlbumState(album);
+
+    const access = getAlbumAccess(req, album);
     
     // Return 404 if album doesn't exist at all
-    if (!albumState) {
+    if (!access.exists) {
       res.status(404).json({ error: "Image not found" });
       return;
     }
     
-    // Deny access if album is unpublished and user is not authenticated and no valid share link
-    if (!albumState.published && !isAuthenticated && !hasValidShareLink) {
+    if (!access.allowed) {
       res.status(403).json({ error: "Access denied" });
       return;
     }
 
-    if (pathParts[0] === "download" && !albumState.downloads_enabled && !isAuthenticated) {
+    const albumState = access.albumState!;
+
+    if (pathParts[0] === "download" && !albumState.downloads_enabled && !isRequestAuthenticated(req)) {
       res.status(403).json({ error: "Downloads disabled" });
       return;
     }

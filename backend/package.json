@@ -7,7 +7,7 @@
     "start": "node --no-warnings --loader ts-node/esm src/server.ts",
     "dev": "nodemon --exec 'node --no-warnings --loader ts-node/esm' src/server.ts",
     "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test --loader ts-node/esm src/utils/album-access.test.ts"
   },
   "keywords": [],
   "author": "",
