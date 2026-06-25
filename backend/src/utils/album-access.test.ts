@@ -8,11 +8,26 @@ import type { Request } from 'express';
 const dataDir = mkdtempSync(path.join(tmpdir(), 'galleria-album-access-'));
 process.env.DATA_DIR = dataDir;
 
-let albumAccess: typeof import('./album-access.js');
+interface AccessResult {
+  allowed: boolean;
+  exists: boolean;
+  reason: string;
+}
+
+interface AlbumAccessModule {
+  getAlbumAccess(req: Request, albumName: string): AccessResult;
+}
+
+interface RequestOptions {
+  authenticated?: boolean;
+  key?: string;
+}
+
+let albumAccess: AlbumAccessModule;
 let shareKey = '';
 let expiredShareKey = '';
 
-function request(options: { authenticated?: boolean; key?: string } = {}): Request {
+function request(options: RequestOptions = {}): Request {
   return {
     isAuthenticated: () => Boolean(options.authenticated),
     session: options.authenticated ? { userId: 1 } : {},
