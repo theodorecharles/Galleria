@@ -71,13 +71,6 @@ const ContentModal: React.FC<ContentModalProps> = ({
   // For image URLs, don't include query strings to improve caching (especially on iOS)
   const imageQueryString = ``;
   
-  // Get query parameters for API calls
-  const queryParams = new URLSearchParams(window.location.search);
-  queryParams.delete('photo');
-  const queryString = queryParams.toString()
-    ? `?${queryParams.toString()}&i=${cacheBustValue}`
-    : `?i=${cacheBustValue}`;
-
   // Update URL with photo parameter
   const updateURLWithPhoto = useCallback((photo: Photo) => {
     const filename = photo.id.split('/').pop();
@@ -323,8 +316,15 @@ const ContentModal: React.FC<ContentModalProps> = ({
     setLoadingExif(true);
     try {
       const filename = photo.id.split('/').pop();
+      const exifQueryParams = new URLSearchParams(window.location.search);
+      exifQueryParams.delete('photo');
+      if (secretKey) {
+        exifQueryParams.set('key', secretKey);
+      }
+      exifQueryParams.set('i', String(cacheBustValue));
+      const exifQueryString = exifQueryParams.toString();
       const res = await fetchWithRateLimitCheck(
-        `${API_URL}/api/photos/${photo.album}/${filename}/exif${queryString ? '?' + queryString : ''}`
+        `${API_URL}/api/photos/${photo.album}/${filename}/exif${exifQueryString ? `?${exifQueryString}` : ''}`
       );
       
       if (res.ok) {
@@ -340,7 +340,7 @@ const ContentModal: React.FC<ContentModalProps> = ({
     } finally {
       setLoadingExif(false);
     }
-  }, [exifData, queryString]);
+  }, [exifData, secretKey]);
 
   // Toggle info panel
   const handleToggleInfo = useCallback(() => {
