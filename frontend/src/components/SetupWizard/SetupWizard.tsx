@@ -178,6 +178,27 @@ export default function SetupWizard() {
 
     try {
       setSubmitting(true);
+
+      // Upload the optional avatar before initialization; setup mutation routes
+      // are locked once the backend reports setup complete.
+      if (avatarFile) {
+        try {
+          const formData = new FormData();
+          formData.append('avatar', avatarFile);
+
+          const avatarResponse = await fetch(`${API_URL}/api/setup/upload-avatar`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!avatarResponse.ok) {
+            warn('Avatar upload failed, but continuing with setup');
+          }
+        } catch (err) {
+          warn('Avatar upload failed:', err);
+          // Don't fail the entire setup if avatar upload fails
+        }
+      }
       
       // Initialize the configuration with user account data
       const response = await fetch(`${API_URL}/api/setup/initialize`, {
@@ -202,26 +223,6 @@ export default function SetupWizard() {
 
       if (!response.ok) {
         throw new Error(data.error || 'Setup failed');
-      }
-
-      // If avatar was uploaded, save it
-      if (avatarFile) {
-        try {
-          const formData = new FormData();
-          formData.append('avatar', avatarFile);
-          
-          const avatarResponse = await fetch(`${API_URL}/api/setup/upload-avatar`, {
-            method: 'POST',
-            body: formData,
-          });
-          
-          if (!avatarResponse.ok) {
-            warn('Avatar upload failed, but continuing with setup');
-          }
-        } catch (err) {
-          warn('Avatar upload failed:', err);
-          // Don't fail the entire setup if avatar upload fails
-        }
       }
 
       setSuccess(t('oobe.completeHeading'));
@@ -755,4 +756,3 @@ export default function SetupWizard() {
     </div>
   );
 }
-
