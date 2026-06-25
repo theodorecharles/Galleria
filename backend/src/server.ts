@@ -57,6 +57,60 @@ const imageCache = new Map<
 const IMAGE_CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
 const IMAGE_CACHE_MAX_ITEMS = 2000; // Limit cache size (thumbnails + modals)
 
+function getOptimizedRelativePath(reqPath: string): string | null {
+  let decoded: string;
+
+  try {
+    decoded = decodeURIComponent(reqPath);
+  } catch {
+    return null;
+  }
+
+  if (decoded.includes("\0") || decoded.includes("\\")) {
+    return null;
+  }
+
+  return decoded.replace(/^[/\\]+/, "");
+}
+
+function isOptimizedCachePath(reqPath: string): boolean {
+  const relative = getOptimizedRelativePath(reqPath);
+
+  if (relative) {
+    return (
+      relative === "thumbnail" ||
+      relative === "modal" ||
+      relative.startsWith("thumbnail/") ||
+      relative.startsWith("modal/")
+    );
+  }
+
+  return reqPath.startsWith("/thumbnail") || reqPath.startsWith("/modal");
+}
+
+function safeOptimizedPath(
+  optimizedDir: string,
+  reqPath: string
+): string | null {
+  const relative = getOptimizedRelativePath(reqPath);
+
+  if (
+    !relative ||
+    (!relative.startsWith("thumbnail/") && !relative.startsWith("modal/"))
+  ) {
+    return null;
+  }
+
+  const root = path.resolve(optimizedDir);
+  const candidate = path.resolve(root, relative);
+
+  if (candidate !== root && !candidate.startsWith(root + path.sep)) {
+    return null;
+  }
+
+  return candidate;
+}
+
 // Import authentication middleware
 import { requireAdmin } from "./auth/middleware.ts";
 
@@ -529,11 +583,16 @@ const cacheImageMiddleware = (
 ) => {
   // When mounted under /optimized, req.path is relative to that mount point
   // So req.path will be /thumbnail/... or /modal/... (without /optimized prefix)
-  if (!req.path.startsWith("/thumbnail/") && !req.path.startsWith("/modal/")) {
+  if (!isOptimizedCachePath(req.path)) {
     return next();
   }
 
-  const imagePath = path.join(optimizedDir, req.path);
+  const imagePath = safeOptimizedPath(optimizedDir, req.path);
+  if (!imagePath) {
+    res.status(400).json({ error: "Invalid image path" });
+    return;
+  }
+
   const now = Date.now();
 
   // Check cache first
@@ -576,7 +635,13 @@ const cacheImageMiddleware = (
       timestamp: now,
     });
 
-    const sizeType = req.path.includes("/thumbnail/") ? "thumbnail" : "modal";
+    const cacheRelativePath = path.relative(
+      path.resolve(optimizedDir),
+      imagePath
+    );
+    const sizeType = cacheRelativePath.startsWith(`thumbnail${path.sep}`)
+      ? "thumbnail"
+      : "modal";
     debug(
       `[Cache] Cached ${sizeType}: ${path.basename(imagePath)} (${(
         data.length / 1024
