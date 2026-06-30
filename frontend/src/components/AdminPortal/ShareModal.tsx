@@ -147,6 +147,7 @@ export default function ShareModal({ album, onClose }: ShareModalProps) {
                 handleExpirationChange(newExpiration);
               }}
               disabled={loading}
+              portal
             />
           </div>
 

@@ -154,6 +154,7 @@ export default function VideoShareModal({ album, filename, videoTitle, onClose }
                 handleExpirationChange(newExpiration);
               }}
               disabled={loading}
+              portal
             />
           </div>
 
@@ -187,6 +188,5 @@ export default function VideoShareModal({ album, filename, videoTitle, onClose }
     </div>
   );
 }
-
 
 
