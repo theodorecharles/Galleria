@@ -30,7 +30,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (req.isAuthenticated && req.isAuthenticated()) {
     const sessionUser = req.user as any;
     
-    // Verify user still exists in database
+    // Verify user still exists and is active in database
     if (sessionUser?.email) {
       const dbUser = getUserByEmail(sessionUser.email);
       if (!dbUser) {
@@ -42,6 +42,14 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
         req.session.destroy(() => {});
         return res.status(401).json({ error: 'User account no longer exists' });
       }
+      if (!dbUser.is_active) {
+        trace('[Auth Middleware] User deactivated (Google OAuth):', sessionUser.email);
+        req.logout((err) => {
+          if (err) trace('[Auth Middleware] Logout error:', err);
+        });
+        req.session.destroy(() => {});
+        return res.status(401).json({ error: 'Account is disabled' });
+      }
     }
     
     trace('[Auth Middleware] Authenticated via Passport');
@@ -52,13 +60,18 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if ((req.session as any)?.userId) {
     const userId = (req.session as any).userId;
     
-    // Verify user still exists in database
+    // Verify user still exists and is active in database
     const dbUser = getUserById(userId);
     if (!dbUser) {
       trace('[Auth Middleware] User no longer exists (credentials):', userId);
       // Destroy session and return 401
       req.session.destroy(() => {});
       return res.status(401).json({ error: 'User account no longer exists' });
+    }
+    if (!dbUser.is_active) {
+      trace('[Auth Middleware] User deactivated (credentials):', userId);
+      req.session.destroy(() => {});
+      return res.status(401).json({ error: 'Account is disabled' });
     }
     
     trace('[Auth Middleware] Authenticated via credentials');
