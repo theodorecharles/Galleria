@@ -75,6 +75,11 @@ export async function getVideoMetadata(videoPath: string): Promise<VideoMetadata
       stderr += data.toString();
     });
 
+    // Reject on spawn failure (e.g. ffprobe missing / ENOENT) so callers do not hang
+    ffprobe.on('error', (err) => {
+      reject(new Error(`ffprobe spawn failed: ${err.message}`));
+    });
+
     ffprobe.on('close', (code) => {
       if (code !== 0) {
         reject(new Error(`ffprobe failed: ${stderr}`));
@@ -83,13 +88,17 @@ export async function getVideoMetadata(videoPath: string): Promise<VideoMetadata
 
       try {
         const data = JSON.parse(stdout);
-        const stream = data.streams[0];
+        const stream = data.streams?.[0];
+        if (!stream) {
+          reject(new Error('ffprobe returned no video stream'));
+          return;
+        }
         const format = data.format;
 
         resolve({
           width: stream.width || 1920,
           height: stream.height || 1080,
-          duration: parseFloat(stream.duration || format.duration || '0'),
+          duration: parseFloat(stream.duration || format?.duration || '0'),
           rotation: stream.rotation || 0
         });
       } catch (err) {
