@@ -1287,6 +1287,11 @@ router.post('/passkey/auth-verify', async (req: Request, res: Response) => {
 
     const { user, passkey } = result;
 
+    // Reject disabled accounts (same guard as password /login)
+    if (!user.is_active) {
+      return res.status(401).json({ error: 'Account is disabled' });
+    }
+
     // Verify authentication
     const verification = await verifyPasskeyAuthentication(
       credential,
