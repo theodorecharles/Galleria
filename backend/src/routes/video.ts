@@ -26,21 +26,76 @@ const sanitizePath = (name: string): string | null => {
 };
 
 /**
+ * Extract share key from request query (validated hex format).
+ */
+const getShareKeyFromQuery = (req: Request): string | null => {
+  // Note: req.query.key can be a string OR an array if multiple keys are provided
+  const shareKeyParam = req.query.key;
+  const shareKey = Array.isArray(shareKeyParam) ? shareKeyParam[0] : shareKeyParam;
+  if (shareKey && typeof shareKey === 'string' && /^[a-f0-9]{64}$/i.test(shareKey)) {
+    return shareKey;
+  }
+  return null;
+};
+
+/**
+ * Safari native HLS does not preserve master-playlist query params on relative
+ * media-playlist / segment URIs. Rewrite URI lines so the share key travels with
+ * every follow-on request (HLS.js CustomLoader handles this on non-Safari).
+ */
+const appendKeyToPlaylistUris = (content: string, key: string): string => {
+  return content
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim();
+      // Skip empty lines and HLS tags/comments
+      if (!trimmed || trimmed.startsWith('#')) {
+        return line;
+      }
+      const separator = trimmed.includes('?') ? '&' : '?';
+      return `${trimmed}${separator}key=${key}`;
+    })
+    .join('\n');
+};
+
+/**
+ * Send an m3u8 playlist, rewriting relative URIs to include share key when present.
+ */
+const sendPlaylist = (req: Request, res: Response, playlistPath: string): void => {
+  res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+
+  const shareKey = getShareKeyFromQuery(req);
+  if (shareKey) {
+    // Do not cache key-bearing rewrites (key is a secret capability URL)
+    res.setHeader('Cache-Control', 'private, no-store');
+    const content = fs.readFileSync(playlistPath, 'utf-8');
+    res.send(appendKeyToPlaylistUris(content, shareKey));
+    return;
+  }
+
+  res.sendFile(playlistPath);
+};
+
+/**
  * Check if user has access to album (authenticated, published, or valid share link)
  */
 const hasAlbumAccess = (req: Request, album: string): boolean => {
   // Check authentication
   const isAuthenticated = (req.isAuthenticated && req.isAuthenticated()) || !!(req.session as any)?.userId;
   
-  // Check for share link in query parameter
-  // Note: req.query.key can be a string OR an array if multiple keys are provided
-  const shareKeyParam = req.query.key;
-  const shareKey = Array.isArray(shareKeyParam) ? shareKeyParam[0] : shareKeyParam;
+  const shareKey = getShareKeyFromQuery(req);
   let hasValidShareLink = false;
   
   info(`[Video] Access check: album=${album}, shareKey=${shareKey ? String(shareKey).substring(0, 16) + '...' : 'none'}, isAuth=${isAuthenticated}`);
   
-  if (shareKey && typeof shareKey === 'string' && /^[a-f0-9]{64}$/i.test(shareKey)) {
+  if (shareKey) {
     const shareLink = getShareLinkBySecret(shareKey);
     info(`[Video] Share link lookup: found=${!!shareLink}, match=${shareLink?.album === album}, expired=${shareLink ? isShareLinkExpired(shareLink) : 'N/A'}`);
     if (shareLink && shareLink.album === album && !isShareLinkExpired(shareLink)) {
@@ -127,20 +182,7 @@ const serveMasterPlaylist = async (req: Request, res: Response, album: string, f
     }
     
     info('[Video] Master playlist found, sending file');
-
-    // Set appropriate headers for HLS
-    res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
-    
-    // Set CORS headers to allow credentials
-    const origin = req.headers.origin;
-    if (origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    }
-
-    // Send the master playlist file
-    res.sendFile(masterPlaylistPath);
+    sendPlaylist(req, res, masterPlaylistPath);
   } catch (err) {
     error('[Video] Failed to serve master playlist:', err);
     error('[Video] Error details:', {
@@ -219,19 +261,7 @@ router.get("/:album/:filename/:resolution/playlist.m3u8", async (req: Request, r
       return;
     }
 
-    // Set appropriate headers for HLS
-    res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
-    
-    // Set CORS headers to allow credentials
-    const origin = req.headers.origin;
-    if (origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    }
-
-    // Send the playlist file
-    res.sendFile(playlistPath);
+    sendPlaylist(req, res, playlistPath);
   } catch (err) {
     error('[Video] Failed to serve playlist:', err);
     res.status(500).json({ error: 'Failed to serve playlist' });
