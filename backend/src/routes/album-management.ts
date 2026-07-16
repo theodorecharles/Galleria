@@ -432,6 +432,19 @@ const sanitizeName = (name: string): string | null => {
 };
 
 /**
+ * Best-effort cleanup of a multer diskStorage temp file.
+ * Safe to call when the path is missing or already unlinked.
+ */
+const unlinkTempUpload = (filePath: string | undefined | null): void => {
+  if (!filePath) return;
+  try {
+    fs.unlinkSync(filePath);
+  } catch {
+    // Ignore cleanup errors (already moved/deleted, or race)
+  }
+};
+
+/**
  * Sanitize photo/video filename by removing/replacing invalid characters
  * Converts to Title Case for consistency
  */
@@ -879,6 +892,8 @@ router.post("/:album/upload", requireManager, (req: Request, res: Response, next
     
     const sanitizedAlbum = sanitizeName(album);
     if (!sanitizedAlbum) {
+      // Multer may already have written the file to os.tmpdir()
+      unlinkTempUpload(req.file?.path);
       res.status(400).json({ error: 'Invalid album name' });
       return;
     }
@@ -892,6 +907,7 @@ router.post("/:album/upload", requireManager, (req: Request, res: Response, next
     // SECURITY: Sanitize filename to prevent path traversal attacks
     const sanitizedFilename = sanitizePhotoName(file.originalname);
     if (!sanitizedFilename) {
+      unlinkTempUpload(file.path);
       res.status(400).json({ error: 'Invalid filename. Use only alphanumeric characters, spaces, hyphens, underscores, and valid image/video extensions.' });
       return;
     }
@@ -900,6 +916,7 @@ router.post("/:album/upload", requireManager, (req: Request, res: Response, next
     const albumPath = path.join(photosDir, sanitizedAlbum);
     
     if (!fs.existsSync(albumPath)) {
+      unlinkTempUpload(file.path);
       res.status(404).json({ error: 'Album not found' });
       return;
     }
@@ -1123,6 +1140,8 @@ router.post("/:album/upload", requireManager, (req: Request, res: Response, next
       }
     }
   } catch (err) {
+    // Drop multer temp file on any unexpected failure path
+    unlinkTempUpload(req.file?.path);
     error('[AlbumManagement] Failed to upload file:', err);
     res.status(500).json({ error: 'Failed to upload file' });
   }
