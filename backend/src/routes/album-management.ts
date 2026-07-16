@@ -562,9 +562,11 @@ router.post("/", requireManager, async (req: Request, res: Response): Promise<vo
 });
 
 /**
- * Rename an album
+ * Rename an album (FS first, then DB; roll back FS if DB fails).
+ * Shared by PUT and PATCH so the live API surface cannot diverge into a
+ * DB-first path with no rollback (see ticket #2746).
  */
-router.put("/:album/rename", requireManager, async (req: Request, res: Response): Promise<void> => {
+async function handleRenameAlbum(req: Request, res: Response): Promise<void> {
   try {
     const { album } = req.params;
     const { newName } = req.body;
@@ -609,7 +611,7 @@ router.put("/:album/rename", requireManager, async (req: Request, res: Response)
       return;
     }
     
-    // Rename photos directory
+    // Rename photos directory first — if this fails, DB is untouched
     fs.renameSync(oldAlbumPath, newAlbumPath);
     info(`[AlbumManagement] Renamed photos directory: ${sanitizedOldName} → ${sanitizedNewName}`);
     
@@ -635,7 +637,7 @@ router.put("/:album/rename", requireManager, async (req: Request, res: Response)
       }
     }
     
-    // Update database
+    // Update database after FS; roll FS back if DB fails
     const success = renameAlbum(sanitizedOldName, sanitizedNewName);
     if (!success) {
       // Rollback filesystem changes
@@ -674,7 +676,10 @@ router.put("/:album/rename", requireManager, async (req: Request, res: Response)
     error('[AlbumManagement] Failed to rename album:', err);
     res.status(500).json({ errorCode: 'RENAME_FAILED', error: 'Failed to rename album' });
   }
-});
+}
+
+router.put("/:album/rename", requireManager, handleRenameAlbum);
+router.patch("/:album/rename", requireManager, handleRenameAlbum);
 
 /**
  * Delete an album and all its photos
@@ -1131,146 +1136,6 @@ router.post("/:album/upload", requireManager, (req: Request, res: Response, next
 /**
  * Rename an album (updates database and moves directories)
  */
-router.patch("/:album/rename", requireManager, async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { album } = req.params;
-    const { newName } = req.body;
-    
-    const sanitizedOldName = sanitizeName(album);
-    if (!sanitizedOldName) {
-      res.status(400).json({ error: 'Invalid album name' });
-      return;
-    }
-
-    if (!newName || typeof newName !== 'string') {
-      res.status(400).json({ error: 'New album name is required' });
-      return;
-    }
-
-    const sanitizedNewName = sanitizeName(newName);
-    if (!sanitizedNewName) {
-      res.status(400).json({ error: 'Invalid new album name. Use only letters, numbers, spaces, hyphens, and underscores.' });
-      return;
-    }
-
-    // Check if old album name equals new album name
-    if (sanitizedOldName === sanitizedNewName) {
-      res.status(400).json({ error: 'New name must be different from current name' });
-      return;
-    }
-
-    const photosDir = req.app.get("photosDir");
-    const optimizedDir = req.app.get("optimizedDir");
-    
-    const oldAlbumPath = path.join(photosDir, sanitizedOldName);
-    const newAlbumPath = path.join(photosDir, sanitizedNewName);
-    
-    // Check if old album exists
-    if (!fs.existsSync(oldAlbumPath)) {
-      res.status(404).json({ error: 'Album not found' });
-      return;
-    }
-
-    // Check if new album name already exists
-    if (fs.existsSync(newAlbumPath)) {
-      res.status(400).json({ error: 'An album with that name already exists' });
-      return;
-    }
-
-    // Get album state before renaming
-    const albumState = getAlbumState(sanitizedOldName);
-    if (!albumState) {
-      res.status(404).json({ error: 'Album not found in database' });
-      return;
-    }
-
-    // Update database FIRST before touching filesystem
-    // This way if DB update fails, filesystem is unchanged
-    const db = getDatabase();
-    
-    // Start transaction with foreign keys temporarily disabled
-    // This is needed because share_links has FK to albums(name) without ON UPDATE CASCADE
-    const transaction = db.transaction(() => {
-      // Temporarily disable foreign keys for this transaction
-      db.pragma('foreign_keys = OFF');
-      
-      // Update albums table
-      const result = db.prepare(`
-        UPDATE albums 
-        SET name = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE name = ?
-      `).run(sanitizedNewName, sanitizedOldName);
-      
-      if (result.changes === 0) {
-        throw new Error('Album not found in database');
-      }
-      
-      // Update image_metadata table
-      db.prepare(`
-        UPDATE image_metadata 
-        SET album = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE album = ?
-      `).run(sanitizedNewName, sanitizedOldName);
-      
-      // Update share_links table
-      db.prepare(`
-        UPDATE share_links 
-        SET album = ?
-        WHERE album = ?
-      `).run(sanitizedNewName, sanitizedOldName);
-      
-      // Re-enable foreign keys
-      db.pragma('foreign_keys = ON');
-    });
-    
-    transaction();
-    info(`Updated database: ${sanitizedOldName} -> ${sanitizedNewName}`);
-
-    // Now rename filesystem directories
-    // Rename photos directory
-    fs.renameSync(oldAlbumPath, newAlbumPath);
-    info(`Renamed photos directory: ${sanitizedOldName} -> ${sanitizedNewName}`);
-
-    // Rename optimized directories
-    ['thumbnail', 'modal', 'download'].forEach(dir => {
-      const oldOptimizedPath = path.join(optimizedDir, dir, sanitizedOldName);
-      const newOptimizedPath = path.join(optimizedDir, dir, sanitizedNewName);
-      if (fs.existsSync(oldOptimizedPath)) {
-        fs.renameSync(oldOptimizedPath, newOptimizedPath);
-        info(`Renamed optimized/${dir}: ${sanitizedOldName} -> ${sanitizedNewName}`);
-      }
-    });
-
-    // Rename video directory if it exists
-    const videoDir = req.app.get("videoDir");
-    if (videoDir) {
-      const oldVideoPath = path.join(videoDir, sanitizedOldName);
-      const newVideoPath = path.join(videoDir, sanitizedNewName);
-      if (fs.existsSync(oldVideoPath)) {
-        fs.renameSync(oldVideoPath, newVideoPath);
-        info(`Renamed video directory: ${sanitizedOldName} -> ${sanitizedNewName}`);
-      }
-    }
-
-    // Invalidate cache for both old and new album names
-    invalidateAlbumCache(sanitizedOldName);
-    invalidateAlbumCache(sanitizedNewName);
-
-    // Regenerate static JSON files
-    const appRoot = req.app.get('appRoot');
-    generateStaticJSONFiles(appRoot);
-
-    res.json({ 
-      success: true, 
-      oldName: sanitizedOldName,
-      newName: sanitizedNewName
-    });
-  } catch (err) {
-    error('[AlbumManagement] Failed to rename album:', err);
-    res.status(500).json({ error: 'Failed to rename album' });
-  }
-});
-
 /**
  * Toggle album published state
  */
