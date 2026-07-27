@@ -249,47 +249,55 @@ router.post('/login', async (req: Request, res: Response) => {
       }
     }
 
-    // Login successful - create session
-    (req.session as any).userId = user.id;
-    (req.session as any).user = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      picture: user.picture,
-      role: user.role,
-      mfa_enabled: user.mfa_enabled,
-      passkey_enabled: user.passkeys && user.passkeys.length > 0,
-      auth_methods: user.auth_methods,
-    };
-
-    info('[Login] Creating session for user:', {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      mfa_enabled: user.mfa_enabled,
-      sessionID: req.sessionID,
-    });
-
-    // Save session explicitly
-    req.session.save((err) => {
-      if (err) {
-        error('[Login] Session save error:', err);
+    // Login successful — regenerate session ID before privilege elevation
+    // (prevents session fixation on a pre-planted connect.sid)
+    req.session.regenerate((regenErr) => {
+      if (regenErr) {
+        error('[Login] Session regenerate error:', regenErr);
         return res.status(500).json({ error: 'Session creation failed' });
       }
 
-      info('[Login] ✅ Session saved successfully:', {
+      (req.session as any).userId = user.id;
+      (req.session as any).user = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+        role: user.role,
+        mfa_enabled: user.mfa_enabled,
+        passkey_enabled: user.passkeys && user.passkeys.length > 0,
+        auth_methods: user.auth_methods,
+      };
+
+      info('[Login] Creating session for user:', {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        mfa_enabled: user.mfa_enabled,
         sessionID: req.sessionID,
-        userId: (req.session as any).userId,
       });
 
-      res.json({
-        success: true,
-        user: {
-          id: user!.id,
-          email: user!.email,
-          name: user!.name,
-          picture: user!.picture,
-        },
+      // Save session explicitly
+      req.session.save((err) => {
+        if (err) {
+          error('[Login] Session save error:', err);
+          return res.status(500).json({ error: 'Session creation failed' });
+        }
+
+        info('[Login] ✅ Session saved successfully:', {
+          sessionID: req.sessionID,
+          userId: (req.session as any).userId,
+        });
+
+        res.json({
+          success: true,
+          user: {
+            id: user!.id,
+            email: user!.email,
+            name: user!.name,
+            picture: user!.picture,
+          },
+        });
       });
     });
   } catch (err) {
@@ -1331,44 +1339,51 @@ router.post('/passkey/auth-verify', async (req: Request, res: Response) => {
     updatePasskeyCounter(user.id, passkey.id, verification.authenticationInfo.newCounter);
     challenges.delete(`passkey-auth-${sessionId}`);
 
-    // Create session
-    (req.session as any).userId = user.id;
-    (req.session as any).user = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      picture: user.picture,
-      role: user.role,
-      mfa_enabled: user.mfa_enabled,
-      passkey_enabled: user.passkeys && user.passkeys.length > 0,
-      auth_methods: user.auth_methods,
-    };
-
-    info('[Passkey Login] Creating session for user:', {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      mfa_enabled: user.mfa_enabled,
-      sessionID: req.sessionID,
-    });
-
-    // Save session explicitly
-    req.session.save((err) => {
-      if (err) {
-        error('[Passkey Login] Session save error:', err);
+    // Create session — regenerate ID before privilege elevation (session fixation)
+    req.session.regenerate((regenErr) => {
+      if (regenErr) {
+        error('[Passkey Login] Session regenerate error:', regenErr);
         return res.status(500).json({ error: 'Session creation failed' });
       }
 
-      info('[Passkey Login] ✅ Session saved successfully');
-      
-      res.json({
-        success: true,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          picture: user.picture,
-        },
+      (req.session as any).userId = user.id;
+      (req.session as any).user = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+        role: user.role,
+        mfa_enabled: user.mfa_enabled,
+        passkey_enabled: user.passkeys && user.passkeys.length > 0,
+        auth_methods: user.auth_methods,
+      };
+
+      info('[Passkey Login] Creating session for user:', {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        mfa_enabled: user.mfa_enabled,
+        sessionID: req.sessionID,
+      });
+
+      // Save session explicitly
+      req.session.save((err) => {
+        if (err) {
+          error('[Passkey Login] Session save error:', err);
+          return res.status(500).json({ error: 'Session creation failed' });
+        }
+
+        info('[Passkey Login] ✅ Session saved successfully');
+
+        res.json({
+          success: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            picture: user.picture,
+          },
+        });
       });
     });
   } catch (err) {
