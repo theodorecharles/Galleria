@@ -12,9 +12,12 @@ export type SessionRecord = {
     email?: string;
   };
   passport?: {
+    // Google OAuth serializeUser stores full profile fields, not DB id alone
     user?: number | string | {
       id?: number | string;
       email?: string;
+      name?: string;
+      picture?: string;
     };
   };
 };
