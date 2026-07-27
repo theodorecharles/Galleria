@@ -6,6 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireAdmin } from '../auth/middleware.js';
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
+import { sessionBelongsToUser } from '../utils/session-user.js';
 import {
   getUserById,
   updateUser,
@@ -1527,8 +1528,12 @@ router.delete('/users/:userId', requireAdmin, async (req: Request, res: Response
       }
     ).catch(err => error('[AuthExtended] Failed to send user deletion notification:', err));
     
-    // Invalidate all sessions for this user
+    // Invalidate all sessions for this user.
+    // Credential sessions set session.userId; Passport stores
+    // session.passport.user as { id: googleProfileId, email, ... } — never
+    // compare the whole object to the DB numeric id.
     const sessionStore = req.sessionStore;
+    const deletedEmail = targetUser.email;
     if (sessionStore && sessionStore.all) {
       sessionStore.all((err: Error | null, sessions: any) => {
         if (err) {
@@ -1536,11 +1541,10 @@ router.delete('/users/:userId', requireAdmin, async (req: Request, res: Response
           return;
         }
         
-        // Destroy sessions belonging to the deleted user
         if (sessions) {
           Object.keys(sessions).forEach((sid) => {
             const session = sessions[sid];
-            if (session?.passport?.user === userId) {
+            if (sessionBelongsToUser(session, userId, deletedEmail)) {
               sessionStore.destroy(sid, (destroyErr) => {
                 if (destroyErr) {
                   error(`Failed to destroy session ${sid}:`, destroyErr);
