@@ -9,6 +9,7 @@ import path from "path";
 import { error, info } from '../utils/logger.js';
 import { getAlbumState, getShareLinkBySecret, isShareLinkExpired } from '../database.js';
 import { requireAuth } from '../auth/middleware.js';
+import { isRequestAuthenticated } from '../utils/album-access.js';
 
 const router = Router();
 
@@ -87,8 +88,8 @@ const sendPlaylist = (req: Request, res: Response, playlistPath: string): void =
  * Check if user has access to album (authenticated, published, or valid share link)
  */
 const hasAlbumAccess = (req: Request, album: string): boolean => {
-  // Check authentication
-  const isAuthenticated = (req.isAuthenticated && req.isAuthenticated()) || !!(req.session as any)?.userId;
+  // Live DB check — deleted/inactive sessions must not stream unpublished video
+  const isAuthenticated = isRequestAuthenticated(req);
   
   const shareKey = getShareKeyFromQuery(req);
   let hasValidShareLink = false;

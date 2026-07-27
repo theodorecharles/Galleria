@@ -1565,7 +1565,9 @@ router.delete('/users/:userId', requireAdmin, async (req: Request, res: Response
       }
     ).catch(err => error('[AuthExtended] Failed to send user deletion notification:', err));
     
-    // Invalidate all sessions for this user (credential userId + passport email)
+    // Invalidate all sessions for this user (credential userId + passport email).
+    // Passport stores session.passport.user as { id: googleProfileId, email, ... }
+    // — never compare the whole object to the DB numeric id (handled in matcher).
     await destroySessionsForUser(
       req.sessionStore as any,
       userId,
