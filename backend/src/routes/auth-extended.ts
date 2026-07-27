@@ -48,6 +48,7 @@ import { sendInvitationEmail, sendPasswordResetEmail, isEmailServiceEnabled, gen
 import { getCurrentConfig, reloadConfig } from '../config.js';
 import { sendNotificationToUser } from '../push-notifications.js';
 import { translateNotification } from '../i18n-backend.js';
+import { destroySessionsForUser } from '../auth/session-invalidation.js';
 
 const router = Router();
 
@@ -248,47 +249,55 @@ router.post('/login', async (req: Request, res: Response) => {
       }
     }
 
-    // Login successful - create session
-    (req.session as any).userId = user.id;
-    (req.session as any).user = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      picture: user.picture,
-      role: user.role,
-      mfa_enabled: user.mfa_enabled,
-      passkey_enabled: user.passkeys && user.passkeys.length > 0,
-      auth_methods: user.auth_methods,
-    };
-
-    info('[Login] Creating session for user:', {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      mfa_enabled: user.mfa_enabled,
-      sessionID: req.sessionID,
-    });
-
-    // Save session explicitly
-    req.session.save((err) => {
-      if (err) {
-        error('[Login] Session save error:', err);
+    // Login successful — regenerate session ID before privilege elevation
+    // (prevents session fixation on a pre-planted connect.sid)
+    req.session.regenerate((regenErr) => {
+      if (regenErr) {
+        error('[Login] Session regenerate error:', regenErr);
         return res.status(500).json({ error: 'Session creation failed' });
       }
 
-      info('[Login] ✅ Session saved successfully:', {
+      (req.session as any).userId = user.id;
+      (req.session as any).user = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+        role: user.role,
+        mfa_enabled: user.mfa_enabled,
+        passkey_enabled: user.passkeys && user.passkeys.length > 0,
+        auth_methods: user.auth_methods,
+      };
+
+      info('[Login] Creating session for user:', {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        mfa_enabled: user.mfa_enabled,
         sessionID: req.sessionID,
-        userId: (req.session as any).userId,
       });
 
-      res.json({
-        success: true,
-        user: {
-          id: user!.id,
-          email: user!.email,
-          name: user!.name,
-          picture: user!.picture,
-        },
+      // Save session explicitly
+      req.session.save((err) => {
+        if (err) {
+          error('[Login] Session save error:', err);
+          return res.status(500).json({ error: 'Session creation failed' });
+        }
+
+        info('[Login] ✅ Session saved successfully:', {
+          sessionID: req.sessionID,
+          userId: (req.session as any).userId,
+        });
+
+        res.json({
+          success: true,
+          user: {
+            id: user!.id,
+            email: user!.email,
+            name: user!.name,
+            picture: user!.picture,
+          },
+        });
       });
     });
   } catch (err) {
@@ -722,6 +731,14 @@ router.post('/password-reset/:token/complete', async (req: Request, res: Respons
     // Clear reset token
     clearPasswordResetToken(user.id);
 
+    // Invalidate every existing session for this user (stolen cookies must not survive reset)
+    await destroySessionsForUser(
+      req.sessionStore as any,
+      user.id,
+      user.email,
+      'password-reset'
+    );
+
     // Send push notification to all admins
     await notifyAllAdmins(
       'notifications.backend.passwordChangedTitle',
@@ -883,21 +900,35 @@ router.post('/change-password', requireAuth, async (req: Request, res: Response)
     // Update password
     updatePassword(userId, newPassword);
 
-    // Send push notification to all admins
-    if (user) {
-      await notifyAllAdmins(
-        'notifications.backend.passwordChangedTitle',
-        'notifications.backend.passwordChangedBody',
-        'password-changed',
-        'passwordChanged',
-        {
-          userName: user.name || user.email,
-          userEmail: user.email
-        }
-      ).catch(err => error('[AuthExtended] Failed to send password change notification:', err));
-    }
+    // Invalidate every session for this user (including other devices / stolen cookies)
+    await destroySessionsForUser(
+      req.sessionStore as any,
+      userId,
+      user.email,
+      'change-password'
+    );
 
-    res.json({ success: true });
+    // Send push notification to all admins
+    await notifyAllAdmins(
+      'notifications.backend.passwordChangedTitle',
+      'notifications.backend.passwordChangedBody',
+      'password-changed',
+      'passwordChanged',
+      {
+        userName: user.name || user.email,
+        userEmail: user.email
+      }
+    ).catch(err => error('[AuthExtended] Failed to send password change notification:', err));
+
+    // Force re-login on the current client as well
+    req.session.destroy((destroyErr) => {
+      if (destroyErr) {
+        error('[AuthExtended] Failed to destroy current session after password change:', destroyErr);
+        // Password already updated and other sessions wiped; still report success
+        return res.json({ success: true, requiresReauth: true });
+      }
+      res.json({ success: true, requiresReauth: true });
+    });
   } catch (err) {
     error('[AuthExtended] Password change error:', err);
     res.status(500).json({ error: 'Password change failed' });
@@ -1308,44 +1339,51 @@ router.post('/passkey/auth-verify', async (req: Request, res: Response) => {
     updatePasskeyCounter(user.id, passkey.id, verification.authenticationInfo.newCounter);
     challenges.delete(`passkey-auth-${sessionId}`);
 
-    // Create session
-    (req.session as any).userId = user.id;
-    (req.session as any).user = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      picture: user.picture,
-      role: user.role,
-      mfa_enabled: user.mfa_enabled,
-      passkey_enabled: user.passkeys && user.passkeys.length > 0,
-      auth_methods: user.auth_methods,
-    };
-
-    info('[Passkey Login] Creating session for user:', {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      mfa_enabled: user.mfa_enabled,
-      sessionID: req.sessionID,
-    });
-
-    // Save session explicitly
-    req.session.save((err) => {
-      if (err) {
-        error('[Passkey Login] Session save error:', err);
+    // Create session — regenerate ID before privilege elevation (session fixation)
+    req.session.regenerate((regenErr) => {
+      if (regenErr) {
+        error('[Passkey Login] Session regenerate error:', regenErr);
         return res.status(500).json({ error: 'Session creation failed' });
       }
 
-      info('[Passkey Login] ✅ Session saved successfully');
-      
-      res.json({
-        success: true,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          picture: user.picture,
-        },
+      (req.session as any).userId = user.id;
+      (req.session as any).user = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+        role: user.role,
+        mfa_enabled: user.mfa_enabled,
+        passkey_enabled: user.passkeys && user.passkeys.length > 0,
+        auth_methods: user.auth_methods,
+      };
+
+      info('[Passkey Login] Creating session for user:', {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        mfa_enabled: user.mfa_enabled,
+        sessionID: req.sessionID,
+      });
+
+      // Save session explicitly
+      req.session.save((err) => {
+        if (err) {
+          error('[Passkey Login] Session save error:', err);
+          return res.status(500).json({ error: 'Session creation failed' });
+        }
+
+        info('[Passkey Login] ✅ Session saved successfully');
+
+        res.json({
+          success: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            picture: user.picture,
+          },
+        });
       });
     });
   } catch (err) {
@@ -1527,32 +1565,15 @@ router.delete('/users/:userId', requireAdmin, async (req: Request, res: Response
       }
     ).catch(err => error('[AuthExtended] Failed to send user deletion notification:', err));
     
-    // Invalidate all sessions for this user
-    const sessionStore = req.sessionStore;
-    if (sessionStore && sessionStore.all) {
-      sessionStore.all((err: Error | null, sessions: any) => {
-        if (err) {
-          error('[AuthExtended] Failed to getting sessions:', err);
-          return;
-        }
-        
-        // Destroy sessions belonging to the deleted user
-        if (sessions) {
-          Object.keys(sessions).forEach((sid) => {
-            const session = sessions[sid];
-            if (session?.passport?.user === userId) {
-              sessionStore.destroy(sid, (destroyErr) => {
-                if (destroyErr) {
-                  error(`Failed to destroy session ${sid}:`, destroyErr);
-                } else {
-                  info(`[Session] Destroyed session ${sid} for deleted user ${userId}`);
-                }
-              });
-            }
-          });
-        }
-      });
-    }
+    // Invalidate all sessions for this user (credential userId + passport email).
+    // Passport stores session.passport.user as { id: googleProfileId, email, ... }
+    // — never compare the whole object to the DB numeric id (handled in matcher).
+    await destroySessionsForUser(
+      req.sessionStore as any,
+      userId,
+      targetUser.email,
+      'user-deleted'
+    );
     
     info(`[User Management] User ${targetUser.email} (ID: ${userId}) deleted by user ID: ${currentUserId}`);
     
