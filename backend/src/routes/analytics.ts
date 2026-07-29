@@ -10,6 +10,7 @@ import { Router } from 'express';
 import config from '../config.ts';
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 import { originsEqual } from '../utils/origins-equal.js';
+import { timestampAnalyticsEvent } from '../utils/analytics-timestamp.js';
 
 const router = Router();
 
@@ -71,15 +72,16 @@ router.post('/track', async (req, res): Promise<void> => {
 
     // Add IP address to each event in the array
     const events = Array.isArray(req.body) ? req.body : [req.body];
-    const eventsWithIp = events.map((event: any) => ({
-      ...event,
+    const ingestionTime = Date.now();
+    const eventsWithIp = events.map((event: unknown) => ({
+      ...timestampAnalyticsEvent(event, ingestionTime),
       client_ip: clientIp,
     }));
 
     // Forward the event(s) to OpenObserve with authentication
     // Use newline-delimited JSON format for _multi endpoint
     const credentials = Buffer.from(`${username}:${password}`).toString('base64');
-    const ndjsonPayload = eventsWithIp.map((event: any) => JSON.stringify(event)).join('\n');
+    const ndjsonPayload = eventsWithIp.map((event) => JSON.stringify(event)).join('\n');
     
     const response = await fetch(analyticsUrl, {
       method: 'POST',
@@ -108,4 +110,3 @@ router.post('/track', async (req, res): Promise<void> => {
   });
 
 export default router;
-

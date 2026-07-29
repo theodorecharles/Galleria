@@ -63,7 +63,6 @@ function getBaseEventData(): Partial<AnalyticsEvent> {
   const timestamp = new Date().toISOString();
   return {
     timestamp,
-    _timestamp: Date.now() * 1000000, // OpenObserve expects nanoseconds for timestamp override
     page_url: window.location.href,
     page_path: window.location.pathname,
     referrer: document.referrer || 'direct',
@@ -812,4 +811,3 @@ export function trackVideoSession(videoId: string, album: string, videoTitle: st
     engagement_rate: totalWatchTime > 0 ? Math.round((totalWatchTime / duration) * 100) : 0,
   });
 }
-
