@@ -7,7 +7,7 @@
     "start": "node --no-warnings --loader ts-node/esm src/server.ts",
     "dev": "nodemon --exec 'node --no-warnings --loader ts-node/esm' src/server.ts",
     "build": "tsc",
-    "test": "TS_NODE_PROJECT=tsconfig.json TS_NODE_TRANSPILE_ONLY=true node --test --loader ts-node/esm src/utils/origins-equal.test.ts src/utils/album-access.test.ts src/auth/session-invalidation.test.ts src/auth/reauth.test.ts src/auth/passkeys-auth-options.test.ts src/utils/session-user.test.ts src/utils/rename-rollback.test.ts src/utils/video-processor.spawn-error.test.ts src/utils/media-disk-cleanup.test.ts src/utils/move-media-disk.test.ts src/config.origin-allowed.test.ts"
+    "test": "TS_NODE_PROJECT=tsconfig.json TS_NODE_TRANSPILE_ONLY=true node --test --loader ts-node/esm src/utils/origins-equal.test.ts src/utils/album-access.test.ts src/auth/session-invalidation.test.ts src/auth/reauth.test.ts src/auth/passkeys-auth-options.test.ts src/utils/session-user.test.ts src/utils/rename-rollback.test.ts src/utils/video-processor.spawn-error.test.ts src/utils/media-disk-cleanup.test.ts src/utils/move-media-disk.test.ts src/config.origin-allowed.test.ts src/utils/config-secrets.test.ts"
   },
   "keywords": [],
   "author": "",

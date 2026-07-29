@@ -8,7 +8,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { csrfProtection } from "../security.js";
-import { requireAuth, requireAdmin } from "../auth/middleware.js";
+import { requireAdmin } from "../auth/middleware.js";
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 import { sendNotificationToUser } from '../push-notifications.js';
 import { translateNotification } from '../i18n-backend.js';
@@ -16,6 +16,10 @@ import { getAllUsers } from '../database-users.js';
 import { DATA_DIR, reloadConfig, getLogLevel } from "../config.js";
 import { sendTestEmail } from "../email.js";
 import { initLogger } from '../utils/logger.js';
+import {
+  maskSensitiveFields,
+  restoreSensitiveFields,
+} from "../utils/config-secrets.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102,16 +106,14 @@ router.use(csrfProtection);
 
 /**
  * GET /api/config
- * Get current configuration (excluding sensitive fields)
+ * Admin only. Sensitive secrets are masked (not returned in cleartext).
  */
-router.get("/", requireAuth, (req, res) => {
+router.get("/", requireAdmin, (req, res) => {
   try {
     const configData = fs.readFileSync(CONFIG_PATH, "utf8");
     const config = JSON.parse(configData);
 
-    // Return full config for admin to edit
-    // (sensitive fields will be masked on frontend if needed)
-    res.json(config);
+    res.json(maskSensitiveFields(config));
   } catch (err) {
     error("[Config] Failed to read config:", err);
     res.status(500).json({ error: "Failed to read configuration" });
@@ -185,6 +187,9 @@ router.put("/", requireAdmin, express.json(), async (req, res) => {
       ...currentConfig,
       ...newConfig,
     };
+
+    // Do not wipe secrets when the client re-sends mask tokens from GET
+    restoreSensitiveFields(updatedConfig, currentConfig);
 
     // Write updated config back to file
     fs.writeFileSync(
