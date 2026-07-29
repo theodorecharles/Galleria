@@ -277,6 +277,9 @@ router.get(
           });
           return res.redirect(`${frontendUrl}/auth/error?reason=failed`);
         }
+
+        // Stamp for sensitive-action reauth window (MFA disable / backup codes)
+        (req.session as any).authenticatedAt = Date.now();
         
         // Explicitly save the session before redirecting
         req.session.save(async (err) => {
