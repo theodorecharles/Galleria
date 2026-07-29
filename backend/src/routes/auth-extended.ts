@@ -43,6 +43,11 @@ import {
   generatePasskeyAuthenticationOptions,
   verifyPasskeyAuthentication,
 } from '../auth/passkeys.js';
+import {
+  planSensitiveReauth,
+  userHasPasskeys,
+  userHasPassword,
+} from '../auth/reauth.js';
 import crypto from 'crypto';
 import { sendInvitationEmail, sendPasswordResetEmail, isEmailServiceEnabled, generateInvitationUrl } from '../email.js';
 import { getCurrentConfig, reloadConfig } from '../config.js';
@@ -51,6 +56,97 @@ import { translateNotification } from '../i18n-backend.js';
 import { destroySessionsForUser } from '../auth/session-invalidation.js';
 
 const router = Router();
+
+/**
+ * Step-up re-auth for MFA disable / backup-code mint.
+ * Password when present; else passkey assertion or recent-login window.
+ * Returns null on success, or an Express response already sent.
+ */
+async function requireSensitiveReauth(
+  req: Request,
+  res: Response,
+  user: User
+): Promise<true | null> {
+  const {
+    password,
+    passkeyCredential,
+    passkeySessionId,
+    // alternate names clients may send
+    credential,
+    sessionId,
+  } = req.body || {};
+
+  const plan = planSensitiveReauth({
+    hasPassword: userHasPassword(user),
+    hasPasskeys: userHasPasskeys(user),
+    password,
+    passkeyCredential: passkeyCredential ?? credential,
+    passkeySessionId: passkeySessionId ?? sessionId,
+    sessionAuthenticatedAt: (req.session as any)?.authenticatedAt,
+  });
+
+  if (plan.action === 'reject') {
+    res.status(plan.status).json({
+      error: plan.error,
+      code: plan.code,
+      availableMethods: plan.availableMethods,
+    });
+    return null;
+  }
+
+  if (plan.action === 'accept_recent_login') {
+    return true;
+  }
+
+  if (plan.action === 'verify_password') {
+    if (!verifyPassword(user, plan.password)) {
+      res.status(401).json({ error: 'Invalid password', code: 'invalid_password' });
+      return null;
+    }
+    return true;
+  }
+
+  // verify_passkey
+  const challengeKey = `passkey-reauth-${plan.sessionId}`;
+  const stored = challenges.get(challengeKey);
+  if (!stored || stored.userId !== user.id || stored.expires < Date.now()) {
+    res.status(400).json({
+      error: 'Invalid or expired passkey reauth challenge',
+      code: 'passkey_challenge_invalid',
+    });
+    return null;
+  }
+
+  const credentialPayload = plan.credential as { id?: string };
+  if (!credentialPayload?.id) {
+    res.status(400).json({ error: 'Missing passkey credential', code: 'passkey_required' });
+    return null;
+  }
+
+  const result = getPasskeyByCredentialId(credentialPayload.id);
+  if (!result || result.user.id !== user.id) {
+    res.status(400).json({ error: 'Passkey not found', code: 'passkey_not_found' });
+    return null;
+  }
+
+  const verification = await verifyPasskeyAuthentication(
+    plan.credential as any,
+    stored.challenge,
+    result.passkey.credentialPublicKey,
+    result.passkey.counter
+  );
+
+  if (!verification.verified) {
+    res.status(401).json({ error: 'Passkey verification failed', code: 'passkey_invalid' });
+    return null;
+  }
+
+  updatePasskeyCounter(user.id, result.passkey.id, verification.authenticationInfo.newCounter);
+  challenges.delete(challengeKey);
+  // Refresh authenticatedAt so subsequent sensitive ops in-window succeed without re-prompt.
+  (req.session as any).authenticatedAt = Date.now();
+  return true;
+}
 
 /**
  * Helper to send push notification to all admin users
@@ -258,6 +354,7 @@ router.post('/login', async (req: Request, res: Response) => {
       }
 
       (req.session as any).userId = user.id;
+      (req.session as any).authenticatedAt = Date.now();
       (req.session as any).user = {
         id: user.id,
         email: user.email,
@@ -1039,6 +1136,7 @@ router.post('/mfa/verify-setup', requireAuth, async (req: Request, res: Response
 
 /**
  * Disable MFA
+ * Requires step-up reauth: password if set, else passkey assertion or recent login.
  */
 router.post('/mfa/disable', requireAuth, async (req: Request, res: Response) => {
   try {
@@ -1046,16 +1144,15 @@ router.post('/mfa/disable', requireAuth, async (req: Request, res: Response) => 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
-    const { password } = req.body;
 
     const user = getUserById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Verify password before disabling MFA
-    if (user.password_hash && !verifyPassword(user, password)) {
-      return res.status(401).json({ error: 'Invalid password' });
+    const reauthOk = await requireSensitiveReauth(req, res, user);
+    if (!reauthOk) {
+      return;
     }
 
     disableMFA(userId);
@@ -1088,6 +1185,7 @@ router.post('/mfa/disable', requireAuth, async (req: Request, res: Response) => 
 
 /**
  * Get new backup codes
+ * Requires step-up reauth: password if set, else passkey assertion or recent login.
  */
 router.post('/mfa/backup-codes', requireAuth, async (req: Request, res: Response) => {
   try {
@@ -1095,16 +1193,15 @@ router.post('/mfa/backup-codes', requireAuth, async (req: Request, res: Response
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
-    const { password } = req.body;
 
     const user = getUserById(userId);
     if (!user || !user.mfa_enabled) {
       return res.status(400).json({ error: 'MFA is not enabled' });
     }
 
-    // Verify password
-    if (user.password_hash && !verifyPassword(user, password)) {
-      return res.status(401).json({ error: 'Invalid password' });
+    const reauthOk = await requireSensitiveReauth(req, res, user);
+    if (!reauthOk) {
+      return;
     }
 
     // Generate new backup codes
@@ -1243,6 +1340,44 @@ router.post('/passkey/register-verify', requireAuth, async (req: Request, res: R
 });
 
 /**
+ * Generate passkey options for step-up reauth (sensitive actions while already logged in).
+ * Challenge is stored under passkey-reauth-${sessionId} and consumed by requireSensitiveReauth.
+ */
+router.post('/passkey/reauth-options', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = getUserIdFromRequest(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const user = getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!userHasPasskeys(user)) {
+      return res.status(400).json({
+        error: 'No passkeys registered',
+        code: 'no_passkeys',
+      });
+    }
+
+    const options = await generatePasskeyAuthenticationOptions(user.passkeys || []);
+    const sessionId = crypto.randomUUID();
+    challenges.set(`passkey-reauth-${sessionId}`, {
+      challenge: options.challenge,
+      userId,
+      expires: Date.now() + 5 * 60 * 1000,
+    });
+
+    res.json({ ...options, sessionId });
+  } catch (err) {
+    error('[AuthExtended] Passkey reauth options error:', err);
+    res.status(500).json({ error: 'Failed to generate reauth options' });
+  }
+});
+
+/**
  * Get authentication options for passkey login
  */
 router.post('/passkey/auth-options', async (req: Request, res: Response) => {
@@ -1342,6 +1477,7 @@ router.post('/passkey/auth-verify', async (req: Request, res: Response) => {
       }
 
       (req.session as any).userId = user.id;
+      (req.session as any).authenticatedAt = Date.now();
       (req.session as any).user = {
         id: user.id,
         email: user.email,
