@@ -124,7 +124,9 @@
     "iso": "ISO",
     "dateTaken": "Ημερομηνία Λήψης",
     "resolution": "Ανάλυση",
-    "duration": "Διάρκεια"
+    "duration": "Διάρκεια",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Ανάλυση",

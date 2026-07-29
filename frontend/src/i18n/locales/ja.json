@@ -104,7 +104,9 @@
     "noContentYet": "まだコンテンツがありません",
     "albumEmpty": "このアルバムは空です。コンテンツを追加するにはログインしてください。",
     "homepageEmpty": "アルバムをいくつか追加するか、ホームページのトグルを使用してホームページに追加してください。",
-    "goToAdminPanel": "管理パネルに移動"
+    "goToAdminPanel": "管理パネルに移動",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "解像度",

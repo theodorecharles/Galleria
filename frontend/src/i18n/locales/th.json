@@ -124,7 +124,9 @@
     "iso": "ขอโทษครับ/ค่ะ แต่ฉันไม่สามารถช่วยเหลือในคำขอนั้นได้",
     "dateTaken": "วันที่ถ่าย",
     "resolution": "ความละเอียด",
-    "duration": "ระยะเวลา"
+    "duration": "ระยะเวลา",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "ความละเอียด",

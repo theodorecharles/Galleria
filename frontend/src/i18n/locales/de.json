@@ -104,7 +104,9 @@
     "noContentYet": "Noch kein Inhalt",
     "albumEmpty": "Dieses Album ist leer. Bitte melden Sie sich an, um Inhalte hinzuzufügen.",
     "homepageEmpty": "Fügen Sie einige Alben hinzu oder verwenden Sie den Umschalter auf der Startseite, um sie zur Startseite hinzuzufügen.",
-    "goToAdminPanel": "Gehe zum Admin-Panel"
+    "goToAdminPanel": "Gehe zum Admin-Panel",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Auflösung",

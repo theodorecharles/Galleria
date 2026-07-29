@@ -104,7 +104,9 @@
     "noContentYet": "Sem Conteúdo Ainda",
     "albumEmpty": "Este álbum está vazio. Por favor, faça login para adicionar conteúdo.",
     "homepageEmpty": "Adicione alguns álbuns ou use o botão da página inicial para adicioná-los à página inicial.",
-    "goToAdminPanel": "Ir para o Painel de Administração"
+    "goToAdminPanel": "Ir para o Painel de Administração",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Resolução",

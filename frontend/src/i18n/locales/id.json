@@ -104,7 +104,9 @@
     "iso": "ISO",
     "dateTaken": "Tanggal Diambil",
     "resolution": "Resolusi",
-    "duration": "Durasi"
+    "duration": "Durasi",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Resolusi",

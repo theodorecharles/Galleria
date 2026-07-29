@@ -104,7 +104,9 @@
     "noContentYet": "Nessun contenuto ancora",
     "albumEmpty": "Questo album è vuoto. Accedi per aggiungere contenuti.",
     "homepageEmpty": "Aggiungi alcuni album o usa l'interruttore della homepage per aggiungerli alla homepage.",
-    "goToAdminPanel": "Vai al Pannello di Amministrazione"
+    "goToAdminPanel": "Vai al Pannello di Amministrazione",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Risoluzione",

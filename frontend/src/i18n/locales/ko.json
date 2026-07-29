@@ -104,7 +104,9 @@
     "noContentYet": "아직 콘텐츠가 없습니다",
     "albumEmpty": "이 앨범은 비어 있습니다. 콘텐츠를 추가하려면 로그인하세요.",
     "homepageEmpty": "앨범을 추가하거나 홈페이지 토글을 사용하여 홈페이지에 추가하세요.",
-    "goToAdminPanel": "관리자 패널로 이동"
+    "goToAdminPanel": "관리자 패널로 이동",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "해상도",

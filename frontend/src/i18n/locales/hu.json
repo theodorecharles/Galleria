@@ -124,7 +124,9 @@
     "iso": "ISO",
     "dateTaken": "Készítés dátuma",
     "resolution": "Felbontás",
-    "duration": "Időtartam"
+    "duration": "Időtartam",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Felbontás",

@@ -123,6 +123,8 @@
     "shutter": "Shutter",
     "iso": "ISO",
     "dateTaken": "Date Taken",
+    "location": "Location",
+    "viewMap": "Map",
     "resolution": "Resolution",
     "duration": "Duration"
   },
