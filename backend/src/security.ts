@@ -8,6 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import config, { getAllowedOrigins } from './config.js';
 import { info, warn, error, debug, verbose, trace } from './utils/logger.js';
+import { originsEqual } from './utils/origins-equal.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -181,8 +182,8 @@ export function csrfProtection(req: any, res: any, next: any) {
     // Get dynamic allowed origins (includes config.json values)
     const allowedOrigins = getAllowedOrigins();
     
-    // Check exact match first
-    let isAllowedOrigin = allowedOrigins.some((allowed: string) => origin.startsWith(allowed));
+    // Exact origin match (not startsWith — confusable subdomain bypass)
+    let isAllowedOrigin = allowedOrigins.some((allowed: string) => originsEqual(origin, allowed));
     
     // If not in allowed list, check for localhost
     if (!isAllowedOrigin) {
