@@ -368,6 +368,24 @@ export function trackPhotoDeleted(album: string, photoId: string, photoTitle: st
 }
 
 /**
+ * Track photo/video moved to another album
+ */
+export function trackPhotoMoved(
+  sourceAlbum: string,
+  destinationAlbum: string,
+  photoId: string,
+  photoTitle: string
+) {
+  sendEvent({
+    event_type: 'photo_moved',
+    album: sourceAlbum,
+    destination_album: destinationAlbum,
+    photo_id: photoId,
+    photo_title: photoTitle,
+  });
+}
+
+/**
  * Track external links management
  */
 export function trackExternalLinksUpdate(linkCount: number) {
