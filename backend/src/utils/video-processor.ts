@@ -253,6 +253,11 @@ export async function rotateVideo(
       }
     });
 
+    // Reject on spawn failure (e.g. ffmpeg missing / ENOENT) so callers do not hang
+    ffmpeg.on('error', (err) => {
+      reject(new Error(`ffmpeg spawn failed: ${err.message}`));
+    });
+
     ffmpeg.on('close', (code) => {
       if (code !== 0) {
         error('[VideoProcessor] Rotation failed:', stderr);
@@ -474,6 +479,11 @@ export async function generateHLS(
       }
     });
 
+    // Reject on spawn failure (e.g. ffmpeg missing / ENOENT) so callers do not hang
+    ffmpeg.on('error', (err) => {
+      reject(new Error(`ffmpeg spawn failed: ${err.message}`));
+    });
+
     ffmpeg.on('close', (code) => {
       if (code !== 0) {
         error(`[VideoProcessor] HLS generation failed for ${resolution.name}:`, stderr);
@@ -513,6 +523,11 @@ export async function extractThumbnail(
     ffmpeg.stderr.on('data', (data) => {
       stderr += data.toString();
       if (onProgress) onProgress(50); // Simple progress indication
+    });
+
+    // Reject on spawn failure (e.g. ffmpeg missing / ENOENT) so callers do not hang
+    ffmpeg.on('error', (err) => {
+      reject(new Error(`ffmpeg spawn failed: ${err.message}`));
     });
 
     ffmpeg.on('close', (code) => {
