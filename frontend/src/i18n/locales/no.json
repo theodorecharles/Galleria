@@ -106,7 +106,9 @@
     "homepageEmpty": "Legg til noen album eller bruk hjemmesidetoggles for å legge dem til på hjemmesiden.",
     "goToAdminPanel": "Gå til administrasjonspanelet",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "Spill av lysbildefremvisning",
+    "pauseSlideshow": "Pause lysbildefremvisning"
   },
   "video": {
     "resolution": "Oppløsning",

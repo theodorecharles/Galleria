@@ -106,7 +106,9 @@
     "homepageEmpty": "Aggiungi alcuni album o usa l'interruttore della homepage per aggiungerli alla homepage.",
     "goToAdminPanel": "Vai al Pannello di Amministrazione",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "Avvia presentazione",
+    "pauseSlideshow": "Metti in pausa la presentazione"
   },
   "video": {
     "resolution": "Risoluzione",

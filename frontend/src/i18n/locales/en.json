@@ -126,7 +126,9 @@
     "location": "Location",
     "viewMap": "Map",
     "resolution": "Resolution",
-    "duration": "Duration"
+    "duration": "Duration",
+    "playSlideshow": "Play slideshow",
+    "pauseSlideshow": "Pause slideshow"
   },
   "video": {
     "resolution": "Resolution",

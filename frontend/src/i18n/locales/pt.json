@@ -106,7 +106,9 @@
     "homepageEmpty": "Adicione alguns álbuns ou use o botão da página inicial para adicioná-los à página inicial.",
     "goToAdminPanel": "Ir para o Painel de Administração",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "Reproduzir apresentação",
+    "pauseSlideshow": "Pausar apresentação"
   },
   "video": {
     "resolution": "Resolução",

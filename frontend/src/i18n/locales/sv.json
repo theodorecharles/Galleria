@@ -106,7 +106,9 @@
     "homepageEmpty": "Lägg till några album eller använd hemsidans växlingsknapp för att lägga till dem på hemsidan.",
     "goToAdminPanel": "Gå till administrationspanelen",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "Spela bildspel",
+    "pauseSlideshow": "Pausa bildspel"
   },
   "video": {
     "resolution": "Upplösning",

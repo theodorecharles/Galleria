@@ -106,7 +106,9 @@
     "resolution": "Rezoluție",
     "duration": "Durată",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "Pornește diaporama",
+    "pauseSlideshow": "Pune diaporama pe pauză"
   },
   "video": {
     "resolution": "Rezoluție",

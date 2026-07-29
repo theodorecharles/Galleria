@@ -126,7 +126,9 @@
     "resolution": "Rozlíšenie",
     "duration": "Trvanie",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "Play slideshow",
+    "pauseSlideshow": "Pause slideshow"
   },
   "video": {
     "resolution": "Rozlíšenie",

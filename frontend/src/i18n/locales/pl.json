@@ -106,7 +106,9 @@
     "homepageEmpty": "Dodaj kilka albumów lub użyj przełącznika na stronie głównej, aby dodać je do strony głównej.",
     "goToAdminPanel": "Przejdź do panelu administracyjnego",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "Odtwórz pokaz slajdów",
+    "pauseSlideshow": "Wstrzymaj pokaz slajdów"
   },
   "video": {
     "resolution": "Rozdzielczość",

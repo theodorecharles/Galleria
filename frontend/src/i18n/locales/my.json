@@ -126,7 +126,9 @@
     "resolution": "ရုပ်ထွက်",
     "duration": "ကြာချိန်",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "Play slideshow",
+    "pauseSlideshow": "Pause slideshow"
   },
   "video": {
     "resolution": "ရုပ်ထွက်",

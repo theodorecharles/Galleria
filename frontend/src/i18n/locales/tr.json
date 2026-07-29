@@ -106,7 +106,9 @@
     "homepageEmpty": "Bazı albümler ekleyin veya bunları anasayfaya eklemek için anasayfa geçişini kullanın.",
     "goToAdminPanel": "Yönetici Paneline Git",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "Slayt gösterisini oynat",
+    "pauseSlideshow": "Slayt gösterisini duraklat"
   },
   "video": {
     "resolution": "Çözünürlük",

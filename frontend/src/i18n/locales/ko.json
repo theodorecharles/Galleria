@@ -106,7 +106,9 @@
     "homepageEmpty": "앨범을 추가하거나 홈페이지 토글을 사용하여 홈페이지에 추가하세요.",
     "goToAdminPanel": "관리자 패널로 이동",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "슬라이드쇼 재생",
+    "pauseSlideshow": "슬라이드쇼 일시정지"
   },
   "video": {
     "resolution": "해상도",

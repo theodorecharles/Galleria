@@ -106,7 +106,9 @@
     "homepageEmpty": "Voeg enkele albums toe of gebruik de homepage-schakelaar om ze aan de homepage toe te voegen.",
     "goToAdminPanel": "Ga naar het Admin Paneel",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "Diavoorstelling afspelen",
+    "pauseSlideshow": "Diavoorstelling pauzeren"
   },
   "video": {
     "resolution": "Resolutie",

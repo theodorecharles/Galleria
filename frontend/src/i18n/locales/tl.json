@@ -106,7 +106,9 @@
     "resolution": "Resolusyon",
     "duration": "Tagal",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "I-play ang slideshow",
+    "pauseSlideshow": "I-pause ang slideshow"
   },
   "video": {
     "resolution": "Resolusyon",

@@ -106,7 +106,9 @@
     "homepageEmpty": "Fügen Sie einige Alben hinzu oder verwenden Sie den Umschalter auf der Startseite, um sie zur Startseite hinzuzufügen.",
     "goToAdminPanel": "Gehe zum Admin-Panel",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "Diashow abspielen",
+    "pauseSlideshow": "Diashow pausieren"
   },
   "video": {
     "resolution": "Auflösung",

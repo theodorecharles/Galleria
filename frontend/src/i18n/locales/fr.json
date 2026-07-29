@@ -106,7 +106,9 @@
     "homepageEmpty": "Ajoutez des albums ou utilisez le commutateur de la page d'accueil pour les ajouter à la page d'accueil.",
     "goToAdminPanel": "Aller au panneau d'administration",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "Lancer le diaporama",
+    "pauseSlideshow": "Mettre le diaporama en pause"
   },
   "video": {
     "resolution": "Résolution",

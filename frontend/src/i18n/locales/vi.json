@@ -106,7 +106,9 @@
     "resolution": "Độ phân giải",
     "duration": "Thời gian",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "Phát trình chiếu",
+    "pauseSlideshow": "Tạm dừng trình chiếu"
   },
   "video": {
     "resolution": "Độ phân giải",

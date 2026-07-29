@@ -126,7 +126,9 @@
     "resolution": "ความละเอียด",
     "duration": "ระยะเวลา",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "Play slideshow",
+    "pauseSlideshow": "Pause slideshow"
   },
   "video": {
     "resolution": "ความละเอียด",

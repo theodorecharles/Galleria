@@ -106,7 +106,9 @@
     "homepageEmpty": "添加一些相册或使用主页切换将它们添加到主页。",
     "goToAdminPanel": "前往管理面板",
     "location": "[EN] Location",
-    "viewMap": "[EN] Map"
+    "viewMap": "[EN] Map",
+    "playSlideshow": "播放幻灯片",
+    "pauseSlideshow": "暂停幻灯片"
   },
   "video": {
     "resolution": "分辨率",
