@@ -48,6 +48,7 @@ import { broadcastOptimizationUpdate, queueOptimizationJob } from "./optimizatio
 import OpenAI from "openai";
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
 import { rollbackRenamedPaths, type RenamedPath } from '../utils/rename-rollback.js';
+import { publishUploadWithoutOverwrite } from '../utils/publish-upload.js';
 
 const router = Router();
 const execFileAsync = promisify(execFile);
@@ -1047,8 +1048,8 @@ router.post("/:album/upload", requireManager, (req: Request, res: Response, next
     }
 
     // SECURITY: Sanitize filename to prevent path traversal attacks
-    const sanitizedFilename = sanitizePhotoName(file.originalname);
-    if (!sanitizedFilename) {
+    const preferredFilename = sanitizePhotoName(file.originalname);
+    if (!preferredFilename) {
       unlinkTempUpload(file.path);
       res.status(400).json({ error: 'Invalid filename. Use only alphanumeric characters, spaces, hyphens, underscores, and valid image/video extensions.' });
       return;
@@ -1063,28 +1064,30 @@ router.post("/:album/upload", requireManager, (req: Request, res: Response, next
       return;
     }
 
-    const destPath = path.join(albumPath, sanitizedFilename);
-    const isVideo = isVideoFile(sanitizedFilename);
+    const isVideo = isVideoFile(preferredFilename);
     const mediaType = isVideo ? 'video' : 'photo';
-    
-    if (isVideo) {
-      // For videos, copy file then delete temp (rename doesn't work across filesystems in Docker)
-      try {
-        await fs.promises.copyFile(file.path, destPath);
-        await fs.promises.unlink(file.path);
-      } catch (err: any) {
-        error(`[Upload] Failed to move video ${file.originalname}:`, err.message);
-        try {
-          fs.unlinkSync(file.path);
-        } catch (cleanupErr) {
-          // Ignore cleanup errors
-        }
-        res.status(500).json({ error: `Failed to save video: ${err.message}` });
-        return;
-      }
-    } else {
-      // For images, use sharp to auto-rotate based on EXIF orientation
-      try {
+    const stagingDir = path.join(
+      albumPath,
+      `.galleria-upload-${crypto.randomUUID()}`
+    );
+    const stagingPath = path.join(
+      stagingDir,
+      `staged${path.extname(preferredFilename)}`
+    );
+
+    let publishedUpload: Awaited<ReturnType<typeof publishUploadWithoutOverwrite>>;
+    try {
+      await fs.promises.mkdir(stagingDir);
+
+      if (isVideo) {
+        // Copy into the album filesystem before atomically publishing the final name.
+        await fs.promises.copyFile(
+          file.path,
+          stagingPath,
+          fs.constants.COPYFILE_EXCL
+        );
+      } else {
+        // For images, use sharp to auto-rotate based on EXIF orientation.
         const sharpTimeout = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Sharp processing timeout')), 120000) // 2 minute timeout
         );
@@ -1092,23 +1095,40 @@ router.post("/:album/upload", requireManager, (req: Request, res: Response, next
         await Promise.race([
           sharp(file.path)
             .rotate() // Auto-rotate based on EXIF
-            .toFile(destPath),
+            .toFile(stagingPath),
           sharpTimeout
         ]);
-    
-        // Clean up temp file
-        fs.unlinkSync(file.path);
-      } catch (err: any) {
-        error(`[Upload] Failed to process ${file.originalname}:`, err.message);
-        try {
-          fs.unlinkSync(file.path);
-        } catch (cleanupErr) {
-          // Ignore cleanup errors
-        }
-        res.status(500).json({ error: `Failed to save file: ${err.message}` });
-        return;
       }
+
+      publishedUpload = await publishUploadWithoutOverwrite(
+        stagingPath,
+        albumPath,
+        preferredFilename
+      );
+    } catch (err: any) {
+      const action = isVideo ? 'move video' : 'process';
+      error(`[Upload] Failed to ${action} ${file.originalname}:`, err.message);
+      unlinkTempUpload(stagingPath);
+      try {
+        fs.rmdirSync(stagingDir);
+      } catch {
+        // Ignore cleanup errors
+      }
+      unlinkTempUpload(file.path);
+      const mediaLabel = isVideo ? 'video' : 'file';
+      res.status(500).json({ error: `Failed to save ${mediaLabel}: ${err.message}` });
+      return;
     }
+
+    unlinkTempUpload(stagingPath);
+    try {
+      fs.rmdirSync(stagingDir);
+    } catch {
+      // Ignore cleanup errors
+    }
+    unlinkTempUpload(file.path);
+
+    const { filename: sanitizedFilename, destPath } = publishedUpload;
 
     // Track photo upload for large batch detection (photos only, not videos)
     if (!isVideo) {
