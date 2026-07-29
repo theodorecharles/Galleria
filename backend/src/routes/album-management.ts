@@ -37,6 +37,7 @@ import {
   renameAlbum
 } from "../database.js";
 import { processVideo, VideoProcessingProgress } from "../utils/video-processor.js";
+import { removeMediaDiskAssets } from "../utils/media-disk-cleanup.js";
 import { invalidateAlbumCache } from "./albums.js";
 import { generateStaticJSONFiles } from "./static-json.js";
 import { generateHomepageHTML } from "./homepage-html.js";
@@ -812,6 +813,7 @@ router.delete("/:album/photos/:photo", requireManager, async (req: Request, res:
 
     const photosDir = req.app.get("photosDir");
     const optimizedDir = req.app.get("optimizedDir");
+    const videoDir = req.app.get("videoDir") as string | undefined;
     
     const photoPath = path.join(photosDir, sanitizedAlbum, sanitizedPhoto);
     
@@ -820,16 +822,20 @@ router.delete("/:album/photos/:photo", requireManager, async (req: Request, res:
       return;
     }
 
-    // Delete from photos directory
-    fs.unlinkSync(photoPath);
-
-    // Delete from optimized directories
-    ['thumbnail', 'modal', 'download'].forEach(dir => {
-      const optimizedPath = path.join(optimizedDir, dir, sanitizedAlbum, sanitizedPhoto);
-      if (fs.existsSync(optimizedPath)) {
-        fs.unlinkSync(optimizedPath);
-      }
+    // Original + optimized same-name; for videos also HLS tree and .jpg posters
+    const diskCleanup = removeMediaDiskAssets({
+      photosDir,
+      optimizedDir,
+      videoDir,
+      album: sanitizedAlbum,
+      filename: sanitizedPhoto,
     });
+    if (diskCleanup.hlsRemoved) {
+      info(`[AlbumManagement] Removed HLS assets for video: ${sanitizedAlbum}/${sanitizedPhoto}`);
+    }
+    if (diskCleanup.posterRemoved.length > 0) {
+      info(`[AlbumManagement] Removed video posters: ${diskCleanup.posterRemoved.join(', ')}`);
+    }
 
     // Delete metadata from database
     const deleted = deleteImageMetadata(sanitizedAlbum, sanitizedPhoto);
