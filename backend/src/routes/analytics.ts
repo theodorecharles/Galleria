@@ -9,6 +9,7 @@
 import { Router } from 'express';
 import config from '../config.ts';
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
+import { originsEqual } from '../utils/origins-equal.js';
 
 const router = Router();
 
@@ -45,7 +46,8 @@ router.post('/track', async (req, res): Promise<void> => {
     const allowedOrigins = config.backend.allowedOrigins;
     
     if (origin) {
-      const isAllowedOrigin = allowedOrigins.some((allowed: string) => origin.startsWith(allowed));
+      // Exact origin match (not startsWith — confusable subdomain bypass; same as CSRF #3439)
+      const isAllowedOrigin = allowedOrigins.some((allowed: string) => originsEqual(origin, allowed));
       if (!isAllowedOrigin) {
         warn('Analytics request from unauthorized origin:', origin);
         res.status(403).json({ error: 'Unauthorized origin' });
