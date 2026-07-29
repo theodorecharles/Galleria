@@ -207,6 +207,49 @@ export function getAllowedOrigins(): string[] {
   return uniqueOrigins;
 }
 
+/**
+ * Whether a request Origin may be reflected with Access-Control-Allow-Credentials.
+ * Mirrors the global CORS origin callback in server.ts so route-level headers
+ * cannot bypass the allowlist (credentialed ACAO must never be set for unlisted origins).
+ */
+export function isOriginAllowed(origin: string | undefined | null): boolean {
+  if (!origin) {
+    return false;
+  }
+
+  // During OOBE (setup mode), allow any HTTPS origin — same as server CORS
+  if (!getConfigExists() && origin.startsWith("https://")) {
+    return true;
+  }
+
+  const allowedOrigins = getAllowedOrigins();
+  if (allowedOrigins.indexOf(origin) !== -1) {
+    return true;
+  }
+
+  try {
+    const url = new URL(origin);
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+      return true;
+    }
+
+    // Docker / Unraid direct access: any IPv4 on ports 3000 or 3001
+    const port = url.port
+      ? parseInt(url.port, 10)
+      : url.protocol === "https:"
+        ? 443
+        : 80;
+    const ipPattern = /^\d+\.\d+\.\d+\.\d+$/;
+    if (ipPattern.test(url.hostname) && (port === 3000 || port === 3001)) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+}
+
 // Export constants
 export const PORT = process.env.PORT
   ? parseInt(process.env.PORT)

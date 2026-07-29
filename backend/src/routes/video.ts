@@ -10,8 +10,33 @@ import { error, info } from '../utils/logger.js';
 import { getAlbumState, getShareLinkBySecret, isShareLinkExpired } from '../database.js';
 import { requireAuth } from '../auth/middleware.js';
 import { isRequestAuthenticated } from '../utils/album-access.js';
+import { isOriginAllowed } from '../config.js';
 
 const router = Router();
+
+/**
+ * Reflect Origin only when it passes the global allowlist.
+ * Unconditional reflection + credentials bypassed server CORS (regression of #821).
+ */
+const setCredentialedCorsHeaders = (req: Request, res: Response): void => {
+  const origin = req.headers.origin;
+  if (typeof origin === 'string' && isOriginAllowed(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+};
+
+/** Same rules for writeHead() paths that cannot call setHeader after headers start. */
+const credentialedCorsHeaderRecord = (req: Request): Record<string, string> => {
+  const origin = req.headers.origin;
+  if (typeof origin === 'string' && isOriginAllowed(origin)) {
+    return {
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Credentials': 'true',
+    };
+  }
+  return {};
+};
 
 /**
  * Sanitize path components to prevent directory traversal
@@ -65,12 +90,7 @@ const appendKeyToPlaylistUris = (content: string, key: string): string => {
 const sendPlaylist = (req: Request, res: Response, playlistPath: string): void => {
   res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
   res.setHeader('Cache-Control', 'public, max-age=3600');
-
-  const origin = req.headers.origin;
-  if (origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
+  setCredentialedCorsHeaders(req, res);
 
   const shareKey = getShareKeyFromQuery(req);
   if (shareKey) {
@@ -337,13 +357,7 @@ router.get("/:album/:filename/:resolution/:segment", async (req: Request, res: R
     // Set appropriate headers for MPEG-TS segments
     res.setHeader('Content-Type', 'video/mp2t');
     res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache segments for 1 year
-    
-    // Set CORS headers to allow credentials
-    const origin = req.headers.origin;
-    if (origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    }
+    setCredentialedCorsHeaders(req, res);
 
     // Send the segment file
     res.sendFile(segmentPath);
@@ -485,8 +499,7 @@ router.get("/:album/:filename/original.mp4", requireAuth, async (req: Request, r
         'Accept-Ranges': 'bytes',
         'Content-Length': chunksize,
         'Content-Type': 'video/mp4',
-        'Access-Control-Allow-Origin': req.headers.origin || '*',
-        'Access-Control-Allow-Credentials': 'true',
+        ...credentialedCorsHeaderRecord(req),
       });
 
       file.pipe(res);
@@ -496,8 +509,7 @@ router.get("/:album/:filename/original.mp4", requireAuth, async (req: Request, r
         'Content-Length': fileSize,
         'Content-Type': 'video/mp4',
         'Accept-Ranges': 'bytes',
-        'Access-Control-Allow-Origin': req.headers.origin || '*',
-        'Access-Control-Allow-Credentials': 'true',
+        ...credentialedCorsHeaderRecord(req),
       });
 
       fs.createReadStream(rotatedVideoPath).pipe(res);

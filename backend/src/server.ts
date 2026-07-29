@@ -25,8 +25,8 @@ import config, {
   PHOTOS_DIR,
   OPTIMIZED_DIR,
   DATA_DIR,
-  getAllowedOrigins,
   getConfigExists,
+  isOriginAllowed,
   RATE_LIMIT_WINDOW_MS,
   RATE_LIMIT_MAX_REQUESTS,
   getLogLevel,
@@ -277,55 +277,8 @@ app.use(
       // Allow requests with no origin (mobile apps, curl, etc.)
       if (!origin) return callback(null, true);
 
-      // Get current state (dynamic, updates after config changes)
-      const configExists = getConfigExists();
-      const allowedOrigins = getAllowedOrigins();
-
-      // During OOBE (setup mode), allow any HTTPS origin to enable setup from any domain
-      if (!configExists && origin.startsWith("https://")) {
-        trace(`[OOBE] Allowing CORS from: ${origin}`);
+      if (isOriginAllowed(origin)) {
         return callback(null, true);
-      }
-
-      // Check exact matches first
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-        return;
-      }
-
-      // Allow localhost on any port (for development)
-      try {
-        const url = new URL(origin);
-        if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
-          callback(null, true);
-          return;
-        }
-      } catch (e) {
-        // Invalid URL, continue to other checks
-      }
-
-      // Allow any IP address on ports 3000 and 3001 (for Docker direct access)
-      // Pattern: http://<any-ip>:3000 or http://<any-ip>:3001
-      try {
-        const url = new URL(origin);
-        const port = url.port
-          ? parseInt(url.port)
-          : url.protocol === "https:"
-          ? 443
-          : 80;
-
-        // Check if hostname is an IP address (IPv4 pattern)
-        const hostname = url.hostname;
-        const ipPattern = /^\d+\.\d+\.\d+\.\d+$/;
-        const isIpAddress = ipPattern.test(hostname);
-
-        if (isIpAddress && (port === 3000 || port === 3001)) {
-          trace(`[CORS] Allowing IP-based access: ${origin}`);
-          callback(null, true);
-          return;
-        }
-      } catch (e) {
-        // Invalid URL, continue to rejection
       }
 
       // Reject origin by passing false (not an Error)
