@@ -619,16 +619,11 @@ router.post('/password-reset/request', async (req: Request, res: Response) => {
 
     const user = getUserByEmail(email);
 
-    // Don't reveal if user exists or not (security best practice)
-    if (!user) {
+    // Uniform response for unknown emails and MFA accounts — do not reveal
+    // registration or MFA status. Self-service reset is only issued for
+    // non-MFA accounts; MFA recovery is via authenticated admin paths.
+    if (!user || user.mfa_enabled) {
       return res.json({ success: true, message: 'If the email exists, a password reset link has been sent' });
-    }
-
-    // Only allow password reset if user doesn't have MFA enabled
-    if (user.mfa_enabled) {
-      return res.status(400).json({ 
-        error: 'Password reset not available for accounts with MFA enabled. Contact an administrator for assistance.' 
-      });
     }
 
     // Generate reset token
