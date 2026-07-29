@@ -386,6 +386,9 @@ app.use("/api/", limiter);
 // Apply stricter rate limiting to authentication endpoints
 app.use("/api/auth-extended/login", authLimiter);
 app.use("/api/auth-extended/password-reset", authLimiter);
+// Public passkey login bootstrap — rate-limit by IP (ticket #3444 / #1038)
+app.use("/api/auth-extended/passkey/auth-options", authLimiter);
+app.use("/api/auth-extended/passkey/auth-verify", authLimiter);
 app.use("/api/auth/google", authLimiter);
 
 // Parse JSON request bodies with size limit
