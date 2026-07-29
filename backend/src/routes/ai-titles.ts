@@ -165,7 +165,7 @@ router.post('/stop', requireManager, (req: any, res: any) => {
  * Generate AI title for a single photo
  * Returns the title synchronously
  */
-router.post('/generate-single', requireManager, async (req: any, res: any) => {
+const generateSinglePhotoTitle = async (req: any, res: any) => {
   try {
     const { album, filename, language = 'en' } = req.body;
     
@@ -310,7 +310,10 @@ router.post('/generate-single', requireManager, async (req: any, res: any) => {
       message: err.message 
     });
   }
-});
+};
+
+router.post('/generate-single', requireManager, generateSinglePhotoTitle);
+router.post('/retry-photo', requireManager, generateSinglePhotoTitle);
 
 /**
  * POST /api/ai-titles/generate
@@ -557,4 +560,3 @@ router.post('/generate', requireManager, (req, res) => {
 });
 
 export default router;
-
