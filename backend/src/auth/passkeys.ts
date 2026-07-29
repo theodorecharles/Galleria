@@ -128,21 +128,27 @@ export async function verifyPasskeyRegistration(
 }
 
 /**
- * Generate options for passkey authentication
+ * Generate options for passkey authentication.
+ *
+ * Always discoverable: allowCredentials is intentionally empty regardless of
+ * any caller-supplied passkeys. Populating allowCredentials from a public
+ * email lookup enables account/credential enumeration (ticket #3444).
+ *
+ * @param _existingPasskeys unused — kept for call-site compatibility
  */
 export async function generatePasskeyAuthenticationOptions(
-  existingPasskeys: any[] = []
+  _existingPasskeys: any[] = []
 ) {
   const { rpID } = getRPConfig();
 
   debug("[Passkeys] Generating auth options for RP:", rpID);
 
-  // Don't specify allowCredentials - this lets password managers (like 1Password)
-  // automatically offer their stored passkeys without browser showing generic options
+  // Empty allowCredentials: discoverable credentials only. Password managers
+  // (e.g. 1Password) offer stored passkeys without server-side credential lists.
   const options = await generateAuthenticationOptions({
     rpID,
     userVerification: "preferred",
-    // timeout: 60000, // 60 seconds
+    allowCredentials: [],
   });
 
   return options;

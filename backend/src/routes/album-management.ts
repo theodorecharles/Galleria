@@ -1863,13 +1863,52 @@ router.post('/:albumName/video/:filename/upload-thumbnail', requireManager, uplo
       res.status(400).json({ error: 'No thumbnail file uploaded' });
       return;
     }
+
+    // Validate inputs to prevent directory traversal (mirror update-thumbnail)
+    const sanitizedAlbumName = sanitizeName(albumName);
+    if (!sanitizedAlbumName) {
+      unlinkTempUpload(req.file.path);
+      res.status(400).json({ error: 'Invalid album name' });
+      return;
+    }
+
+    // Basic security check for filename - no transformation (exact disk name)
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      unlinkTempUpload(req.file.path);
+      res.status(400).json({ error: 'Invalid filename' });
+      return;
+    }
+    const sanitizedFilename = filename;
     
     const appRoot = req.app.get('appRoot');
     const dataDir = process.env.DATA_DIR || path.join(appRoot, 'data');
-    const optimizedDir = path.join(dataDir, 'optimized');
+    const optimizedDir = path.resolve(path.join(dataDir, 'optimized'));
+    const jpgName = sanitizedFilename.replace(/\.[^.]+$/, '.jpg');
+
+    const thumbnailPath = path.resolve(optimizedDir, 'thumbnail', sanitizedAlbumName, jpgName);
+    const modalPath = path.resolve(optimizedDir, 'modal', sanitizedAlbumName, jpgName);
+
+    // Reject if resolved paths escape optimizedDir
+    for (const resolved of [thumbnailPath, modalPath]) {
+      const relative = path.relative(optimizedDir, resolved);
+      if (relative.startsWith('..') || path.isAbsolute(relative)) {
+        unlinkTempUpload(req.file.path);
+        res.status(400).json({ error: 'Invalid path' });
+        return;
+      }
+    }
+
+    // Ensure output directories exist (same as update-thumbnail)
+    const thumbnailDir = path.dirname(thumbnailPath);
+    const modalDir = path.dirname(modalPath);
+    if (!fs.existsSync(thumbnailDir)) {
+      fs.mkdirSync(thumbnailDir, { recursive: true });
+    }
+    if (!fs.existsSync(modalDir)) {
+      fs.mkdirSync(modalDir, { recursive: true });
+    }
     
     // Generate thumbnail (512px)
-    const thumbnailPath = path.join(optimizedDir, 'thumbnail', albumName, filename.replace(/\.[^.]+$/, '.jpg'));
     await sharp(req.file.path)
       .resize(512, 512, { 
         fit: 'inside',
@@ -1879,7 +1918,6 @@ router.post('/:albumName/video/:filename/upload-thumbnail', requireManager, uplo
       .toFile(thumbnailPath);
     
     // Generate modal preview (2048px)
-    const modalPath = path.join(optimizedDir, 'modal', albumName, filename.replace(/\.[^.]+$/, '.jpg'));
     await sharp(req.file.path)
       .resize(2048, 2048, { 
         fit: 'inside',
@@ -1891,13 +1929,13 @@ router.post('/:albumName/video/:filename/upload-thumbnail', requireManager, uplo
     // Clean up temporary file
     unlinkTempUpload(req.file.path);
     
-    info(`[VideoThumbnail] Uploaded custom thumbnail for ${albumName}/${filename}`);
+    info(`[VideoThumbnail] Uploaded custom thumbnail for ${sanitizedAlbumName}/${sanitizedFilename}`);
     
     // Regenerate static JSON to reflect thumbnail update
     try {
       info(`[VideoThumbnail] Regenerating static JSON after thumbnail upload`);
       generateStaticJSONFiles(appRoot);
-      invalidateAlbumCache(albumName);
+      invalidateAlbumCache(sanitizedAlbumName);
     } catch (err) {
       error('[VideoThumbnail] Failed to regenerate static JSON:', err);
     }
