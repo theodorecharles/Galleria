@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "TS_NODE_PROJECT=tsconfig.app.json TS_NODE_TRANSPILE_ONLY=true node --test --loader ts-node/esm src/components/AdminPortal/AlbumsManager/handlers/optimizationStreamState.test.ts",
+    "test": "TS_NODE_PROJECT=tsconfig.app.json TS_NODE_TRANSPILE_ONLY=true node --test --loader ts-node/esm src/components/AdminPortal/AlbumsManager/handlers/optimizationStreamState.test.ts && TS_NODE_PROJECT=tsconfig.test.json TS_NODE_TRANSPILE_ONLY=true node --test --loader ts-node/esm tests/*.test.ts",
     "preview": "vite preview",
     "start": "node server.js"
   },
@@ -41,6 +41,7 @@
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
     "rollup-plugin-visualizer": "^6.0.5",
+    "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.26.1",
     "vite": "^6.3.1"
