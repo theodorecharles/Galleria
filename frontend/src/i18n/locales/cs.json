@@ -461,7 +461,14 @@
     "publishedVisibilityDescription": "Zobrazit tento album ve veřejné galerii.",
     "folderControlsPublished": "Tento album přebírá publikovaný stav ze své složky.",
     "homepageVisibilityDescription": "Zahrnout fotografie tohoto alba na úvodní stránku.",
-    "downloadsVisibilityDescription": "Povolit návštěvníkům stahovat optimalizované fotografie v plné velikosti z tohoto alba."
+    "downloadsVisibilityDescription": "Povolit návštěvníkům stahovat optimalizované fotografie v plné velikosti z tohoto alba.",
+    "moveToAlbum": "[EN] Move to Album",
+    "moveToAlbumTitle": "[EN] Move to Album",
+    "moveToAlbumHint": "[EN] Choose a destination album for \"{{name}}\".",
+    "moveToAlbumFrom": "[EN] Currently in: {{album}}",
+    "moveToAlbumNoDestinations": "[EN] No other albums available. Create another album first.",
+    "photoMoved": "[EN] Moved to \"{{album}}\"",
+    "failedToMovePhoto": "[EN] Failed to move photo"
   },
   "settings": {
     "saved": "Nastavení {{section}} bylo uloženo!",

@@ -461,7 +461,14 @@
     "publishedVisibilityDescription": "แสดงอัลบั้มนี้ในแกลเลอรีสาธารณะ",
     "folderControlsPublished": "อัลบั้มนี้สืบทอดสถานะการเผยแพร่จากโฟลเดอร์ของมัน",
     "homepageVisibilityDescription": "รวมรูปภาพของอัลบั้มนี้ในหน้าแรก",
-    "downloadsVisibilityDescription": "อนุญาตให้ผู้เข้าชมดาวน์โหลดรูปภาพขนาดเต็มที่ปรับแต่งแล้วจากอัลบั้มนี้"
+    "downloadsVisibilityDescription": "อนุญาตให้ผู้เข้าชมดาวน์โหลดรูปภาพขนาดเต็มที่ปรับแต่งแล้วจากอัลบั้มนี้",
+    "moveToAlbum": "[EN] Move to Album",
+    "moveToAlbumTitle": "[EN] Move to Album",
+    "moveToAlbumHint": "[EN] Choose a destination album for \"{{name}}\".",
+    "moveToAlbumFrom": "[EN] Currently in: {{album}}",
+    "moveToAlbumNoDestinations": "[EN] No other albums available. Create another album first.",
+    "photoMoved": "[EN] Moved to \"{{album}}\"",
+    "failedToMovePhoto": "[EN] Failed to move photo"
   },
   "settings": {
     "saved": "การตั้งค่า {{section}} บันทึกแล้ว!",

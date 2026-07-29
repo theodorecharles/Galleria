@@ -461,7 +461,14 @@
     "publishedVisibilityDescription": "Εμφάνιση αυτού του άλμπουμ στη δημόσια συλλογή.",
     "folderControlsPublished": "Αυτό το άλμπουμ κληρονομεί την κατάσταση δημοσίευσης από τον φάκελό του.",
     "homepageVisibilityDescription": "Συμπερίληψη των φωτογραφιών αυτού του άλμπουμ στην αρχική σελίδα.",
-    "downloadsVisibilityDescription": "Επιτρέψτε στους επισκέπτες να κατεβάσουν βελτιστοποιημένες φωτογραφίες πλήρους μεγέθους από αυτό το άλμπουμ."
+    "downloadsVisibilityDescription": "Επιτρέψτε στους επισκέπτες να κατεβάσουν βελτιστοποιημένες φωτογραφίες πλήρους μεγέθους από αυτό το άλμπουμ.",
+    "moveToAlbum": "[EN] Move to Album",
+    "moveToAlbumTitle": "[EN] Move to Album",
+    "moveToAlbumHint": "[EN] Choose a destination album for \"{{name}}\".",
+    "moveToAlbumFrom": "[EN] Currently in: {{album}}",
+    "moveToAlbumNoDestinations": "[EN] No other albums available. Create another album first.",
+    "photoMoved": "[EN] Moved to \"{{album}}\"",
+    "failedToMovePhoto": "[EN] Failed to move photo"
   },
   "settings": {
     "saved": "Οι ρυθμίσεις του {{section}} αποθηκεύτηκαν!",

@@ -367,7 +367,14 @@
     "publishedVisibilityDescription": "이 앨범을 공개 갤러리에 표시합니다.",
     "folderControlsPublished": "이 앨범은 폴더에서 게시 상태를 상속받습니다.",
     "homepageVisibilityDescription": "이 앨범의 사진을 홈페이지에 포함합니다.",
-    "downloadsVisibilityDescription": "방문자가 이 앨범에서 전체 크기로 최적화된 사진을 다운로드할 수 있도록 허용합니다."
+    "downloadsVisibilityDescription": "방문자가 이 앨범에서 전체 크기로 최적화된 사진을 다운로드할 수 있도록 허용합니다.",
+    "moveToAlbum": "[EN] Move to Album",
+    "moveToAlbumTitle": "[EN] Move to Album",
+    "moveToAlbumHint": "[EN] Choose a destination album for \"{{name}}\".",
+    "moveToAlbumFrom": "[EN] Currently in: {{album}}",
+    "moveToAlbumNoDestinations": "[EN] No other albums available. Create another album first.",
+    "photoMoved": "[EN] Moved to \"{{album}}\"",
+    "failedToMovePhoto": "[EN] Failed to move photo"
   },
   "settings": {
     "saved": "{{section}} 설정이 저장되었습니다!",

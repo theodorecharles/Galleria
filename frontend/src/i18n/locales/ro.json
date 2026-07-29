@@ -367,7 +367,14 @@
     "publishedVisibilityDescription": "Afișează acest album în galeria publică.",
     "folderControlsPublished": "Acest album moștenește statutul publicat de la dosarul său.",
     "homepageVisibilityDescription": "Include fotografiile acestui album pe pagina principală.",
-    "downloadsVisibilityDescription": "Permite vizitatorilor să descarce fotografii optimizate la dimensiune completă din acest album."
+    "downloadsVisibilityDescription": "Permite vizitatorilor să descarce fotografii optimizate la dimensiune completă din acest album.",
+    "moveToAlbum": "[EN] Move to Album",
+    "moveToAlbumTitle": "[EN] Move to Album",
+    "moveToAlbumHint": "[EN] Choose a destination album for \"{{name}}\".",
+    "moveToAlbumFrom": "[EN] Currently in: {{album}}",
+    "moveToAlbumNoDestinations": "[EN] No other albums available. Create another album first.",
+    "photoMoved": "[EN] Moved to \"{{album}}\"",
+    "failedToMovePhoto": "[EN] Failed to move photo"
   },
   "settings": {
     "saved": "Setările {{section}} au fost salvate!",

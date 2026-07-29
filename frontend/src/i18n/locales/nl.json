@@ -367,7 +367,14 @@
     "publishedVisibilityDescription": "Toon dit album in de openbare galerij.",
     "folderControlsPublished": "Dit album erft de publicatiestatus van zijn map.",
     "homepageVisibilityDescription": "Neem de foto's van dit album op de startpagina op.",
-    "downloadsVisibilityDescription": "Sta bezoekers toe om geoptimaliseerde foto's op volledige grootte van dit album te downloaden."
+    "downloadsVisibilityDescription": "Sta bezoekers toe om geoptimaliseerde foto's op volledige grootte van dit album te downloaden.",
+    "moveToAlbum": "[EN] Move to Album",
+    "moveToAlbumTitle": "[EN] Move to Album",
+    "moveToAlbumHint": "[EN] Choose a destination album for \"{{name}}\".",
+    "moveToAlbumFrom": "[EN] Currently in: {{album}}",
+    "moveToAlbumNoDestinations": "[EN] No other albums available. Create another album first.",
+    "photoMoved": "[EN] Moved to \"{{album}}\"",
+    "failedToMovePhoto": "[EN] Failed to move photo"
   },
   "settings": {
     "saved": "{{section}} instellingen opgeslagen!",

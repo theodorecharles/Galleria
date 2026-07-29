@@ -367,7 +367,14 @@
     "publishedVisibilityDescription": "Tampilkan album ini di galeri publik.",
     "folderControlsPublished": "Album ini mewarisi status publikasi dari foldernya.",
     "homepageVisibilityDescription": "Sertakan foto album ini di beranda.",
-    "downloadsVisibilityDescription": "Izinkan pengunjung mengunduh foto berukuran penuh yang dioptimalkan dari album ini."
+    "downloadsVisibilityDescription": "Izinkan pengunjung mengunduh foto berukuran penuh yang dioptimalkan dari album ini.",
+    "moveToAlbum": "[EN] Move to Album",
+    "moveToAlbumTitle": "[EN] Move to Album",
+    "moveToAlbumHint": "[EN] Choose a destination album for \"{{name}}\".",
+    "moveToAlbumFrom": "[EN] Currently in: {{album}}",
+    "moveToAlbumNoDestinations": "[EN] No other albums available. Create another album first.",
+    "photoMoved": "[EN] Moved to \"{{album}}\"",
+    "failedToMovePhoto": "[EN] Failed to move photo"
   },
   "settings": {
     "saved": "Pengaturan {{section}} disimpan!",
