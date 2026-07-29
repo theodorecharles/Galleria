@@ -104,7 +104,9 @@
     "iso": "ISO",
     "dateTaken": "Tanggal Diambil",
     "resolution": "Resolusi",
-    "duration": "Durasi"
+    "duration": "Durasi",
+    "playSlideshow": "Putar presentasi",
+    "pauseSlideshow": "Jeda presentasi"
   },
   "video": {
     "resolution": "Resolusi",

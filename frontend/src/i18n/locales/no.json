@@ -104,7 +104,9 @@
     "noContentYet": "Ingen innhold ennå",
     "albumEmpty": "Dette albumet er tomt. Vennligst logg inn for å legge til innhold.",
     "homepageEmpty": "Legg til noen album eller bruk hjemmesidetoggles for å legge dem til på hjemmesiden.",
-    "goToAdminPanel": "Gå til administrasjonspanelet"
+    "goToAdminPanel": "Gå til administrasjonspanelet",
+    "playSlideshow": "Spill av lysbildefremvisning",
+    "pauseSlideshow": "Pause lysbildefremvisning"
   },
   "video": {
     "resolution": "Oppløsning",

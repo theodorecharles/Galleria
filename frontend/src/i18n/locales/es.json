@@ -104,7 +104,9 @@
     "noContentYet": "No hay contenido aún",
     "albumEmpty": "Este álbum está vacío. Por favor, inicia sesión para agregar contenido.",
     "homepageEmpty": "Agrega algunos álbumes o usa el interruptor de la página de inicio para agregarlos a la página de inicio.",
-    "goToAdminPanel": "Ir al Panel de Administración"
+    "goToAdminPanel": "Ir al Panel de Administración",
+    "playSlideshow": "Reproducir presentación",
+    "pauseSlideshow": "Pausar presentación"
   },
   "video": {
     "resolution": "Resolución",

@@ -104,7 +104,9 @@
     "noContentYet": "Brak treści",
     "albumEmpty": "Ten album jest pusty. Zaloguj się, aby dodać treść.",
     "homepageEmpty": "Dodaj kilka albumów lub użyj przełącznika na stronie głównej, aby dodać je do strony głównej.",
-    "goToAdminPanel": "Przejdź do panelu administracyjnego"
+    "goToAdminPanel": "Przejdź do panelu administracyjnego",
+    "playSlideshow": "Odtwórz pokaz slajdów",
+    "pauseSlideshow": "Wstrzymaj pokaz slajdów"
   },
   "video": {
     "resolution": "Rozdzielczość",

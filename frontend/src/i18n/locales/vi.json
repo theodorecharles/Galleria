@@ -104,7 +104,9 @@
     "iso": "ISO",
     "dateTaken": "Ngày chụp",
     "resolution": "Độ phân giải",
-    "duration": "Thời gian"
+    "duration": "Thời gian",
+    "playSlideshow": "Phát trình chiếu",
+    "pauseSlideshow": "Tạm dừng trình chiếu"
   },
   "video": {
     "resolution": "Độ phân giải",

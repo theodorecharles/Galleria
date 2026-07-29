@@ -124,7 +124,9 @@
     "iso": "ISO",
     "dateTaken": "Fotografavimo data",
     "resolution": "Raiška",
-    "duration": "Trukmė"
+    "duration": "Trukmė",
+    "playSlideshow": "Play slideshow",
+    "pauseSlideshow": "Pause slideshow"
   },
   "video": {
     "resolution": "Raiška",

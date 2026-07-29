@@ -104,7 +104,9 @@
     "noContentYet": "尚无内容",
     "albumEmpty": "此相册为空。请登录以添加内容。",
     "homepageEmpty": "添加一些相册或使用主页切换将它们添加到主页。",
-    "goToAdminPanel": "前往管理面板"
+    "goToAdminPanel": "前往管理面板",
+    "playSlideshow": "播放幻灯片",
+    "pauseSlideshow": "暂停幻灯片"
   },
   "video": {
     "resolution": "分辨率",

@@ -124,7 +124,9 @@
     "iso": "ISO",
     "dateTaken": "Tarikh Diambil",
     "resolution": "Resolusi",
-    "duration": "Tempoh"
+    "duration": "Tempoh",
+    "playSlideshow": "Play slideshow",
+    "pauseSlideshow": "Pause slideshow"
   },
   "video": {
     "resolution": "Resolusi",

@@ -124,7 +124,9 @@
     "iso": "ISO",
     "dateTaken": "Dátum zhotovenia",
     "resolution": "Rozlíšenie",
-    "duration": "Trvanie"
+    "duration": "Trvanie",
+    "playSlideshow": "Play slideshow",
+    "pauseSlideshow": "Pause slideshow"
   },
   "video": {
     "resolution": "Rozlíšenie",

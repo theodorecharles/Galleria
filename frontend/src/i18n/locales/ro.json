@@ -104,7 +104,9 @@
     "iso": "ISO",
     "dateTaken": "Data capturării",
     "resolution": "Rezoluție",
-    "duration": "Durată"
+    "duration": "Durată",
+    "playSlideshow": "Pornește diaporama",
+    "pauseSlideshow": "Pune diaporama pe pauză"
   },
   "video": {
     "resolution": "Rezoluție",

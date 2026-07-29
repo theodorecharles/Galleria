@@ -104,7 +104,9 @@
     "iso": "ISO",
     "dateTaken": "Petsa ng Kinuha",
     "resolution": "Resolusyon",
-    "duration": "Tagal"
+    "duration": "Tagal",
+    "playSlideshow": "I-play ang slideshow",
+    "pauseSlideshow": "I-pause ang slideshow"
   },
   "video": {
     "resolution": "Resolusyon",
