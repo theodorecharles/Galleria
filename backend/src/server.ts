@@ -46,6 +46,7 @@ import {
   trace,
 } from "./utils/logger.ts";
 import { getAlbumAccess, isRequestAuthenticated } from "./utils/album-access.ts";
+import { getSessionCookieDomain } from "./utils/session-cookie-domain.ts";
 
 // Initialize logger early with config or environment variable
 initLogger(getLogLevel());
@@ -376,21 +377,6 @@ if (!sessionSecret) {
   }
 }
 
-// Helper to extract base domain from hostname (e.g., 'api.example.com' -> '.example.com')
-function getBaseDomain(hostname: string): string | undefined {
-  const parts = hostname.split(".");
-  if (parts.length >= 2) {
-    return "." + parts.slice(-2).join(".");
-  }
-  return undefined;
-}
-
-// Helper to check if hostname is an IP address or localhost
-function isLocalOrIP(hostname: string): boolean {
-  const isIpAddress = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
-  return hostname === "localhost" || hostname === "127.0.0.1" || isIpAddress;
-}
-
 // Initialize SQLite session store
 const db = initializeDatabase();
 const SqliteStore = SqliteStoreFactory(session);
@@ -407,7 +393,7 @@ app.use((req: Request, res: Response, next) => {
   // Store computed values on request for session middleware to use
   (req as any).__cookieSecure = isSecure;
   (req as any).__cookieSameSite = isSecure ? "lax" : false;
-  (req as any).__cookieDomain = isLocalOrIP(host) ? undefined : getBaseDomain(host);
+  (req as any).__cookieDomain = getSessionCookieDomain(host);
 
   debug(`[Session Cookie] host=${host}, secure=${isSecure}, domain=${(req as any).__cookieDomain}`);
   next();
@@ -465,21 +451,26 @@ app.use((req: Request, res: Response, next) => {
     // Clear cookies on all possible domains to handle domain changes
     // This ensures old cookies from different domain configurations are removed
     const hostname = req.hostname;
-    const baseDomain = getBaseDomain(hostname);
+    const cookieDomain = getSessionCookieDomain(hostname);
     const clearCookieOptions = { path: "/", httpOnly: true };
 
     // Clear on exact hostname (e.g., api-docker.tedcharles.net)
     res.clearCookie("connect.sid", { ...clearCookieOptions, domain: hostname });
 
-    // Clear on base domain (e.g., .tedcharles.net)
-    if (baseDomain) {
-      res.clearCookie("connect.sid", { ...clearCookieOptions, domain: baseDomain });
+    // Clear on the registrable domain (e.g., .tedcharles.net)
+    if (cookieDomain) {
+      res.clearCookie("connect.sid", {
+        ...clearCookieOptions,
+        domain: cookieDomain,
+      });
     }
 
     // Clear without explicit domain (browser default)
     res.clearCookie("connect.sid", clearCookieOptions);
 
-    debug(`[Session] Cleared cookies on domains: ${hostname}, ${baseDomain || 'none'}, default`);
+    debug(
+      `[Session] Cleared cookies on domains: ${hostname}, ${cookieDomain || "none"}, default`
+    );
 
     req.session.regenerate((err) => {
       if (err) {
