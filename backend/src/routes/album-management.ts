@@ -11,6 +11,7 @@ import { execFile, spawn } from "child_process";
 import { promisify } from "util";
 import multer from "multer";
 import os from "os";
+import crypto from "crypto";
 import sharp from "sharp";
 import { csrfProtection } from "../security.js";
 import { requireAuth, requireAdmin, requireManager } from '../auth/middleware.js';
@@ -36,12 +37,14 @@ import {
   renameAlbum
 } from "../database.js";
 import { processVideo, VideoProcessingProgress } from "../utils/video-processor.js";
+import { removeMediaDiskAssets } from "../utils/media-disk-cleanup.js";
 import { invalidateAlbumCache } from "./albums.js";
 import { generateStaticJSONFiles } from "./static-json.js";
 import { generateHomepageHTML } from "./homepage-html.js";
 import { broadcastOptimizationUpdate, queueOptimizationJob } from "./optimization-stream.js";
 import OpenAI from "openai";
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
+import { rollbackRenamedPaths, type RenamedPath } from '../utils/rename-rollback.js';
 
 const router = Router();
 const execFileAsync = promisify(execFile);
@@ -394,8 +397,10 @@ const upload = multer({
       cb(null, os.tmpdir());
     },
     filename: (req, file, cb) => {
-      // Keep original filename
-      cb(null, file.originalname);
+      // Unique temp name so concurrent same-originalname uploads never share a path.
+      // Album destination still uses file.originalname via sanitizePhotoName.
+      const ext = path.extname(file.originalname);
+      cb(null, `${crypto.randomUUID()}${ext}`);
     }
   }),
   limits: {
@@ -575,11 +580,16 @@ router.post("/", requireManager, async (req: Request, res: Response): Promise<vo
 });
 
 /**
- * Rename an album (FS first, then DB; roll back FS if DB fails).
+ * Rename an album (FS first, then DB; roll back FS if DB fails or a later FS rename throws).
  * Shared by PUT and PATCH so the live API surface cannot diverge into a
  * DB-first path with no rollback (see ticket #2746).
  */
 async function handleRenameAlbum(req: Request, res: Response): Promise<void> {
+  // Track successful renames so mid-sequence FS failures can reverse prior moves
+  // (photos/ can succeed while optimized/ or video/ throws — see ticket #3337).
+  const renamedPaths: RenamedPath[] = [];
+  let dbUpdated = false;
+
   try {
     const { album } = req.params;
     const { newName } = req.body;
@@ -626,26 +636,27 @@ async function handleRenameAlbum(req: Request, res: Response): Promise<void> {
     
     // Rename photos directory first — if this fails, DB is untouched
     fs.renameSync(oldAlbumPath, newAlbumPath);
+    renamedPaths.push({ from: oldAlbumPath, to: newAlbumPath });
     info(`[AlbumManagement] Renamed photos directory: ${sanitizedOldName} → ${sanitizedNewName}`);
     
     // Rename optimized directories
-    ['thumbnail', 'modal', 'download'].forEach(dir => {
+    for (const dir of ['thumbnail', 'modal', 'download'] as const) {
       const oldOptimizedPath = path.join(optimizedDir, dir, sanitizedOldName);
       const newOptimizedPath = path.join(optimizedDir, dir, sanitizedNewName);
       if (fs.existsSync(oldOptimizedPath)) {
         fs.renameSync(oldOptimizedPath, newOptimizedPath);
+        renamedPaths.push({ from: oldOptimizedPath, to: newOptimizedPath });
       }
-    });
+    }
     
     // Rename video directory if it exists
     const videoDir = req.app.get("videoDir");
-    let videoRenamed = false;
     if (videoDir) {
       const oldVideoPath = path.join(videoDir, sanitizedOldName);
       const newVideoPath = path.join(videoDir, sanitizedNewName);
       if (fs.existsSync(oldVideoPath)) {
         fs.renameSync(oldVideoPath, newVideoPath);
-        videoRenamed = true;
+        renamedPaths.push({ from: oldVideoPath, to: newVideoPath });
         info(`[AlbumManagement] Renamed video directory: ${sanitizedOldName} → ${sanitizedNewName}`);
       }
     }
@@ -653,26 +664,11 @@ async function handleRenameAlbum(req: Request, res: Response): Promise<void> {
     // Update database after FS; roll FS back if DB fails
     const success = renameAlbum(sanitizedOldName, sanitizedNewName);
     if (!success) {
-      // Rollback filesystem changes
-      fs.renameSync(newAlbumPath, oldAlbumPath);
-      ['thumbnail', 'modal', 'download'].forEach(dir => {
-        const oldOptimizedPath = path.join(optimizedDir, dir, sanitizedOldName);
-        const newOptimizedPath = path.join(optimizedDir, dir, sanitizedNewName);
-        if (fs.existsSync(newOptimizedPath)) {
-          fs.renameSync(newOptimizedPath, oldOptimizedPath);
-        }
-      });
-      // Rollback video directory if it was renamed
-      if (videoRenamed && videoDir) {
-        const oldVideoPath = path.join(videoDir, sanitizedOldName);
-        const newVideoPath = path.join(videoDir, sanitizedNewName);
-        if (fs.existsSync(newVideoPath)) {
-          fs.renameSync(newVideoPath, oldVideoPath);
-        }
-      }
+      rollbackRenamedPaths(renamedPaths);
       res.status(500).json({ errorCode: 'DATABASE_UPDATE_FAILED', error: 'Failed to update database' });
       return;
     }
+    dbUpdated = true;
     
     info(`[AlbumManagement] Renamed album in database: ${sanitizedOldName} → ${sanitizedNewName}`);
     
@@ -686,6 +682,11 @@ async function handleRenameAlbum(req: Request, res: Response): Promise<void> {
     
     res.json({ success: true, newName: sanitizedNewName });
   } catch (err) {
+    // Only reverse FS when DB still has the old name — never after a successful renameAlbum.
+    if (!dbUpdated && renamedPaths.length > 0) {
+      warn('[AlbumManagement] Rolling back FS renames after mid-sequence failure');
+      rollbackRenamedPaths(renamedPaths);
+    }
     error('[AlbumManagement] Failed to rename album:', err);
     res.status(500).json({ errorCode: 'RENAME_FAILED', error: 'Failed to rename album' });
   }
@@ -812,6 +813,7 @@ router.delete("/:album/photos/:photo", requireManager, async (req: Request, res:
 
     const photosDir = req.app.get("photosDir");
     const optimizedDir = req.app.get("optimizedDir");
+    const videoDir = req.app.get("videoDir") as string | undefined;
     
     const photoPath = path.join(photosDir, sanitizedAlbum, sanitizedPhoto);
     
@@ -820,16 +822,20 @@ router.delete("/:album/photos/:photo", requireManager, async (req: Request, res:
       return;
     }
 
-    // Delete from photos directory
-    fs.unlinkSync(photoPath);
-
-    // Delete from optimized directories
-    ['thumbnail', 'modal', 'download'].forEach(dir => {
-      const optimizedPath = path.join(optimizedDir, dir, sanitizedAlbum, sanitizedPhoto);
-      if (fs.existsSync(optimizedPath)) {
-        fs.unlinkSync(optimizedPath);
-      }
+    // Original + optimized same-name; for videos also HLS tree and .jpg posters
+    const diskCleanup = removeMediaDiskAssets({
+      photosDir,
+      optimizedDir,
+      videoDir,
+      album: sanitizedAlbum,
+      filename: sanitizedPhoto,
     });
+    if (diskCleanup.hlsRemoved) {
+      info(`[AlbumManagement] Removed HLS assets for video: ${sanitizedAlbum}/${sanitizedPhoto}`);
+    }
+    if (diskCleanup.posterRemoved.length > 0) {
+      info(`[AlbumManagement] Removed video posters: ${diskCleanup.posterRemoved.join(', ')}`);
+    }
 
     // Delete metadata from database
     const deleted = deleteImageMetadata(sanitizedAlbum, sanitizedPhoto);
@@ -1715,6 +1721,8 @@ router.post('/:albumName/video/:filename/upload-thumbnail', requireManager, uplo
     const { albumName, filename } = req.params;
     
     if (!albumName || !filename) {
+      // Multer may already have written the file to os.tmpdir()
+      unlinkTempUpload(req.file?.path);
       res.status(400).json({ error: 'Album name and filename are required' });
       return;
     }
@@ -1750,7 +1758,7 @@ router.post('/:albumName/video/:filename/upload-thumbnail', requireManager, uplo
       .toFile(modalPath);
     
     // Clean up temporary file
-    fs.unlinkSync(req.file.path);
+    unlinkTempUpload(req.file.path);
     
     info(`[VideoThumbnail] Uploaded custom thumbnail for ${albumName}/${filename}`);
     
@@ -1768,6 +1776,8 @@ router.post('/:albumName/video/:filename/upload-thumbnail', requireManager, uplo
       message: 'Custom thumbnail uploaded successfully'
     });
   } catch (err) {
+    // Always remove multer diskStorage temp on sharp/IO failure
+    unlinkTempUpload(req.file?.path);
     error('[VideoThumbnail] Failed to upload custom thumbnail:', err);
     res.status(500).json({ error: 'Failed to upload custom thumbnail' });
   }
