@@ -382,13 +382,27 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true, // Don't count successful logins
 });
 
+// Passkey bootstrap routes always (or often) return 2xx with challenge material.
+// authLimiter's skipSuccessfulRequests would never increment on auth-options
+// (always 200) and under-count verify abuse — count every response by IP.
+const passkeyAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 requests per windowMs
+  message:
+    "Too many authentication attempts from this IP, please try again after 15 minutes.",
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Count all outcomes — required for public challenge issuance
+  skipSuccessfulRequests: false,
+});
+
 app.use("/api/", limiter);
 // Apply stricter rate limiting to authentication endpoints
 app.use("/api/auth-extended/login", authLimiter);
 app.use("/api/auth-extended/password-reset", authLimiter);
-// Public passkey login bootstrap — rate-limit by IP (ticket #3444 / #1038)
-app.use("/api/auth-extended/passkey/auth-options", authLimiter);
-app.use("/api/auth-extended/passkey/auth-verify", authLimiter);
+// Public passkey login bootstrap — rate-limit by IP, all responses (ticket #3444)
+app.use("/api/auth-extended/passkey/auth-options", passkeyAuthLimiter);
+app.use("/api/auth-extended/passkey/auth-verify", passkeyAuthLimiter);
 app.use("/api/auth/google", authLimiter);
 
 // Parse JSON request bodies with size limit
