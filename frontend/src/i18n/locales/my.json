@@ -465,7 +465,14 @@
     "publishedVisibilityDescription": "ဒီအယ်လ်ဘမ်ကို အများပြည်သူ ဂယ်လရီတွင် ပြပါ။",
     "folderControlsPublished": "ဒီအယ်လ်ဘမ်သည် ၎င်း၏ဖိုလ်ဒါမှ ထုတ်ဝေထားသော အခြေအနေကို အမွေဆက်ခံသည်။",
     "homepageVisibilityDescription": "ဒီအယ်လ်ဘမ်၏ ဓာတ်ပုံများကို မူလစာမျက်နှာတွင် ထည့်ပါ။",
-    "downloadsVisibilityDescription": "ဧည့်သည်များကို ဒီအယ်လ်ဘမ်မှ အပြည့်အဝ အရွယ်အစား အထူးပြုလုပ်ထားသော ဓာတ်ပုံများကို ဒေါင်းလုဒ်လုပ်ရန် ခွင့်ပြုပါ။"
+    "downloadsVisibilityDescription": "ဧည့်သည်များကို ဒီအယ်လ်ဘမ်မှ အပြည့်အဝ အရွယ်အစား အထူးပြုလုပ်ထားသော ဓာတ်ပုံများကို ဒေါင်းလုဒ်လုပ်ရန် ခွင့်ပြုပါ။",
+    "moveToAlbum": "[EN] Move to Album",
+    "moveToAlbumTitle": "[EN] Move to Album",
+    "moveToAlbumHint": "[EN] Choose a destination album for \"{{name}}\".",
+    "moveToAlbumFrom": "[EN] Currently in: {{album}}",
+    "moveToAlbumNoDestinations": "[EN] No other albums available. Create another album first.",
+    "photoMoved": "[EN] Moved to \"{{album}}\"",
+    "failedToMovePhoto": "[EN] Failed to move photo"
   },
   "settings": {
     "saved": "{{section}} ဆက်တင်များ သိမ်းဆည်းပြီးပါပြီ!",

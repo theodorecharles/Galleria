@@ -371,7 +371,14 @@
     "publishedVisibilityDescription": "このアルバムを公開ギャラリーに表示します。",
     "folderControlsPublished": "このアルバムはフォルダーから公開ステータスを継承します。",
     "homepageVisibilityDescription": "このアルバムの写真をホームページに含めます。",
-    "downloadsVisibilityDescription": "訪問者がこのアルバムからフルサイズの最適化された写真をダウンロードできるようにします。"
+    "downloadsVisibilityDescription": "訪問者がこのアルバムからフルサイズの最適化された写真をダウンロードできるようにします。",
+    "moveToAlbum": "[EN] Move to Album",
+    "moveToAlbumTitle": "[EN] Move to Album",
+    "moveToAlbumHint": "[EN] Choose a destination album for \"{{name}}\".",
+    "moveToAlbumFrom": "[EN] Currently in: {{album}}",
+    "moveToAlbumNoDestinations": "[EN] No other albums available. Create another album first.",
+    "photoMoved": "[EN] Moved to \"{{album}}\"",
+    "failedToMovePhoto": "[EN] Failed to move photo"
   },
   "settings": {
     "saved": "{{section}}設定が保存されました！",

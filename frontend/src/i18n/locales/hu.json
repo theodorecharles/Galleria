@@ -465,7 +465,14 @@
     "publishedVisibilityDescription": "Mutassa ezt az albumot a nyilvános galériában.",
     "folderControlsPublished": "Ez az album a közzétett státuszt a mappájából örökli.",
     "homepageVisibilityDescription": "Tartalmazza ennek az albumnak a fotóit a kezdőlapon.",
-    "downloadsVisibilityDescription": "Engedélyezze a látogatóknak, hogy teljes méretű optimalizált fotókat töltsenek le ebből az albumból."
+    "downloadsVisibilityDescription": "Engedélyezze a látogatóknak, hogy teljes méretű optimalizált fotókat töltsenek le ebből az albumból.",
+    "moveToAlbum": "[EN] Move to Album",
+    "moveToAlbumTitle": "[EN] Move to Album",
+    "moveToAlbumHint": "[EN] Choose a destination album for \"{{name}}\".",
+    "moveToAlbumFrom": "[EN] Currently in: {{album}}",
+    "moveToAlbumNoDestinations": "[EN] No other albums available. Create another album first.",
+    "photoMoved": "[EN] Moved to \"{{album}}\"",
+    "failedToMovePhoto": "[EN] Failed to move photo"
   },
   "settings": {
     "saved": "{{section}} beállítások elmentve!",

@@ -465,7 +465,14 @@
     "publishedVisibilityDescription": "Vis dette album i det offentlige galleri.",
     "folderControlsPublished": "Dette album arver offentliggjort status fra sin mappe.",
     "homepageVisibilityDescription": "Inkluder dette albums fotos på hjemmesiden.",
-    "downloadsVisibilityDescription": "Tillad besøgende at downloade fuld størrelse optimerede fotos fra dette album."
+    "downloadsVisibilityDescription": "Tillad besøgende at downloade fuld størrelse optimerede fotos fra dette album.",
+    "moveToAlbum": "[EN] Move to Album",
+    "moveToAlbumTitle": "[EN] Move to Album",
+    "moveToAlbumHint": "[EN] Choose a destination album for \"{{name}}\".",
+    "moveToAlbumFrom": "[EN] Currently in: {{album}}",
+    "moveToAlbumNoDestinations": "[EN] No other albums available. Create another album first.",
+    "photoMoved": "[EN] Moved to \"{{album}}\"",
+    "failedToMovePhoto": "[EN] Failed to move photo"
   },
   "settings": {
     "saved": "{{section}} indstillinger gemt!",

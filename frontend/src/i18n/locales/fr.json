@@ -371,7 +371,14 @@
     "publishedVisibilityDescription": "Afficher cet album dans la galerie publique.",
     "folderControlsPublished": "Cet album hérite du statut publié de son dossier.",
     "homepageVisibilityDescription": "Inclure les photos de cet album sur la page d'accueil.",
-    "downloadsVisibilityDescription": "Autoriser les visiteurs à télécharger des photos optimisées en taille réelle de cet album."
+    "downloadsVisibilityDescription": "Autoriser les visiteurs à télécharger des photos optimisées en taille réelle de cet album.",
+    "moveToAlbum": "[EN] Move to Album",
+    "moveToAlbumTitle": "[EN] Move to Album",
+    "moveToAlbumHint": "[EN] Choose a destination album for \"{{name}}\".",
+    "moveToAlbumFrom": "[EN] Currently in: {{album}}",
+    "moveToAlbumNoDestinations": "[EN] No other albums available. Create another album first.",
+    "photoMoved": "[EN] Moved to \"{{album}}\"",
+    "failedToMovePhoto": "[EN] Failed to move photo"
   },
   "settings": {
     "saved": "Paramètres de {{section}} enregistrés !",

@@ -371,7 +371,14 @@
     "publishedVisibilityDescription": "在公共画廊中显示此相册。",
     "folderControlsPublished": "此相册继承其文件夹的发布状态。",
     "homepageVisibilityDescription": "在主页上包含此相册的照片。",
-    "downloadsVisibilityDescription": "允许访客从此相册下载全尺寸优化照片。"
+    "downloadsVisibilityDescription": "允许访客从此相册下载全尺寸优化照片。",
+    "moveToAlbum": "[EN] Move to Album",
+    "moveToAlbumTitle": "[EN] Move to Album",
+    "moveToAlbumHint": "[EN] Choose a destination album for \"{{name}}\".",
+    "moveToAlbumFrom": "[EN] Currently in: {{album}}",
+    "moveToAlbumNoDestinations": "[EN] No other albums available. Create another album first.",
+    "photoMoved": "[EN] Moved to \"{{album}}\"",
+    "failedToMovePhoto": "[EN] Failed to move photo"
   },
   "settings": {
     "saved": "{{section}} 设置已保存！",

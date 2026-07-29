@@ -465,7 +465,14 @@
     "publishedVisibilityDescription": "Prikaži ta album v javni galeriji.",
     "folderControlsPublished": "Ta album podeduje objavljen status iz svoje mape.",
     "homepageVisibilityDescription": "Vključi fotografije tega albuma na domačo stran.",
-    "downloadsVisibilityDescription": "Dovoli obiskovalcem prenos optimiziranih fotografij v polni velikosti iz tega albuma."
+    "downloadsVisibilityDescription": "Dovoli obiskovalcem prenos optimiziranih fotografij v polni velikosti iz tega albuma.",
+    "moveToAlbum": "[EN] Move to Album",
+    "moveToAlbumTitle": "[EN] Move to Album",
+    "moveToAlbumHint": "[EN] Choose a destination album for \"{{name}}\".",
+    "moveToAlbumFrom": "[EN] Currently in: {{album}}",
+    "moveToAlbumNoDestinations": "[EN] No other albums available. Create another album first.",
+    "photoMoved": "[EN] Moved to \"{{album}}\"",
+    "failedToMovePhoto": "[EN] Failed to move photo"
   },
   "settings": {
     "saved": "Nastavitve {{section}} shranjene!",

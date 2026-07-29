@@ -28,6 +28,8 @@ import {
   setAlbumVisibility,
   updateImageSortOrder,
   saveImageMetadata,
+  moveImageMetadata,
+  getImageMetadata,
   updateAlbumSortOrder,
   getAlbumState,
   getDatabase,
@@ -38,6 +40,7 @@ import {
 } from "../database.js";
 import { processVideo, VideoProcessingProgress } from "../utils/video-processor.js";
 import { removeMediaDiskAssets } from "../utils/media-disk-cleanup.js";
+import { moveMediaDiskAssets } from "../utils/move-media-disk.js";
 import { invalidateAlbumCache } from "./albums.js";
 import { generateStaticJSONFiles } from "./static-json.js";
 import { generateHomepageHTML } from "./homepage-html.js";
@@ -861,6 +864,134 @@ router.delete("/:album/photos/:photo", requireManager, async (req: Request, res:
   } catch (err) {
     error('[AlbumManagement] Failed to delete photo:', err);
     res.status(500).json({ error: 'Failed to delete photo' });
+  }
+});
+
+/**
+ * Move a photo/video to another album (original + optimized + video assets).
+ * Preserves title/description; appends to destination sort order.
+ */
+router.post("/:album/photos/:photo/move", requireManager, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { album, photo } = req.params;
+    const destinationAlbumRaw =
+      typeof req.body?.destinationAlbum === "string"
+        ? req.body.destinationAlbum
+        : typeof req.body?.targetAlbum === "string"
+          ? req.body.targetAlbum
+          : "";
+
+    const sanitizedSourceAlbum = sanitizeName(album);
+    const sanitizedDestAlbum = sanitizeName(destinationAlbumRaw);
+    const sanitizedPhoto = sanitizePhotoName(photo);
+
+    if (!sanitizedSourceAlbum || !sanitizedDestAlbum || !sanitizedPhoto) {
+      res.status(400).json({ error: "Invalid album or photo name" });
+      return;
+    }
+
+    if (sanitizedSourceAlbum === sanitizedDestAlbum) {
+      res.status(400).json({ error: "Source and destination albums are the same" });
+      return;
+    }
+
+    const photosDir = req.app.get("photosDir") as string;
+    const optimizedDir = req.app.get("optimizedDir") as string;
+    const videoDir = req.app.get("videoDir") as string | undefined;
+
+    const sourcePath = path.join(photosDir, sanitizedSourceAlbum, sanitizedPhoto);
+    if (!fs.existsSync(sourcePath)) {
+      res.status(404).json({ error: "Photo not found" });
+      return;
+    }
+
+    const destAlbumPath = path.join(photosDir, sanitizedDestAlbum);
+    if (!fs.existsSync(destAlbumPath)) {
+      // Album must already exist (created via admin); refuse silent create
+      const destState = getAlbumState(sanitizedDestAlbum);
+      if (!destState) {
+        res.status(404).json({ error: "Destination album not found" });
+        return;
+      }
+      fs.mkdirSync(destAlbumPath, { recursive: true });
+    }
+
+    const destPath = path.join(destAlbumPath, sanitizedPhoto);
+    if (fs.existsSync(destPath) || getImageMetadata(sanitizedDestAlbum, sanitizedPhoto)) {
+      res.status(409).json({
+        error: "A photo with this filename already exists in the destination album",
+        code: "DESTINATION_EXISTS",
+      });
+      return;
+    }
+
+    // Disk first (with internal rollback on failure)
+    const diskResult = moveMediaDiskAssets({
+      photosDir,
+      optimizedDir,
+      videoDir,
+      fromAlbum: sanitizedSourceAlbum,
+      toAlbum: sanitizedDestAlbum,
+      filename: sanitizedPhoto,
+    });
+
+    // Metadata: move row if present; otherwise create a minimal destination row
+    const sourceMeta = getImageMetadata(sanitizedSourceAlbum, sanitizedPhoto);
+    if (sourceMeta) {
+      const moved = moveImageMetadata(
+        sanitizedSourceAlbum,
+        sanitizedDestAlbum,
+        sanitizedPhoto
+      );
+      if (!moved) {
+        // Roll back disk — destination metadata conflict or race
+        rollbackRenamedPaths(diskResult.movedPaths);
+        res.status(409).json({
+          error: "Failed to update metadata for destination album",
+          code: "METADATA_MOVE_FAILED",
+        });
+        return;
+      }
+    } else {
+      const mediaType = isVideoFile(sanitizedPhoto) ? "video" : "photo";
+      saveImageMetadata(
+        sanitizedDestAlbum,
+        sanitizedPhoto,
+        null,
+        null,
+        mediaType
+      );
+    }
+
+    invalidateAlbumCache(sanitizedSourceAlbum);
+    invalidateAlbumCache(sanitizedDestAlbum);
+
+    const appRoot = req.app.get("appRoot");
+    generateStaticJSONFiles(appRoot);
+
+    const sourceState = getAlbumState(sanitizedSourceAlbum);
+    const destState = getAlbumState(sanitizedDestAlbum);
+    if (sourceState?.show_on_homepage || destState?.show_on_homepage) {
+      info(
+        `[AlbumManagement] Photo moved involving homepage album - regenerating homepage HTML`
+      );
+      generateHomepageHTML(appRoot);
+    }
+
+    info(
+      `[AlbumManagement] Moved photo ${sanitizedPhoto}: ${sanitizedSourceAlbum} → ${sanitizedDestAlbum}` +
+        (diskResult.hlsMoved ? " (with HLS)" : "")
+    );
+
+    res.json({
+      success: true,
+      sourceAlbum: sanitizedSourceAlbum,
+      destinationAlbum: sanitizedDestAlbum,
+      filename: sanitizedPhoto,
+    });
+  } catch (err) {
+    error("[AlbumManagement] Failed to move photo:", err);
+    res.status(500).json({ error: "Failed to move photo" });
   }
 });
 
