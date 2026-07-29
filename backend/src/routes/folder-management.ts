@@ -174,6 +174,7 @@ router.delete("/:folder", requireManager, async (req: Request, res: Response): P
       
       const photosDir = req.app.get('photosDir');
       const optimizedDir = req.app.get('optimizedDir');
+      const videoDir = req.app.get('videoDir');
       
       for (const album of albumsInFolder) {
         try {
@@ -191,6 +192,15 @@ router.delete("/:folder", requireManager, async (req: Request, res: Response): P
               fs.rmSync(optimizedPath, { recursive: true, force: true });
             }
           });
+
+          // Delete from video directory (HLS trees / original.mp4) if configured
+          if (videoDir) {
+            const videoPath = path.join(videoDir, album.name);
+            if (fs.existsSync(videoPath)) {
+              fs.rmSync(videoPath, { recursive: true, force: true });
+              info(`[FolderManagement] Deleted video directory: ${album.name}`);
+            }
+          }
           
           // Cancel share link expiry timers before deleting
           try {
