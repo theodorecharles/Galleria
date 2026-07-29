@@ -124,7 +124,9 @@
     "iso": "ISO",
     "dateTaken": "Дата зйомки",
     "resolution": "Роздільна здатність",
-    "duration": "Тривалість"
+    "duration": "Тривалість",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Роздільна здатність",

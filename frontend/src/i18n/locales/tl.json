@@ -104,7 +104,9 @@
     "iso": "ISO",
     "dateTaken": "Petsa ng Kinuha",
     "resolution": "Resolusyon",
-    "duration": "Tagal"
+    "duration": "Tagal",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Resolusyon",

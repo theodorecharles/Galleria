@@ -104,7 +104,9 @@
     "iso": "ISO",
     "dateTaken": "Data capturării",
     "resolution": "Rezoluție",
-    "duration": "Durată"
+    "duration": "Durată",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Rezoluție",

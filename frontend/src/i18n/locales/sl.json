@@ -124,7 +124,9 @@
     "iso": "ISO",
     "dateTaken": "Datum posnetka",
     "resolution": "Ločljivost",
-    "duration": "Trajanje"
+    "duration": "Trajanje",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Ločljivost",

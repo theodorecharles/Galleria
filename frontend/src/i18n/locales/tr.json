@@ -104,7 +104,9 @@
     "noContentYet": "Henüz İçerik Yok",
     "albumEmpty": "Bu albüm boş. Lütfen içerik eklemek için giriş yapın.",
     "homepageEmpty": "Bazı albümler ekleyin veya bunları anasayfaya eklemek için anasayfa geçişini kullanın.",
-    "goToAdminPanel": "Yönetici Paneline Git"
+    "goToAdminPanel": "Yönetici Paneline Git",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Çözünürlük",

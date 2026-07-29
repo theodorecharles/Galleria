@@ -124,7 +124,9 @@
     "iso": "ISO",
     "dateTaken": "Datum pořízení",
     "resolution": "Rozlišení",
-    "duration": "Délka"
+    "duration": "Délka",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Rozlišení",

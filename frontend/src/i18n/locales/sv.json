@@ -104,7 +104,9 @@
     "noContentYet": "Ingen innehåll än",
     "albumEmpty": "Detta album är tomt. Vänligen logga in för att lägga till innehåll.",
     "homepageEmpty": "Lägg till några album eller använd hemsidans växlingsknapp för att lägga till dem på hemsidan.",
-    "goToAdminPanel": "Gå till administrationspanelen"
+    "goToAdminPanel": "Gå till administrationspanelen",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Upplösning",

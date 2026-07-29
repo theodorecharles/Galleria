@@ -104,7 +104,9 @@
     "iso": "ISO",
     "dateTaken": "Ngày chụp",
     "resolution": "Độ phân giải",
-    "duration": "Thời gian"
+    "duration": "Thời gian",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Độ phân giải",

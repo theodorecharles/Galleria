@@ -124,7 +124,9 @@
     "iso": "ISO",
     "dateTaken": "Data de captura",
     "resolution": "Resolució",
-    "duration": "Durada"
+    "duration": "Durada",
+    "location": "[EN] Location",
+    "viewMap": "[EN] Map"
   },
   "video": {
     "resolution": "Resolució",
