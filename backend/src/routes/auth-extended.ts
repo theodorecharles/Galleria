@@ -1467,8 +1467,9 @@ router.delete('/passkey/:id', requireAuth, async (req: Request, res: Response) =
 
 /**
  * List all users (admin only)
+ * Does not return invite_token — use GET /users/:userId/invite-link for copy-link.
  */
-router.get('/users', requireAuth, (req: Request, res: Response) => {
+router.get('/users', requireAdmin, (req: Request, res: Response) => {
   try {
     const users = getAllUsers();
     
@@ -1476,7 +1477,6 @@ router.get('/users', requireAuth, (req: Request, res: Response) => {
     const sanitizedUsers = users.map((user: User) => {
       // Determine display status based on user state
       let displayStatus = null;
-      let inviteToken = null;
       
       if (user.status === 'invited') {
         // Check if invite has expired
@@ -1490,9 +1490,6 @@ router.get('/users', requireAuth, (req: Request, res: Response) => {
         } else {
           displayStatus = 'invited';
         }
-        
-        // Include invite token for invited/expired users (needed for copy link functionality)
-        inviteToken = user.invite_token;
       }
       
       return {
@@ -1505,7 +1502,6 @@ router.get('/users', requireAuth, (req: Request, res: Response) => {
         passkey_count: user.passkeys?.length || 0,
         is_active: user.is_active,
         status: displayStatus, // Only show status if invited or expired
-        invite_token: inviteToken, // Include for invited users
         created_at: user.created_at,
         last_login_at: user.last_login_at,
       };
@@ -1515,6 +1511,36 @@ router.get('/users', requireAuth, (req: Request, res: Response) => {
   } catch (err) {
     error('[AuthExtended] List users error:', err);
     res.status(500).json({ error: 'Failed to list users' });
+  }
+});
+
+/**
+ * Get invite URL for an invited user (admin only — copy-link; never bulk-list tokens)
+ */
+router.get('/users/:userId/invite-link', requireAdmin, (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    if (Number.isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user id' });
+    }
+
+    const user = getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.status !== 'invited' && user.status !== 'invite_expired') {
+      return res.status(400).json({ error: 'User has no pending invitation' });
+    }
+
+    if (!user.invite_token) {
+      return res.status(404).json({ error: 'Invitation token not found' });
+    }
+
+    res.json({ inviteUrl: generateInvitationUrl(user.invite_token) });
+  } catch (err) {
+    error('[AuthExtended] Get invite link error:', err);
+    res.status(500).json({ error: 'Failed to get invitation link' });
   }
 });
 
