@@ -1715,6 +1715,8 @@ router.post('/:albumName/video/:filename/upload-thumbnail', requireManager, uplo
     const { albumName, filename } = req.params;
     
     if (!albumName || !filename) {
+      // Multer may already have written the file to os.tmpdir()
+      unlinkTempUpload(req.file?.path);
       res.status(400).json({ error: 'Album name and filename are required' });
       return;
     }
@@ -1750,7 +1752,7 @@ router.post('/:albumName/video/:filename/upload-thumbnail', requireManager, uplo
       .toFile(modalPath);
     
     // Clean up temporary file
-    fs.unlinkSync(req.file.path);
+    unlinkTempUpload(req.file.path);
     
     info(`[VideoThumbnail] Uploaded custom thumbnail for ${albumName}/${filename}`);
     
@@ -1768,6 +1770,8 @@ router.post('/:albumName/video/:filename/upload-thumbnail', requireManager, uplo
       message: 'Custom thumbnail uploaded successfully'
     });
   } catch (err) {
+    // Always remove multer diskStorage temp on sharp/IO failure
+    unlinkTempUpload(req.file?.path);
     error('[VideoThumbnail] Failed to upload custom thumbnail:', err);
     res.status(500).json({ error: 'Failed to upload custom thumbnail' });
   }
