@@ -1378,36 +1378,16 @@ router.post('/passkey/reauth-options', requireAuth, async (req: Request, res: Re
 });
 
 /**
- * Get authentication options for passkey login
+ * Get authentication options for passkey login.
+ *
+ * Public endpoint: always returns discoverable (empty allowCredentials) options
+ * with a constant shape. Never looks up users by email — that would enable
+ * account enumeration and credential-ID harvest for phishing.
  */
 router.post('/passkey/auth-options', async (req: Request, res: Response) => {
   try {
-    const { email } = req.body;
-    
-    // If email provided, get user's passkeys
-    let passkeys: any[] = [];
-    if (email) {
-      const user = getUserByEmail(email);
-      if (user && user.passkeys) {
-        passkeys = user.passkeys;
-        info('[Passkey Auth] Found user with passkeys:', {
-          email,
-          passkeyCount: passkeys.length,
-          passkeys: passkeys.map(pk => ({
-            id: pk.id,
-            name: pk.name,
-            credentialIDLength: pk.credentialID?.length,
-            transports: pk.transports
-          }))
-        });
-      } else {
-        info('[Passkey Auth] User not found or has no passkeys:', email);
-      }
-    } else {
-      info('[Passkey Auth] No email provided, returning empty allowCredentials');
-    }
-
-    const options = await generatePasskeyAuthenticationOptions(passkeys);
+    // Ignore email/body for enumeration resistance; client may still send email.
+    const options = await generatePasskeyAuthenticationOptions([]);
 
     // Store challenge
     const sessionId = crypto.randomUUID();
