@@ -11,6 +11,7 @@ import { getAlbumState, getShareLinkBySecret, isShareLinkExpired } from '../data
 import { requireAuth } from '../auth/middleware.js';
 import { isRequestAuthenticated } from '../utils/album-access.js';
 import { isOriginAllowed } from '../config.js';
+import { streamFileToResponse } from '../utils/stream-file-response.js';
 
 const router = Router();
 
@@ -492,7 +493,6 @@ router.get("/:album/:filename/original.mp4", requireAuth, async (req: Request, r
       const start = parseInt(parts[0], 10);
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
       const chunksize = (end - start) + 1;
-      const file = fs.createReadStream(rotatedVideoPath, { start, end });
 
       res.writeHead(206, {
         'Content-Range': `bytes ${start}-${end}/${fileSize}`,
@@ -502,7 +502,7 @@ router.get("/:album/:filename/original.mp4", requireAuth, async (req: Request, r
         ...credentialedCorsHeaderRecord(req),
       });
 
-      file.pipe(res);
+      await streamFileToResponse(rotatedVideoPath, res, { start, end });
     } else {
       // Send entire file
       res.writeHead(200, {
@@ -512,10 +512,16 @@ router.get("/:album/:filename/original.mp4", requireAuth, async (req: Request, r
         ...credentialedCorsHeaderRecord(req),
       });
 
-      fs.createReadStream(rotatedVideoPath).pipe(res);
+      await streamFileToResponse(rotatedVideoPath, res);
     }
   } catch (err) {
     error('[Video] Failed to serve rotated video:', err);
+    if (res.headersSent) {
+      if (!res.destroyed) {
+        res.destroy();
+      }
+      return;
+    }
     res.status(500).json({ error: 'Failed to serve video' });
   }
 });
