@@ -11,6 +11,7 @@ import { execFile, spawn } from "child_process";
 import { promisify } from "util";
 import multer from "multer";
 import os from "os";
+import crypto from "crypto";
 import sharp from "sharp";
 import { csrfProtection } from "../security.js";
 import { requireAuth, requireAdmin, requireManager } from '../auth/middleware.js';
@@ -394,8 +395,10 @@ const upload = multer({
       cb(null, os.tmpdir());
     },
     filename: (req, file, cb) => {
-      // Keep original filename
-      cb(null, file.originalname);
+      // Unique temp name so concurrent same-originalname uploads never share a path.
+      // Album destination still uses file.originalname via sanitizePhotoName.
+      const ext = path.extname(file.originalname);
+      cb(null, `${crypto.randomUUID()}${ext}`);
     }
   }),
   limits: {
