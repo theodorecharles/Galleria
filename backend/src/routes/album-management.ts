@@ -43,6 +43,7 @@ import { generateHomepageHTML } from "./homepage-html.js";
 import { broadcastOptimizationUpdate, queueOptimizationJob } from "./optimization-stream.js";
 import OpenAI from "openai";
 import { error, warn, info, debug, verbose } from '../utils/logger.js';
+import { rollbackRenamedPaths, type RenamedPath } from '../utils/rename-rollback.js';
 
 const router = Router();
 const execFileAsync = promisify(execFile);
@@ -578,11 +579,16 @@ router.post("/", requireManager, async (req: Request, res: Response): Promise<vo
 });
 
 /**
- * Rename an album (FS first, then DB; roll back FS if DB fails).
+ * Rename an album (FS first, then DB; roll back FS if DB fails or a later FS rename throws).
  * Shared by PUT and PATCH so the live API surface cannot diverge into a
  * DB-first path with no rollback (see ticket #2746).
  */
 async function handleRenameAlbum(req: Request, res: Response): Promise<void> {
+  // Track successful renames so mid-sequence FS failures can reverse prior moves
+  // (photos/ can succeed while optimized/ or video/ throws — see ticket #3337).
+  const renamedPaths: RenamedPath[] = [];
+  let dbUpdated = false;
+
   try {
     const { album } = req.params;
     const { newName } = req.body;
@@ -629,26 +635,27 @@ async function handleRenameAlbum(req: Request, res: Response): Promise<void> {
     
     // Rename photos directory first — if this fails, DB is untouched
     fs.renameSync(oldAlbumPath, newAlbumPath);
+    renamedPaths.push({ from: oldAlbumPath, to: newAlbumPath });
     info(`[AlbumManagement] Renamed photos directory: ${sanitizedOldName} → ${sanitizedNewName}`);
     
     // Rename optimized directories
-    ['thumbnail', 'modal', 'download'].forEach(dir => {
+    for (const dir of ['thumbnail', 'modal', 'download'] as const) {
       const oldOptimizedPath = path.join(optimizedDir, dir, sanitizedOldName);
       const newOptimizedPath = path.join(optimizedDir, dir, sanitizedNewName);
       if (fs.existsSync(oldOptimizedPath)) {
         fs.renameSync(oldOptimizedPath, newOptimizedPath);
+        renamedPaths.push({ from: oldOptimizedPath, to: newOptimizedPath });
       }
-    });
+    }
     
     // Rename video directory if it exists
     const videoDir = req.app.get("videoDir");
-    let videoRenamed = false;
     if (videoDir) {
       const oldVideoPath = path.join(videoDir, sanitizedOldName);
       const newVideoPath = path.join(videoDir, sanitizedNewName);
       if (fs.existsSync(oldVideoPath)) {
         fs.renameSync(oldVideoPath, newVideoPath);
-        videoRenamed = true;
+        renamedPaths.push({ from: oldVideoPath, to: newVideoPath });
         info(`[AlbumManagement] Renamed video directory: ${sanitizedOldName} → ${sanitizedNewName}`);
       }
     }
@@ -656,26 +663,11 @@ async function handleRenameAlbum(req: Request, res: Response): Promise<void> {
     // Update database after FS; roll FS back if DB fails
     const success = renameAlbum(sanitizedOldName, sanitizedNewName);
     if (!success) {
-      // Rollback filesystem changes
-      fs.renameSync(newAlbumPath, oldAlbumPath);
-      ['thumbnail', 'modal', 'download'].forEach(dir => {
-        const oldOptimizedPath = path.join(optimizedDir, dir, sanitizedOldName);
-        const newOptimizedPath = path.join(optimizedDir, dir, sanitizedNewName);
-        if (fs.existsSync(newOptimizedPath)) {
-          fs.renameSync(newOptimizedPath, oldOptimizedPath);
-        }
-      });
-      // Rollback video directory if it was renamed
-      if (videoRenamed && videoDir) {
-        const oldVideoPath = path.join(videoDir, sanitizedOldName);
-        const newVideoPath = path.join(videoDir, sanitizedNewName);
-        if (fs.existsSync(newVideoPath)) {
-          fs.renameSync(newVideoPath, oldVideoPath);
-        }
-      }
+      rollbackRenamedPaths(renamedPaths);
       res.status(500).json({ errorCode: 'DATABASE_UPDATE_FAILED', error: 'Failed to update database' });
       return;
     }
+    dbUpdated = true;
     
     info(`[AlbumManagement] Renamed album in database: ${sanitizedOldName} → ${sanitizedNewName}`);
     
@@ -689,6 +681,11 @@ async function handleRenameAlbum(req: Request, res: Response): Promise<void> {
     
     res.json({ success: true, newName: sanitizedNewName });
   } catch (err) {
+    // Only reverse FS when DB still has the old name — never after a successful renameAlbum.
+    if (!dbUpdated && renamedPaths.length > 0) {
+      warn('[AlbumManagement] Rolling back FS renames after mid-sequence failure');
+      rollbackRenamedPaths(renamedPaths);
+    }
     error('[AlbumManagement] Failed to rename album:', err);
     res.status(500).json({ errorCode: 'RENAME_FAILED', error: 'Failed to rename album' });
   }
